@@ -1,0 +1,32 @@
+{
+  "name": "static",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "ag-grid":              "latest",
+    "angular":              "latest",
+    "angular-animate":      "latest",
+    "angular-cookies":      "latest",
+    "angular-hotkeys":      "latest",
+    "angular-toastr":       "latest",
+    "bootstrap":            "latest",
+    "bootstrap-social":     "latest",
+    "chai":                 "latest",
+    "d3":                   "latest",
+    "datatables":           "latest",
+    "font-awesome":         "latest",
+    "holderjs":             "latest",       
+    "jquery":               "latest",
+    "metismenu":            "latest",
+    "mocha":                "latest",
+    "raphael":              "latest"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

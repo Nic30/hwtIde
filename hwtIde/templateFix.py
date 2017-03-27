@@ -2,8 +2,8 @@ import os, re
 
 
 subs = {
-        #"/static/template/bower_components/":"/static/bower_components/",
-        "../bower_components/":"/static/bower_components/",
+        #"/static/template/node_modules/":"/static/node_modules/",
+        "../node_modules/":"/static/node_modules/",
         "../js/":"/static/template/js/",
         "../dist/":"/static/template/dist/"
         }

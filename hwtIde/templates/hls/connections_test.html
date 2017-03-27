@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block css_extra %}
 <link type="text/css" href="/static/hls/connections/style.css"
 	rel="stylesheet" />
-<link rel="stylesheet" href="/static/bower_components/mocha/mocha.css" />
+<link rel="stylesheet" href="/static/node_modules/mocha/mocha.css" />
 {% endblock %} 
 {% block js_extra %}
 <script type="text/javascript">
@@ -10,7 +10,7 @@
 	var COMPONENT_PADDING = 20;
 	var NET_PADDING = 5;
 </script>
-<script type="text/javascript" src="/static/bower_components/d3/d3.js"></script>
+<script type="text/javascript" src="/static/node_modules/d3/build/d3.js"></script>
 <script type="text/javascript" src="/static/hls/connections/binaryheap.js"></script>
 <script type="text/javascript" src="/static/hls/connections/a_star.js"></script>
 <script type="text/javascript" src="/static/hls/connections/component_diagram_objects.js"></script>
@@ -19,8 +19,8 @@
 <script type="text/javascript" src="/static/hls/connections/routing_node_container.js"></script>
 <script type="text/javascript" src="/static/hls/connections/dataprocessing.js"></script>
 <script type="text/javascript" src="/static/hls/connections/net_router.js"></script>
-<script src="/static/bower_components/chai/chai.js"></script>
-<script src="/static/bower_components/mocha/mocha.js"></script>
+<script src="/static/node_modules/chai/chai.js"></script>
+<script src="/static/node_modules/mocha/mocha.js"></script>
 <script>mocha.setup('bdd')</script>
 <script type="text/javascript" src="/static/hls/connections/tests.js"></script>
 <script>

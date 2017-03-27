@@ -1,14 +1,12 @@
-import sys
 from flask import Flask, render_template
 from flask.helpers import send_from_directory
-from hwtIde.hls_connections_views import connectionsBp
+
 from hwtIde.dependencyViews import dependenciesBp
+from hwtIde.hls_connections_views import connectionsBp
 from hwtIde.wave_views import waveBp
 
 
-sys.path.append("..")  # [hotfix] to make visualizer run after downloading from git
-
-app = Flask("Visualizer")
+app = Flask("hwtIde")
 
 
 # for loading all static files (antipatent, but it is necessary because

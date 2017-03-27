@@ -1,6 +1,7 @@
-from hwt.hdlObjects.specialValues import DIRECTION
 from connectionsJsonObj import Net, Connection, ExternalPort, Unit
+from hwt.hdlObjects.constants import DIRECTION
 from hwt.hdlObjects.portItem import PortItem
+
 
 class PortIndexLookup():
     """ class for searching port indexes of portItems in units"""

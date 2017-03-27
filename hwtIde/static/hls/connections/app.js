@@ -2,8 +2,8 @@ var App = angular.module('App', [ 'ngCookies', 'agGrid', 'cfp.hotkeys', 'ngAnima
 App.config(function(toastrConfig) {
   angular.extend(toastrConfig, {
 	    templates: {
-	      toast: '/static/bower_components/angular-toastr/src/directives/toast/toast.html',
-	      progressbar: '/static/bower_components/angular-toastr/src/directives/progressbar/progressbar.html'
+	      toast: '/static/node_modules/angular-toastr/src/directives/toast/toast.html',
+	      progressbar: '/static/node_modules/angular-toastr/src/directives/progressbar/progressbar.html'
 	    },
 	    timeOut: 4000,
 	  });
