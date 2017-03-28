@@ -15,8 +15,26 @@
 .grid path {
       stroke-width: 0;
 }
+.value-rect-invalid {
+	fill: red;
+}
+.value-rect-valid {
+	fill: green;
+}
+
+.value-rect-valid text {
+    text-anchor: middle;
+	fill: white;
+	alignment-baseline: middle;
+}
+.value-rect-invalid text {
+	text-anchor: middle;
+	fill: white;
+	alignment-baseline: middle;
+}
 </style>
 <script type="text/javascript" src="/static/node_modules/d3/build/d3.js"></script>
+<script type="text/javascript" src="/static/wave/valueRenderers.js"></script>
 </head>
 <body>
 	<svg style="width:100%;height:100%;position:fixed;top:0;left:0;bottom:0;right:0;"></svg>
