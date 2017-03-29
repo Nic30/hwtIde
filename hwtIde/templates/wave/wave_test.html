@@ -2,15 +2,75 @@
 <meta charset="utf-8">
 <head>
 <style>
-.line {
+.value-line {
 	fill: none;
-	stroke: #000;
+	stroke: lime;
 	stroke-width: 1.5px;
 }
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+    stroke-dasharray : 5, 5;
+}
+.grid path {
+      stroke-width: 0;
+}
+.value-rect-invalid path {
+	fill: darkred;
+	stroke: red;
+}
+.value-rect-invalid rect {
+	fill: darkred;
+	stroke: red;
+}
+.value-rect-valid path {
+	fill: green;
+	stroke: lime; 
+}
+
+.value-rect-valid text {
+    text-anchor: middle;
+	fill: white;
+}
+.value-rect-invalid text {
+	text-anchor: middle;
+	fill: white;
+}
+
+.wave-graph {
+	background: black;
+    width:100%;
+    height:100%;
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    right:0;
+}
+
+.domain {
+	stroke: yellow;
+	stroke-width: 1.5px;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
+}
+
+.tick line {
+	stroke-width: 1.5px;
+	stroke: yellow;
+}
+
+.axis text {
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
+	fill: yellow;
+}
+
 </style>
 <script type="text/javascript" src="/static/node_modules/d3/build/d3.js"></script>
+<script type="text/javascript" src="/static/wave/valueRenderers.js"></script>
 </head>
 <body>
-	<svg width="960" height="500"></svg>
+	<svg class="wave-graph"></svg>
 	<script type="text/javascript" src="/static/wave/app.js"></script>
 </body>
