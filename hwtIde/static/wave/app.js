@@ -2,6 +2,8 @@ const T_BIT = "bit"
 const T_ENUM = "enum"
 const T_BITS = "bits"
 
+// zoom+drag https://bl.ocks.org/mbostock/6123708	
+	
 function randData(n) {
 	function random() {
 		var r = Math.random()
@@ -24,6 +26,7 @@ function randData(n) {
 }
 
 function randBitsData(n, width) {
+	n-=1
 	function random() {
 		var r = Math.random()
 		if (r < 0.2)
@@ -126,13 +129,15 @@ function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding
      .attr("clip-path", "url(#clip)")
      .append("path")
      .datum(lineData)
-     .attr("class", "line")
+     .attr("class", "value-line")
      .attr("d", line)
 	
 	// Add the scatterplot
 	parent.selectAll("rect")	
 	 .data(invalidRanges)
 	 .enter()
+     .append('g')
+	 .attr("class", "value-rect-invalid")
 	 .append("rect")						
 	 .attr("height", waveRowHeight - waveRowYpadding)
 	 .attr("width",  function (d){ 
@@ -144,91 +149,84 @@ function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding
 	 .attr("y", function(d) { 
 		            return waveRowY(0) - waveRowHeight + waveRowYpadding 
 	  })
-	  .attr("class", "value-rect-invalid"); 
+}
+
+function renderBitsLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding, waveRowX, waveRowY){
+	var vldMask = mask(signalWidth)
+	var waveRowHeight = 20
+	var waveRowYpadding = 5
+
+	var rectG =  g.selectAll("value-rect")	
+				  .data(data)
+				  .enter()
+				  .append("g")	
+				  .attr("transform", function(d) {
+					  return "translate(" + 
+					  		[waveRowX(d[0]) , (waveRowY(0) - waveRowHeight + waveRowYpadding)]
+					  					  + ")"
+				  }).attr("class", function(d){ 
+				   if(valVld(d[1]) != vldMask){
+					   return "value-rect-invalid"
+				   } else {
+					   return "value-rect-valid"
+				   }
+				  })
+				   
+	 rectG.append("path")
+	 	  .attr("d", function(d, indx){
+	 		  //  <==> like shape
+ 	 		  if (indx+1 == data.length){
+	 	 		var next = d[0]+1
+		 	  } else {
+		 	  	var next = data[indx+1][0]
+		 	  }
+	 	      var right = waveRowX(next-d[0])
+	 	      var top = waveRowHeight
+	 	  	  return 'M '+ [0, top/2] + 
+	 	  	         ' L ' + [5, top] + 
+	 	  	         ' L '+ [right - 5, top] + 
+	 	  	         ' L '+ [right, top/2] +
+	 	  	         ' L '+ [right - 5, 0] + 
+	 	  	         ' L '+[5, 0]+' Z'
+	 	  })
+	   
+	 rectG
+	   .append("text")
+	   .text(function(d) {
+		   return renderBitsHex(d[1])
+	   })
+	   .attr("x", function (d, indx){ 
+			if (indx+1 == data.length){
+				var next = d[0]+1
+			} else {
+				var next = data[indx+1][0]
+			}
+			return waveRowX(next-d[0]) / 2 
+	   })
+	   .attr("y", (waveRowHeight) / 2 +  waveRowYpadding)
 }
 
 function renderWaveRow(indx, signalType, data, rowRange){
 	var waveRowWidth = graphWidth
 	var waveRowHeight = 20
 	var waveRowYpadding = 5
-	var signalWidth = 1
 
 	var waveRowX =  d3.scaleLinear()
 					  .domain(rowRange)
-					  .range([ 0, waveRowWidth ]);
+					  .range([0, waveRowWidth]);
 
 	var waveRowY = d3.scaleLinear()
 	                 .domain([0, 1])
 	                 .range([(waveRowHeight + waveRowYpadding) * (indx + 1) - waveRowYpadding,
 	                	     (waveRowHeight + waveRowYpadding) * indx + waveRowYpadding] );
 	if (signalType.name === T_BIT){
+		var signalWidth = 1
 		renderBitLine(g, data, signalWidth, waveRowHeight, waveRowYpadding,
 				 waveRowX, waveRowY)
 	 } else {
-		 var vldMask = mask(signalType.width)
-		 var rectG =  g.selectAll("value-rect")	
-					   .data(data)
-					   .enter()
-					   .append("g")	
-					   .attr("transform", function(d) {
-						  return "translate(" + waveRowX(d[0]) + " ," + (waveRowY(0) - waveRowHeight + waveRowYpadding)  + ")"
-					   }).attr("class", function(d){ 
-						   if(valVld(d[1]) != vldMask){
-							   return "value-rect-invalid"
-						   } else {
-							   return "value-rect-valid"
-						   }
-					   })
-					   
-		 rectG.append("rect")
-		   .attr("height", waveRowHeight - waveRowYpadding)
-		   .attr("width",  function (d, indx){ 
-			 			if (indx+1 == data.length){
-			 				var next = d[0]+1
-			 			} else {
-			 				var next = data[indx+1][0]
-			 			}
-		               return waveRowX(next-d[0]) 
-		    })
-		   .attr('rx', 20)
-		   .attr('ry', 20)
-		   .attr("class", function(d){ 
-		 	  if(valVld(d[1]) != vldMask){
-		 		 return "value-rect-invalid"
-		 	  } else {
-		 		 return "value-rect-valid"
-		 	  }
-		   })
-		   
-		 rectG
-		   .append("text")
-		   .text(function(d) {
-			   return renderBitsHex(d[1])
-		   })
-		   .attr("x", function (d, indx){ 
-	 			if (indx+1 == data.length){
-	 				var next = d[0]+1
-	 			} else {
-	 				var next = data[indx+1][0]
-	 			}
-            return waveRowX(next-d[0]) / 2 
-		   })
-		   .attr("y", (waveRowHeight) / 2 )
-		   
+		 renderBitsLine(parent, data, signalType.width, waveRowHeight, waveRowYpadding, 
+				 waveRowX, waveRowY)
 	}
-	//g.append("text")
-	// .data(data)
-	// .enter()
-    // .text(function(d) {
-    //	 return renderer(d[1], width)
-    // })
-    // .attr("x", function(d) {
-    //     return waveRowX(d[0]);
-    // })
-    // .attr("y", function(d, i) {
-    //     return waveRowY(0) - waveRowHeight;
-    // })
-    // .attr('class', "value-text")
 }
 
 
