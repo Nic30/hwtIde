@@ -92,174 +92,64 @@ g.append("g")
 // .attr("class", "axis axis--y")
 // .call(d3.axisLeft(y))
 
-function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding, waveRowX, waveRowY){
-	var vldMask = mask(signalWidth)
-	var invalidRanges = []
-	var lastInvalid = null
-	var lineData = []
-	var lastD=null;
-	data.forEach(function (d){
-		if (lastD!=null && !valCmp(d[1], lastD[1])) {
-			lineData.push([d[0], lastD[1]])
-		}
-		lastD = d
-		lineData.push(d)
 
-		if(valVld(d[1]) === vldMask){
-			if (lastInvalid != null){
-				invalidRanges.push([lastInvalid[0], d[0]])
-				lastInvalid = null
-			}
-		} else
-			if (lastInvalid == null)
-				lastInvalid = d
-		
-	})
+function verticalHelpLine(graph, height) {
 	
-    var line = d3.line()
-    	     .x(function(d) {
-    	          return waveRowX(d[0]);
-    	      })
-    	     .y(function(d) {
-    	     	  return waveRowY(valVal(d[1]));
-    	      });
-		
-    // wave line
-    g.append("g")
-     .attr("clip-path", "url(#clip)")
-     .append("path")
-     .datum(lineData)
-     .attr("class", "value-line")
-     .attr("d", line)
-	
-	// Add the scatterplot
-	parent.selectAll("rect")	
-	 .data(invalidRanges)
-	 .enter()
-     .append('g')
-	 .attr("class", "value-rect-invalid")
-	 .append("rect")						
-	 .attr("height", waveRowHeight - waveRowYpadding)
-	 .attr("width",  function (d){ 
-		               return waveRowX(d[1] - d[0]) 
-	  })
-	 .attr("x", function(d) { 
-		 			return waveRowX(d[0]) 
-	  })		 
-	 .attr("y", function(d) { 
-		            return waveRowY(0) - waveRowHeight + waveRowYpadding 
-	  })
-}
+	var verticalHelpLine = graph.append('line')
+								.attr('x1', 0)
+								.attr('y1', 0)
+								.attr('x2', 0)
+								.attr('y2', height)
+								.attr('class', 'verticalHelpLine')
 
-function renderBitsLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding, waveRowX, waveRowY){
-	var vldMask = mask(signalWidth)
-	var waveRowHeight = 20
-	var waveRowYpadding = 5
-
-	var rectG =  g.selectAll("value-rect")	
-				  .data(data)
-				  .enter()
-				  .append("g")	
-				  .attr("transform", function(d) {
-					  return "translate(" + 
-					  		[waveRowX(d[0]) , (waveRowY(0) - waveRowHeight + waveRowYpadding)]
-					  					  + ")"
-				  }).attr("class", function(d){ 
-				   if(valVld(d[1]) != vldMask){
-					   return "value-rect-invalid"
-				   } else {
-					   return "value-rect-valid"
-				   }
-				  })
-				   
-	 rectG.append("path")
-	 	  .attr("d", function(d, indx){
-	 		  //  <==> like shape
- 	 		  if (indx+1 == data.length){
-	 	 		var next = d[0]+1
-		 	  } else {
-		 	  	var next = data[indx+1][0]
-		 	  }
-	 	      var right = waveRowX(next-d[0])
-	 	      var top = waveRowHeight
-	 	  	  return 'M '+ [0, top/2] + 
-	 	  	         ' L ' + [5, top] + 
-	 	  	         ' L '+ [right - 5, top] + 
-	 	  	         ' L '+ [right, top/2] +
-	 	  	         ' L '+ [right - 5, 0] + 
-	 	  	         ' L '+[5, 0]+' Z'
-	 	  })
-	   
-	 rectG
-	   .append("text")
-	   .text(function(d) {
-		   return renderBitsHex(d[1])
-	   })
-	   .attr("x", function (d, indx){ 
-			if (indx+1 == data.length){
-				var next = d[0]+1
-			} else {
-				var next = data[indx+1][0]
-			}
-			return waveRowX(next-d[0]) / 2 
-	   })
-	   .attr("y", (waveRowHeight) / 2 +  waveRowYpadding)
-}
-
-function renderWaveRow(indx, signalType, data, rowRange){
-	var waveRowWidth = graphWidth
-	var waveRowHeight = 20
-	var waveRowYpadding = 5
-
-	var waveRowX =  d3.scaleLinear()
-					  .domain(rowRange)
-					  .range([0, waveRowWidth]);
-
-	var waveRowY = d3.scaleLinear()
-	                 .domain([0, 1])
-	                 .range([(waveRowHeight + waveRowYpadding) * (indx + 1) - waveRowYpadding,
-	                	     (waveRowHeight + waveRowYpadding) * indx + waveRowYpadding] );
-	if (signalType.name === T_BIT){
-		var signalWidth = 1
-		renderBitLine(g, data, signalWidth, waveRowHeight, waveRowYpadding,
-				 waveRowX, waveRowY)
-	 } else {
-		 renderBitsLine(parent, data, signalType.width, waveRowHeight, waveRowYpadding, 
-				 waveRowX, waveRowY)
+	function moveVerticalHelpLine(){
+		var xPos = d3.mouse(this)[0];
+	    d3.select(".verticalHelpLine")
+	      .attr("transform", function () {
+	        return "translate(" + xPos + ",0)";
+	       });
+	    
+	    console.log("x and y coordinate where vertical line intersects graph: " + [xPos]);
 	}
+	
+	graph.on('mousemove', moveVerticalHelpLine);
 }
 
-
-
-// imple graph with grid lines in v4 https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-function make_x_gridlines() {		
-    return d3.axisBottom(x)
-             .ticks(rowRange[1] - rowRange[0] + 1)
+function gridLines(graph, height, rowRange){
+	// imple graph with grid lines in v4 https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
+	function make_x_gridlines() {		
+	    return d3.axisBottom(x)
+	             .ticks(rowRange[1] - rowRange[0] + 1)
+	}
+	
+	//// gridlines in y axis function
+	//function make_y_gridlines() {		
+	//    return d3.axisLeft(y)
+	//        	 .ticks(signalData[0][1].length)
+	//}
+	
+	// add the X gridlines
+	graph.append("g")			
+	    .attr("class", "grid")
+	    .attr("transform", "translate(0," + height + ")")
+	    .call(make_x_gridlines()
+	        .tickSize(-height)
+	        .tickFormat("")
+	    )
+	
+	//// add the Y gridlines
+	//graph.append("g")			
+	//    .attr("class", "grid")
+	//    .call(make_y_gridlines()
+	//        .tickSize(-width)
+	//        .tickFormat("")
+	//    )
+	//
 }
 
-//// gridlines in y axis function
-//function make_y_gridlines() {		
-//    return d3.axisLeft(y)
-//        	 .ticks(signalData[0][1].length)
-//}
+gridLines(g, height, rowRange)
+verticalHelpLine(g, height)
 
-// add the X gridlines
-g.append("g")			
-    .attr("class", "grid")
-    .attr("transform", "translate(0," + height + ")")
-    .call(make_x_gridlines()
-        .tickSize(-height)
-        .tickFormat("")
-    )
-
-//// add the Y gridlines
-//g.append("g")			
-//    .attr("class", "grid")
-//    .call(make_y_gridlines()
-//        .tickSize(-width)
-//        .tickFormat("")
-//    )
-//
 var signalNames = signalData.map(function(d){
 	return d[0]
 })
