@@ -3,53 +3,7 @@ const T_ENUM = "enum"
 const T_BITS = "bits"
 
 // zoom+drag https://bl.ocks.org/mbostock/6123708	
-	
-function randData(n) {
-	function random() {
-		var r = Math.random()
-		if (r < 0.4)
-			return [ 0, 1 ]
-		else if (r > 0.6)
-			return [ 1, 1 ]
-		else
-			return [ 0, 0 ]
-	}
-	var data = []
-	for (var i = 0; i < n; i++) {
-		var d = random()
-		// we need to create points when value changes
-		// to have right angle curve
-		data.push([ i, d ])
-	}
-	
-	return data
-}
-
-function randBitsData(n, width) {
-	n-=1
-	function random() {
-		var r = Math.random()
-		if (r < 0.2)
-			return [ 0, 0]
-		else
-			return [ Math.ceil(Math.random()*10)+1, mask(width) ]
-	}
-	var data = []
-	for (var i = 0; i < n; i++) {
-		var d = random()
-		data.push([ i, d ])
-	}
-	
-	return data
-}
-
-var signalData = []
-for (var i =0; i< 2; i++){
-	signalData.push(["clk" + i, {name:T_BIT}, randData(10)])
-	signalData.push(["clk" + i, {name:T_BITS, width:8}, randBitsData(10, 8)])
-	
-}
-var rowRange = [0, 10-1]
+var rowRange = [0, 200]
 
 var svg = d3.select("svg"), 
     margin = {
@@ -108,8 +62,6 @@ function verticalHelpLine(graph, height) {
 	      .attr("transform", function () {
 	        return "translate(" + xPos + ",0)";
 	       });
-	    
-	    console.log("x and y coordinate where vertical line intersects graph: " + [xPos]);
 	}
 	
 	graph.on('mousemove', moveVerticalHelpLine);
@@ -117,9 +69,10 @@ function verticalHelpLine(graph, height) {
 
 function gridLines(graph, height, rowRange){
 	// imple graph with grid lines in v4 https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-	function make_x_gridlines() {		
-	    return d3.axisBottom(x)
-	             .ticks(rowRange[1] - rowRange[0] + 1)
+	
+	function make_x_gridlines() {
+		return d3.axisBottom(x)
+	             .ticks(10)
 	}
 	
 	//// gridlines in y axis function
@@ -150,10 +103,18 @@ function gridLines(graph, height, rowRange){
 gridLines(g, height, rowRange)
 verticalHelpLine(g, height)
 
-var signalNames = signalData.map(function(d){
-	return d[0]
-})
 
-signalData.forEach(function(data, indx){
-	renderWaveRow(indx, data[1], data[2], rowRange)
+d3.json("/wave-data", function(signalData) {
+	var signalNames = signalData.map(function(d){
+		return d[0]
+	})
+
+	signalData.forEach(function(data, indx){
+		renderWaveRow(indx, data[1], data[2], rowRange)
+	})
 })
+//rendering logic here//for (var i =0; i< 2; i++){
+//	signalData.push(["clk" + i, {name:T_BIT}, randData(10)])
+//	signalData.push(["clk" + i, {name:T_BITS, width:8}, randBitsData(10, 8)])
+//	
+//}
