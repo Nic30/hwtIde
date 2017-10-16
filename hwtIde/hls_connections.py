@@ -1,6 +1,6 @@
 from connectionsJsonObj import Net, Connection, ExternalPort, Unit
-from hwt.hdlObjects.constants import DIRECTION
-from hwt.hdlObjects.portItem import PortItem
+from hwt.hdl.constants import DIRECTION
+from hwt.hdl.portItem import PortItem
 
 
 class PortIndexLookup():
@@ -9,10 +9,10 @@ class PortIndexLookup():
         def __init__(self):
             self.inputs = {}
             self.outputs = {}
-            
+
     def __init__(self):
         self.cache = {}
-        
+
     def _index(self, unit):
         rec = PortIndexLookup.LookupRecord()
         inIndx = 0
@@ -24,49 +24,47 @@ class PortIndexLookup():
             else:
                 rec.inputs[id(pi)] = inIndx
                 inIndx += 1
-                
+
         self.cache[id(unit)] = rec
-        
+
     def lookup(self, unit, portItem):
         unitId = id(unit)
         if unitId not in self.cache.keys():
             self._index(unit)
-        
+
         rec = self.cache[unitId]
-        if portItem.direction == DIRECTION.OUT:   
+        if portItem.direction == DIRECTION.OUT:
             portArr = rec.outputs
         else:
             portArr = rec.inputs
         return portArr[id(portItem)]
-    
+
 
 def serializeUnit(u):
     nets = []
     nodes = []
     indx = 1
     u._guiIndex = 0
-    
+
     for _, su in u._subUnits.items():
         su._guiIndex = indx
         n = Unit.fromIntfUnit(su)
         nodes.append(n)
-        indx += 1 
-    
+        indx += 1
+
     for _, intf in u._interfaces.items():
         if intf._isExtern:
             n = ExternalPort(intf)
             n._guiIndex = indx
-            intf._guiExternPort = n 
+            intf._guiExternPort = n
             nodes.append(n)
             indx += 1
         if intf._destinations:
             n = Net(intf, intf._destinations)
             nets.append(n)
-            
-            
-    
-    #nets = sorted(nets , key=lambda x : x.name)
-    return {"nodes":nodes, "nets" : nets }
+
+    # nets = sorted(nets , key=lambda x : x.name)
+    return {"nodes": nodes, "nets": nets}
 
 
 def serializeRtlUnit(interface, unit):
@@ -75,31 +73,33 @@ def serializeRtlUnit(interface, unit):
     """
     unit.synthesize(interface)
     nets = []
-    nodes = sorted(list(unit.subUnits), key=lambda x : x.name)
-    
+    nodes = sorted(list(unit.subUnits), key=lambda x: x.name)
+
     indxLookup = PortIndexLookup()
     for s in unit.signals:
         driver = s.getDriver()
-        
-                
+
         if driver and isinstance(driver, PortItem):  # has driver inside schema
             n = Net()
             n.name = s.name
-            n.source = Connection(driver.unit, driver.portItem, portIndexLookup=indxLookup)
+            n.source = Connection(
+                driver.unit, driver.portItem, portIndexLookup=indxLookup)
             for expr in s.expr:
                 if isinstance(expr, PortItem) and expr.portItem.direction == DIRECTION.IN:
-                    t = Connection(expr.unit, expr.portItem, portIndexLookup=indxLookup)
+                    t = Connection(expr.unit, expr.portItem,
+                                   portIndexLookup=indxLookup)
                     n.targets.append(t)
-            
+
             isOuterInterface = driver.sig in interface
             if isOuterInterface:
                 outputPort = ExternalPort(driver.sig.name, DIRECTION.OUT)
                 nodes.append(outputPort)
                 t = Connection(outputPort, outputPort, index=0)
                 n.targets.append(t)
-            
+
             if len(n.targets) > 0:
-                n.targets = sorted(n.targets, key=lambda x : (x.unit.name, x.index))
+                n.targets = sorted(
+                    n.targets, key=lambda x: (x.unit.name, x.index))
                 nets.append(n)
         # else: # is input
         #    inputPort = ExternalPort(s.name, PortItem.typeIn)
@@ -113,7 +113,6 @@ def serializeRtlUnit(interface, unit):
         #            print("")
         #        n.targets.append(t)
         #    nets.append(n)
-            
-                   
-    nets = sorted(nets , key=lambda x : x.name)
-    return {"nodes":nodes, "nets" : nets }
+
+    nets = sorted(nets, key=lambda x: x.name)
+    return {"nodes": nodes, "nets": nets}

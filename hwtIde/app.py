@@ -26,6 +26,7 @@ def index():
 def gantt():
     return render_template('hls/gantt_chart.html', ganttTasks=[], ganttTaskNames=[])
 
+
 app.register_blueprint(connectionsBp)
 app.register_blueprint(dependenciesBp)
 app.register_blueprint(waveBp)

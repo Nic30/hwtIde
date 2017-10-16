@@ -1,15 +1,17 @@
+from flask import abort, jsonify, request
 from flask.blueprints import Blueprint
 from flask.templating import render_template
-from flask import abort, jsonify, request
-from hwtLib.handshaked.fifo import HandshakedFifo
+
+from hwt.hdl.constants import Time
+from hwt.hdl.types.bits import Bits
+from hwt.hdl.types.bool import HBool
+from hwt.hdl.types.enum import HEnum
 from hwt.interfaces.std import Handshaked
-from hwt.simulator.shortcuts import simPrepare
-from hwt.simulator.hdlSimulator import HdlSimulator
 from hwt.simulator.hdlSimConfig import HdlSimConfig
-from hwt.hdlObjects.types.boolean import Boolean
-from hwt.hdlObjects.types.bits import Bits
-from hwt.hdlObjects.types.enum import Enum
-from hwt.hdlObjects.constants import Time
+from hwt.simulator.hdlSimulator import HdlSimulator
+from hwt.simulator.shortcuts import simPrepare
+from hwtLib.handshaked.fifo import HandshakedFifo
+
 
 waveBp = Blueprint('wave',
                    __name__,
@@ -17,10 +19,9 @@ waveBp = Blueprint('wave',
 
 
 class WebHdlSimConfig(HdlSimConfig):
-    supported_type_classes = (Boolean, Bits, Enum)
+    supported_type_classes = (HBool, Bits, HEnum)
 
     def __init__(self):
-        super().__init__()
         self.logPropagation = False
         self.logApplyingValues = False
         self.collectedWave = {}
@@ -37,11 +38,11 @@ class WebHdlSimConfig(HdlSimConfig):
             return "%x" % v
 
     def initUnitSignals(self, unit):
-        for se in unit._cntx.signals:
-            if isinstance(se._dtype, self.supported_type_classes):
-                d = self.collectedWave.setdefault(se, [])
-                nextVal = se._val
-                d.append((0, self.dumpVal(nextVal, se._dtype)))
+        for s in unit._cntx.signals:
+            if isinstance(s._dtype, self.supported_type_classes):
+                d = self.collectedWave.setdefault(s, [])
+                nextVal = s._val
+                d.append((0, self.dumpVal(nextVal, s._dtype)))
 
         for u in unit._units:
             self.initUnitSignals(u)
@@ -78,7 +79,7 @@ def wave_data():
     u, model, procs = simPrepare(u)
     sim = HdlSimulator()
 
-    u.dataIn._ag.data = [1, 2, 3, 4, 5, 6]
+    u.dataIn._ag.data.extend([1, 2, 3, 4, 5, 6])
 
     sim.config = WebHdlSimConfig()
     sim.simUnit(model,
