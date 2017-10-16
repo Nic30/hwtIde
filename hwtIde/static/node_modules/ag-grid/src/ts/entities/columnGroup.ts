@@ -6,6 +6,9 @@ import {OriginalColumnGroup} from "./originalColumnGroup";
 import {EventService} from "../eventService";
 import {Autowired} from "../context/context";
 import {GridOptionsWrapper} from "../gridOptionsWrapper";
+import {AgEvent} from "../events";
+import {ColumnApi} from "../columnController/columnController";
+import {GridApi} from "../gridApi";
 
 export class ColumnGroup implements ColumnGroupChild {
 
@@ -21,6 +24,8 @@ export class ColumnGroup implements ColumnGroupChild {
     }
 
     @Autowired('gridOptionsWrapper') gridOptionsWrapper: GridOptionsWrapper;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     // all the children of this group, regardless of whether they are opened or closed
     private children:ColumnGroupChild[];
@@ -64,6 +69,10 @@ export class ColumnGroup implements ColumnGroupChild {
         return ColumnGroup.createUniqueId(this.groupId, this.instanceId);
     }
 
+    public isEmptyGroup(): boolean {
+        return this.displayedChildren.length === 0;
+    }
+
     public checkLeft(): void {
         // first get all children to setLeft, as it impacts our decision below
         this.displayedChildren.forEach( (child: ColumnGroupChild) => {
@@ -76,10 +85,10 @@ export class ColumnGroup implements ColumnGroupChild {
         if (this.displayedChildren.length > 0) {
             if (this.gridOptionsWrapper.isEnableRtl()) {
                 let lastChild = this.displayedChildren[this.displayedChildren.length-1];
-                var lastChildLeft = lastChild.getLeft();
+                let lastChildLeft = lastChild.getLeft();
                 this.setLeft(lastChildLeft);
             } else {
-                var firstChildLeft = this.displayedChildren[0].getLeft();
+                let firstChildLeft = this.displayedChildren[0].getLeft();
                 this.setLeft(firstChildLeft);
             }
         } else {
@@ -101,8 +110,14 @@ export class ColumnGroup implements ColumnGroupChild {
         this.oldLeft = left;
         if (this.left !== left) {
             this.left = left;
-            this.localEventService.dispatchEvent(ColumnGroup.EVENT_LEFT_CHANGED);
+            this.localEventService.dispatchEvent(this.createAgEvent(ColumnGroup.EVENT_LEFT_CHANGED));
         }
+    }
+
+    private createAgEvent(type: string): AgEvent {
+        return {
+            type: type,
+        };
     }
 
     public addEventListener(eventType: string, listener: Function): void {
@@ -113,14 +128,6 @@ export class ColumnGroup implements ColumnGroupChild {
         this.localEventService.removeEventListener(eventType, listener);
     }
 
-    // public setMoving(moving: boolean) {
-    //     this.getDisplayedLeafColumns().forEach( (column)=> column.setMoving(moving) );
-    // }
-    //
-    // public isMoving(): boolean {
-    //     return this.moving;
-    // }
-
     public getGroupId(): string {
         return this.groupId;
     }
@@ -130,7 +137,7 @@ export class ColumnGroup implements ColumnGroupChild {
     }
 
     public isChildInThisGroupDeepSearch(wantedChild: ColumnGroupChild): boolean {
-        var result = false;
+        let result = false;
 
         this.children.forEach( (foundChild: ColumnGroupChild) => {
             if (wantedChild === foundChild) {
@@ -147,7 +154,7 @@ export class ColumnGroup implements ColumnGroupChild {
     }
 
     public getActualWidth(): number {
-        var groupActualWidth = 0;
+        let groupActualWidth = 0;
         if (this.displayedChildren) {
             this.displayedChildren.forEach( (child: ColumnGroupChild)=> {
                 groupActualWidth += child.getActualWidth();
@@ -156,8 +163,22 @@ export class ColumnGroup implements ColumnGroupChild {
         return groupActualWidth;
     }
 
+    public isResizable(): boolean {
+        if (!this.displayedChildren) { return false; }
+
+        // if at least one child is resizable, then the group is resizable
+        let result = false;
+        this.displayedChildren.forEach( (child: ColumnGroupChild)=> {
+            if (child.isResizable()) {
+                result = true;
+            }
+        });
+
+        return result;
+    }
+
     public getMinWidth(): number {
-        var result = 0;
+        let result = 0;
         this.displayedChildren.forEach( (groupChild: ColumnGroupChild) => {
             result += groupChild.getMinWidth();
         });
@@ -176,13 +197,13 @@ export class ColumnGroup implements ColumnGroupChild {
     }
 
     public getLeafColumns(): Column[] {
-        var result: Column[] = [];
+        let result: Column[] = [];
         this.addLeafColumns(result);
         return result;
     }
 
     public getDisplayedLeafColumns(): Column[] {
-        var result: Column[] = [];
+        let result: Column[] = [];
         this.addDisplayedLeafColumns(result);
         return result;
     }
@@ -253,7 +274,7 @@ export class ColumnGroup implements ColumnGroupChild {
         } else {
             // and calculate again
             this.children.forEach( abstractColumn => {
-                var headerGroupShow = abstractColumn.getColumnGroupShow();
+                let headerGroupShow = abstractColumn.getColumnGroupShow();
                 switch (headerGroupShow) {
                     case ColumnGroup.HEADER_GROUP_SHOW_OPEN:
                         // when set to open, only show col if group is open
@@ -275,6 +296,6 @@ export class ColumnGroup implements ColumnGroupChild {
             });
         }
 
-        this.localEventService.dispatchEvent(ColumnGroup.EVENT_DISPLAYED_CHILDREN_CHANGED);
+        this.localEventService.dispatchEvent(this.createAgEvent(ColumnGroup.EVENT_DISPLAYED_CHILDREN_CHANGED));
     }
 }

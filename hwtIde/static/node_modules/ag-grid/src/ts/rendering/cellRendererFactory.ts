@@ -3,7 +3,7 @@ import {Utils as _} from '../utils';
 import {ICellRenderer, ICellRendererFunc} from "./cellRenderers/iCellRenderer";
 import {GridOptionsWrapper} from "../gridOptionsWrapper";
 import {EventService} from "../eventService";
-import {ExpressionService} from "../expressionService";
+import {ExpressionService} from "../valueService/expressionService";
 import {AnimateSlideCellRenderer} from "./cellRenderers/animateSlideCellRenderer";
 import {AnimateShowChangeCellRenderer} from "./cellRenderers/animateShowChangeCellRenderer";
 import {GroupCellRenderer} from "./cellRenderers/groupCellRenderer";
@@ -31,7 +31,7 @@ export class CellRendererFactory {
     }
 
     // private registerRenderersFromGridOptions(): void {
-    //     var userProvidedCellRenderers = this.gridOptionsWrapper.getCellRenderers();
+    //     let userProvidedCellRenderers = this.gridOptionsWrapper.getCellRenderers();
     //     _.iterateObject(userProvidedCellRenderers, (key: string, cellRenderer: {new(): ICellRenderer} | ICellRendererFunc)=> {
     //         this.addCellRenderer(key, cellRenderer);
     //     });
@@ -43,7 +43,7 @@ export class CellRendererFactory {
 
     public getCellRenderer(key: string): {new(): ICellRenderer} | ICellRendererFunc {
 
-        var result = this.cellRendererMap[key];
+        let result = this.cellRendererMap[key];
         if (_.missing(result)) {
             console.warn('ag-Grid: unable to find cellRenderer for key ' + key);
             return null;

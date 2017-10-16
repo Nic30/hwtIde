@@ -43,13 +43,13 @@ export class LargeTextCellEditor extends Component implements ICellEditorComp {
             this.textarea.value = params.value.toString();
         }
 
-        this.getGui().querySelector('.ag-large-textarea').appendChild(this.textarea);
+        this.getHtmlElement().querySelector('.ag-large-textarea').appendChild(this.textarea);
 
         this.addGuiEventListener('keydown', this.onKeyDown.bind(this));
     }
 
     private onKeyDown(event:KeyboardEvent): void {
-        var key = event.which || event.keyCode;
+        let key = event.which || event.keyCode;
         if (key == Constants.KEY_LEFT ||
             key == Constants.KEY_UP ||
             key == Constants.KEY_RIGHT ||

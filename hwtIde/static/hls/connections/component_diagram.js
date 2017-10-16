@@ -318,7 +318,7 @@ function ComponentDiagram(selector){
 	}
     // define the zoomListener which calls the zoom function on the "zoom" event
 	// constrained within the scaleExtents
-    var zoomListener = d3.behavior.zoom()
+    var zoomListener = d3.zoom()
     	.scaleExtent([0.2, 30])
     	.on("zoom", defaultZoom);
     

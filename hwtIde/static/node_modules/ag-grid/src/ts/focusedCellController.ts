@@ -1,14 +1,14 @@
 import {Bean, Autowired, PostConstruct} from "./context/context";
 import {EventService} from "./eventService";
 import {Column} from "./entities/column";
-import {Events} from "./events";
+import {CellFocusedEvent, Events} from "./events";
 import {GridOptionsWrapper} from "./gridOptionsWrapper";
-import {ColDef} from "./entities/colDef";
-import {ColumnController} from "./columnController/columnController";
+import {ColumnApi, ColumnController} from "./columnController/columnController";
 import {Utils as _} from "./utils";
 import {GridCell} from "./entities/gridCell";
-import {Constants} from "./constants";
 import {RowNode} from "./entities/rowNode";
+import {GridApi} from "./gridApi";
+import {CellComp} from "./rendering/cellComp";
 
 @Bean('focusedCellController')
 export class FocusedCellController {
@@ -16,6 +16,8 @@ export class FocusedCellController {
     @Autowired('eventService') private eventService: EventService;
     @Autowired('gridOptionsWrapper') private gridOptionsWrapper: GridOptionsWrapper;
     @Autowired('columnController') private columnController: ColumnController;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     private focusedCell: GridCell;
 
@@ -55,13 +57,13 @@ export class FocusedCellController {
             return null;
         }
         
-        var browserFocusedCell = this.getGridCellForDomElement(document.activeElement);
+        let browserFocusedCell = this.getGridCellForDomElement(document.activeElement);
         if (!browserFocusedCell) {
             return null;
         }
 
-        var gridFocusId = this.focusedCell.createId();
-        var browserFocusId = browserFocusedCell.createId();
+        let gridFocusId = this.focusedCell.createId();
+        let browserFocusId = browserFocusedCell.createId();
 
         if (gridFocusId === browserFocusId) {
             return this.focusedCell;
@@ -71,63 +73,25 @@ export class FocusedCellController {
     }
 
     private getGridCellForDomElement(eBrowserCell: Node): GridCell {
-        if (!eBrowserCell) {
-            return null;
-        }
 
-        var column: Column = null;
-        var row: number  = null;
-        var floating: string = null;
-        var that = this;
-
-        while (eBrowserCell) {
-            checkRow(eBrowserCell);
-            checkColumn(eBrowserCell);
-            eBrowserCell = eBrowserCell.parentNode;
-        }
-
-        if (_.exists(column) && _.exists(row)) {
-            var gridCell = new GridCell({rowIndex: row, floating: floating, column: column});
-            return gridCell;
-        } else {
-            return null;
-        }
-
-        function checkRow(eTarget: Node): void {
-            // match the column by checking a) it has a valid colId and b) it has the 'ag-cell' class
-            var rowId = _.getElementAttribute(eTarget, 'row');
-            if (_.exists(rowId) && _.containsClass(eTarget, 'ag-row')) {
-                if (rowId.indexOf('ft')===0) {
-                    floating = Constants.FLOATING_TOP;
-                    rowId = rowId.substr(3);
-                } else if (rowId.indexOf('fb')===0) {
-                    floating = Constants.FLOATING_BOTTOM;
-                    rowId = rowId.substr(3);
-                } else {
-                    floating = null;
-                }
-                row = parseInt(rowId);
+        let ePointer = eBrowserCell;
+        while (ePointer) {
+            let cellComp = <CellComp> this.gridOptionsWrapper.getDomData(ePointer, CellComp.DOM_DATA_KEY_CELL_COMP);
+            if (cellComp) {
+                return cellComp.getGridCell();
             }
+            ePointer = ePointer.parentNode;
         }
 
-        function checkColumn(eTarget: Node): void {
-            // match the column by checking a) it has a valid colId and b) it has the 'ag-cell' class
-            var colId = _.getElementAttribute(eTarget, 'colid');
-            if (_.exists(colId) && _.containsClass(eTarget, 'ag-cell')) {
-                var foundColumn = that.columnController.getGridColumn(colId);
-                if (foundColumn) {
-                    column = foundColumn;
-                }
-            }
-        }
+        return null;
     }
 
-    public setFocusedCell(rowIndex: number, colKey: Column|ColDef|string, floating: string, forceBrowserFocus = false): void {
+    public setFocusedCell(rowIndex: number, colKey: string|Column, floating: string, forceBrowserFocus = false): void {
         if (this.gridOptionsWrapper.isSuppressCellSelection()) {
             return;
         }
 
-        var column = _.makeNull(this.columnController.getGridColumn(colKey));
+        let column = _.makeNull(this.columnController.getGridColumn(colKey));
         this.focusedCell = new GridCell({rowIndex: rowIndex,
                                         floating: _.makeNull(floating),
                                         column: column});
@@ -141,7 +105,7 @@ export class FocusedCellController {
     }
 
     public isRowNodeFocused(rowNode: RowNode): boolean {
-        return this.isRowFocused(rowNode.rowIndex, rowNode.floating);
+        return this.isRowFocused(rowNode.rowIndex, rowNode.rowPinned);
     }
 
     public isAnyCellFocused(): boolean {
@@ -150,23 +114,28 @@ export class FocusedCellController {
 
     public isRowFocused(rowIndex: number, floating: string): boolean {
         if (_.missing(this.focusedCell)) { return false; }
-        var floatingOrNull = _.makeNull(floating);
+        let floatingOrNull = _.makeNull(floating);
         return this.focusedCell.rowIndex === rowIndex && this.focusedCell.floating === floatingOrNull;
     }
 
     private onCellFocused(forceBrowserFocus: boolean): void {
-        var event = {
+        let event: CellFocusedEvent = {
+            type: Events.EVENT_CELL_FOCUSED,
+            forceBrowserFocus: forceBrowserFocus,
             rowIndex: <number> null,
             column: <Column> null,
             floating: <string> null,
-            forceBrowserFocus: forceBrowserFocus
+            api: this.gridApi,
+            columnApi: this.columnApi,
+            rowPinned: <string> null
         };
+
         if (this.focusedCell) {
             event.rowIndex = this.focusedCell.rowIndex;
             event.column = this.focusedCell.column;
-            event.floating = this.focusedCell.floating;
+            event.rowPinned = this.focusedCell.floating;
         }
 
-        this.eventService.dispatchEvent(Events.EVENT_CELL_FOCUSED, event);
+        this.eventService.dispatchEvent(event);
     }
 }

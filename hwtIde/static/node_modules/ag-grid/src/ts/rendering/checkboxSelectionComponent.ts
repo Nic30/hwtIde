@@ -4,14 +4,11 @@ import {RowNode} from "../entities/rowNode";
 import {Utils as _} from '../utils';
 import {Autowired, PostConstruct} from "../context/context";
 import {GridOptionsWrapper} from "../gridOptionsWrapper";
-import {SvgFactory} from "../svgFactory";
 import {Column} from "../entities/column";
 import {Events} from "../events";
 import {EventService} from "../eventService";
 import {GridApi} from "../gridApi";
 import {ColumnApi} from "../columnController/columnController";
-
-var svgFactory = SvgFactory.getInstance();
 
 export class CheckboxSelectionComponent extends Component {
 
@@ -34,37 +31,37 @@ export class CheckboxSelectionComponent extends Component {
     }
 
     private createAndAddIcons(): void {
-        this.eCheckedIcon = _.createIconNoSpan('checkboxChecked', this.gridOptionsWrapper, null, svgFactory.createCheckboxCheckedIcon);
-        this.eUncheckedIcon = _.createIconNoSpan('checkboxUnchecked', this.gridOptionsWrapper, null, svgFactory.createCheckboxUncheckedIcon);
-        this.eIndeterminateIcon = _.createIconNoSpan('checkboxIndeterminate', this.gridOptionsWrapper, null, svgFactory.createCheckboxIndeterminateIcon);
+        this.eCheckedIcon = _.createIconNoSpan('checkboxChecked', this.gridOptionsWrapper, this.column);
+        this.eUncheckedIcon = _.createIconNoSpan('checkboxUnchecked', this.gridOptionsWrapper, this.column);
+        this.eIndeterminateIcon = _.createIconNoSpan('checkboxIndeterminate', this.gridOptionsWrapper, this.column);
 
-        var eGui = this.getGui();
-        eGui.appendChild(this.eCheckedIcon);
-        eGui.appendChild(this.eUncheckedIcon);
-        eGui.appendChild(this.eIndeterminateIcon);
+        let element = this.getHtmlElement();
+        element.appendChild(this.eCheckedIcon);
+        element.appendChild(this.eUncheckedIcon);
+        element.appendChild(this.eIndeterminateIcon);
     }
 
     private onSelectionChanged(): void {
-        var state = this.rowNode.isSelected();
+        let state = this.rowNode.isSelected();
         _.setVisible(this.eCheckedIcon, state === true);
         _.setVisible(this.eUncheckedIcon, state === false);
         _.setVisible(this.eIndeterminateIcon, typeof state !== 'boolean');
     }
 
     private onCheckedClicked(): number {
-        var groupSelectsFiltered = this.gridOptionsWrapper.isGroupSelectsFiltered();
-        var updatedCount = this.rowNode.setSelectedParams({newValue: false, groupSelectsFiltered: groupSelectsFiltered});
+        let groupSelectsFiltered = this.gridOptionsWrapper.isGroupSelectsFiltered();
+        let updatedCount = this.rowNode.setSelectedParams({newValue: false, groupSelectsFiltered: groupSelectsFiltered});
         return updatedCount;
      }
 
     private onUncheckedClicked(event: MouseEvent): number {
-        var groupSelectsFiltered = this.gridOptionsWrapper.isGroupSelectsFiltered();
-        var updatedCount = this.rowNode.setSelectedParams({newValue: true, rangeSelect: event.shiftKey, groupSelectsFiltered: groupSelectsFiltered});
+        let groupSelectsFiltered = this.gridOptionsWrapper.isGroupSelectsFiltered();
+        let updatedCount = this.rowNode.setSelectedParams({newValue: true, rangeSelect: event.shiftKey, groupSelectsFiltered: groupSelectsFiltered});
         return updatedCount;
     }
 
     private onIndeterminateClicked(event: MouseEvent): void {
-        var result = this.onUncheckedClicked(event);
+        let result = this.onUncheckedClicked(event);
         if (result===0) {
             this.onCheckedClicked();
         }
@@ -72,11 +69,11 @@ export class CheckboxSelectionComponent extends Component {
 
     public init(params: any): void {
 
-        this.createAndAddIcons();
-
         this.rowNode = params.rowNode;
         this.column = params.column;
         this.visibleFunc = params.visibleFunc;
+
+        this.createAndAddIcons();
 
         this.onSelectionChanged();
 
@@ -105,7 +102,7 @@ export class CheckboxSelectionComponent extends Component {
     }
 
     private createParams(): any {
-        var params = {
+        let params = {
             node: this.rowNode,
             data: this.rowNode.data,
             column: this.column,

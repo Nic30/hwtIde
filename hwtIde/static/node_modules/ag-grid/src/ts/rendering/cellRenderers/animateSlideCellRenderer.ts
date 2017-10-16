@@ -36,16 +36,16 @@ export class AnimateSlideCellRenderer extends Component implements ICellRenderer
         // below we keep checking this, and stop working on the animation
         // if it no longer matches - this means another animation has started
         // and this one is stale.
-        var refreshCountCopy = this.refreshCount;
+        let refreshCountCopy = this.refreshCount;
 
         // if old animation, remove it
         if (this.ePrevious) {
-            this.getGui().removeChild(this.ePrevious);
+            this.getHtmlElement().removeChild(this.ePrevious);
         }
 
         this.ePrevious = _.loadTemplate('<span class="ag-value-slide-previous ag-value-slide-out"></span>');
         this.ePrevious.innerHTML = this.eCurrent.innerHTML;
-        this.getGui().insertBefore(this.ePrevious, this.eCurrent);
+        this.getHtmlElement().insertBefore(this.ePrevious, this.eCurrent);
 
         // having timeout of 0 allows use to skip to the next css turn,
         // so we know the previous css classes have been applied. so the
@@ -57,14 +57,14 @@ export class AnimateSlideCellRenderer extends Component implements ICellRenderer
 
         setTimeout( ()=> {
             if (refreshCountCopy !== this.refreshCount) { return; }
-            this.getGui().removeChild(this.ePrevious);
+            this.getHtmlElement().removeChild(this.ePrevious);
             this.ePrevious = null;
         }, 3000);
     }
 
-    public refresh(params: any): void {
+    public refresh(params: any): boolean {
 
-        var value = params.value;
+        let value = params.value;
 
         if (_.missing(value)) {
             value = '';
@@ -85,5 +85,7 @@ export class AnimateSlideCellRenderer extends Component implements ICellRenderer
         } else {
             this.eCurrent.innerHTML = '';
         }
+
+        return true;
     }
 }

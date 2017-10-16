@@ -6,10 +6,10 @@ var tasks = [ {
 	"codeRef" : "main.cpp:14"
 } ];
 
-var taskNames = [ "D Job", "P Job", "E Job", "A Job", "N Job" ];
 
  * 
  * */
+var taskNames = [ "D Job", "P Job", "E Job", "A Job", "N Job" ];
 var taskStatus = {
 	"SUCCEEDED" : "bar",
 	"FAILED" : "bar-failed",
@@ -28,11 +28,13 @@ if (tasks.length > 0) {
 	});
 	min = tasks[0].start;
 }
-var format = "d";
 var timeDomainString = "ns";
 
-var gantt = d3.gantt().taskTypes(taskNames).taskStatus(taskStatus).tickFormat(
-		format).height(500).width(1700);
+var gantt = d3.gantt(d3.select("#chartWraper"))
+              .taskTypes(taskNames)
+              .taskStatus(taskStatus)
+              .height(500)
+              .width(1000);
 
 gantt.timeDomainMode("fixed");
 fitTasks(timeDomainString);
@@ -46,7 +48,6 @@ function fitTasks(timeDomainString) {
 	 * getEnd() ]);
 	 */
 	gantt.timeDomain([ 0, getEnd() ]);
-	gantt.tickFormat(format);
 	gantt.redraw(tasks);
 }
 
@@ -59,7 +60,6 @@ function getEnd() {
 }
 
 function addTask() {
-
 	var lastEnd = getEnd();
 	var taskStatusKeys = Object.keys(taskStatus);
 	var taskStatusName = taskStatusKeys[Math.floor(Math.random()

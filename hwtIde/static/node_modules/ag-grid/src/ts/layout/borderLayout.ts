@@ -2,45 +2,46 @@ import {Utils as _} from '../utils';
 
 export class BorderLayout {
 
+    // this is used if there user has not specified any north or south parts
     private static TEMPLATE_FULL_HEIGHT =
         '<div class="ag-bl ag-bl-full-height">' +
-        '  <div class="ag-bl-west ag-bl-full-height-west" id="west"></div>' +
-        '  <div class="ag-bl-east ag-bl-full-height-east" id="east"></div>' +
-        '  <div class="ag-bl-center ag-bl-full-height-center" id="center"></div>' +
-        '  <div class="ag-bl-overlay" id="overlay"></div>' +
+        '  <div class="ag-bl-west ag-bl-full-height-west" ref="west"></div>' +
+        '  <div class="ag-bl-east ag-bl-full-height-east" ref="east"></div>' +
+        '  <div class="ag-bl-center ag-bl-full-height-center" ref="center"></div>' +
+        '  <div class="ag-bl-overlay" ref="overlay"></div>' +
         '</div>';
 
     private static TEMPLATE_NORMAL =
         '<div class="ag-bl ag-bl-normal">' +
-        '  <div id="north"></div>' +
-        '  <div class="ag-bl-center-row ag-bl-normal-center-row" id="centerRow">' +
-        '    <div class="ag-bl-west ag-bl-normal-west" id="west"></div>' +
-        '    <div class="ag-bl-east ag-bl-normal-east" id="east"></div>' +
-        '    <div class="ag-bl-center ag-bl-normal-center" id="center"></div>' +
+        '  <div ref="north"></div>' +
+        '  <div class="ag-bl-center-row ag-bl-normal-center-row" ref="centerRow">' +
+        '    <div class="ag-bl-west ag-bl-normal-west" ref="west"></div>' +
+        '    <div class="ag-bl-east ag-bl-normal-east" ref="east"></div>' +
+        '    <div class="ag-bl-center ag-bl-normal-center" ref="center"></div>' +
         '  </div>' +
-        '  <div id="south"></div>' +
-        '  <div class="ag-bl-overlay" id="overlay"></div>' +
+        '  <div ref="south"></div>' +
+        '  <div class="ag-bl-overlay" ref="overlay"></div>' +
         '</div>';
 
     private static TEMPLATE_DONT_FILL =
         '<div class="ag-bl ag-bl-dont-fill">' +
-        '  <div id="north"></div>' +
-        '  <div id="centerRow">' +
-        '    <div id="west"></div>' +
-        '    <div id="east"></div>' +
-        '    <div id="center"></div>' +
+        '  <div ref="north"></div>' +
+        '  <div ref="centerRow" class="ag-bl-center-row ag-bl-dont-fill-center-row">' +
+        '    <div ref="west" class="ag-bl-west ag-bl-dont-fill-west"></div>' +
+        '    <div ref="east" class="ag-bl-east ag-bl-dont-fill-east"></div>' +
+        '    <div ref="center" class="ag-bl-center ag-bl-dont-fill-center"></div>' +
         '  </div>' +
-        '  <div id="south"></div>' +
-        '  <div class="ag-bl-overlay" id="overlay"></div>' +
+        '  <div ref="south"></div>' +
+        '  <div class="ag-bl-overlay" ref="overlay"></div>' +
         '</div>';
 
-    private eNorthWrapper: any;
-    private eSouthWrapper: any;
-    private eEastWrapper: any;
-    private eWestWrapper: any;
-    private eCenterWrapper: any;
-    private eOverlayWrapper: any;
-    private eCenterRow: any;
+    private eNorthWrapper: HTMLElement;
+    private eSouthWrapper: HTMLElement;
+    private eEastWrapper: HTMLElement;
+    private eWestWrapper: HTMLElement;
+    private eCenterWrapper: HTMLElement;
+    private eOverlayWrapper: HTMLElement;
+    private eCenterRow: HTMLElement;
 
     private eNorthChildLayout: any;
     private eSouthChildLayout: any;
@@ -50,7 +51,8 @@ export class BorderLayout {
 
     private isLayoutPanel: any;
     private fullHeight: any;
-    private layoutActive: any;
+    private horizontalLayoutActive: boolean;
+    private verticalLayoutActive: boolean;
 
     private eGui: HTMLElement;
     private id: string;
@@ -69,17 +71,23 @@ export class BorderLayout {
 
         this.fullHeight = !params.north && !params.south;
 
-        var template: any;
-        if (!params.dontFill) {
+        let template: any;
+        if (params.dontFill) {
+            template = BorderLayout.TEMPLATE_DONT_FILL;
+            this.horizontalLayoutActive = false;
+            this.verticalLayoutActive = false;
+        } else if (params.fillHorizontalOnly) {
+            template = BorderLayout.TEMPLATE_DONT_FILL;
+            this.horizontalLayoutActive = true;
+            this.verticalLayoutActive = false;
+        } else {
             if (this.fullHeight) {
                 template = BorderLayout.TEMPLATE_FULL_HEIGHT;
             } else {
                 template = BorderLayout.TEMPLATE_NORMAL;
             }
-            this.layoutActive = true;
-        } else {
-            template = BorderLayout.TEMPLATE_DONT_FILL;
-            this.layoutActive = false;
+            this.horizontalLayoutActive = true;
+            this.verticalLayoutActive = true;
         }
 
         this.eGui = _.loadTemplate(template);
@@ -109,14 +117,21 @@ export class BorderLayout {
         });
     }
 
+    // this logic is also in Component.ts - the plan is sometime in the future,
+    // this layout panel may (or may not) extend the Component class, and somehow
+    // act as a component.
+    private getRefElement(refName: string): HTMLElement {
+        return <HTMLElement> this.eGui.querySelector('[ref="' + refName + '"]');
+    }
+
     private setupPanels(params: any) {
-        this.eNorthWrapper = this.eGui.querySelector('#north');
-        this.eSouthWrapper = this.eGui.querySelector('#south');
-        this.eEastWrapper = this.eGui.querySelector('#east');
-        this.eWestWrapper = this.eGui.querySelector('#west');
-        this.eCenterWrapper = this.eGui.querySelector('#center');
-        this.eOverlayWrapper = this.eGui.querySelector('#overlay');
-        this.eCenterRow = this.eGui.querySelector('#centerRow');
+        this.eNorthWrapper = this.getRefElement('north');
+        this.eSouthWrapper = this.getRefElement('south');
+        this.eEastWrapper = this.getRefElement('east');
+        this.eWestWrapper = this.getRefElement('west');
+        this.eCenterWrapper = this.getRefElement('center');
+        this.eOverlayWrapper = this.getRefElement('overlay');
+        this.eCenterRow = this.getRefElement('centerRow');
 
         this.eNorthChildLayout = this.setupPanel(params.north, this.eNorthWrapper);
         this.eSouthChildLayout = this.setupPanel(params.south, this.eSouthWrapper);
@@ -151,13 +166,13 @@ export class BorderLayout {
     // returns true if any item changed size, otherwise returns false
     public doLayout() {
 
-        var isVisible = _.isVisible(this.eGui);
+        let isVisible = _.isVisible(this.eGui);
         if (!isVisible) {
             this.visibleLastTime = false;
             return false;
         }
 
-        var atLeastOneChanged = false;
+        let atLeastOneChanged = false;
 
         if (this.visibleLastTime !== isVisible) {
             atLeastOneChanged = true;
@@ -165,23 +180,29 @@ export class BorderLayout {
 
         this.visibleLastTime = true;
 
-        var childLayouts = [this.eNorthChildLayout, this.eSouthChildLayout, this.eEastChildLayout, this.eWestChildLayout];
+        let childLayouts = [this.eNorthChildLayout, this.eSouthChildLayout, this.eEastChildLayout, this.eWestChildLayout];
         childLayouts.forEach(childLayout => {
-            var childChangedSize = this.layoutChild(childLayout);
+            let childChangedSize = this.layoutChild(childLayout);
             if (childChangedSize) {
                 atLeastOneChanged = true;
             }
         });
 
-        if (this.layoutActive) {
-            var ourHeightChanged = this.layoutHeight();
-            var ourWidthChanged = this.layoutWidth();
-            if (ourHeightChanged || ourWidthChanged) {
+        if (this.horizontalLayoutActive) {
+            let ourWidthChanged = this.layoutWidth();
+            if (ourWidthChanged) {
                 atLeastOneChanged = true;
             }
         }
 
-        var centerChanged = this.layoutChild(this.eCenterChildLayout);
+        if (this.verticalLayoutActive) {
+            let ourHeightChanged = this.layoutHeight();
+            if (ourHeightChanged) {
+                atLeastOneChanged = true;
+            }
+        }
+
+        let centerChanged = this.layoutChild(this.eCenterChildLayout);
         if (centerChanged) {
             atLeastOneChanged = true;
         }
@@ -212,7 +233,7 @@ export class BorderLayout {
     // full height never changes the height, because the center is always 100%,
     // however we do check for change, to inform the listeners
     private layoutHeightFullHeight(): boolean {
-        var centerHeight = _.offsetHeight(this.eGui);
+        let centerHeight = _.offsetHeight(this.eGui);
         if (centerHeight < 0) {
             centerHeight = 0;
         }
@@ -226,11 +247,11 @@ export class BorderLayout {
 
     private layoutHeightNormal(): boolean {
 
-        var totalHeight = _.offsetHeight(this.eGui);
-        var northHeight = _.offsetHeight(this.eNorthWrapper);
-        var southHeight = _.offsetHeight(this.eSouthWrapper);
+        let totalHeight = _.offsetHeight(this.eGui);
+        let northHeight = _.offsetHeight(this.eNorthWrapper);
+        let southHeight = _.offsetHeight(this.eSouthWrapper);
 
-        var centerHeight = totalHeight - northHeight - southHeight;
+        let centerHeight = totalHeight - northHeight - southHeight;
         if (centerHeight < 0) {
             centerHeight = 0;
         }
@@ -249,16 +270,16 @@ export class BorderLayout {
     }
 
     private layoutWidth(): boolean {
-        var totalWidth = _.offsetWidth(this.eGui);
-        var eastWidth = _.offsetWidth(this.eEastWrapper);
-        var westWidth = _.offsetWidth(this.eWestWrapper);
+        let totalWidth = _.offsetWidth(this.eGui);
+        let eastWidth = _.offsetWidth(this.eEastWrapper);
+        let westWidth = _.offsetWidth(this.eWestWrapper);
 
-        var centerWidth = totalWidth - eastWidth - westWidth;
+        let centerWidth = totalWidth - eastWidth - westWidth;
         if (centerWidth < 0) {
             centerWidth = 0;
         }
 
-        var atLeastOneChanged = false;
+        let atLeastOneChanged = false;
 
         if (this.centerLeftMarginLastTime !== westWidth) {
             this.centerLeftMarginLastTime = westWidth;
@@ -298,7 +319,7 @@ export class BorderLayout {
     }
 
     public showOverlay(key: string) {
-        var overlay = this.overlays ? this.overlays[key] : null;
+        let overlay = this.overlays ? this.overlays[key] : null;
         if (overlay) {
             _.removeAllChildren(this.eOverlayWrapper);
             this.eOverlayWrapper.style.display = '';

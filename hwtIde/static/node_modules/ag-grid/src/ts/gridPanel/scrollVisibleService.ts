@@ -1,8 +1,9 @@
 import {Bean, Autowired} from "../context/context";
 import {Utils as _} from "../utils";
 import {EventService} from "../eventService";
-import {Events} from "../events";
-import {ColumnController} from "../columnController/columnController";
+import {Events, ScrollVisibilityChangedEvent} from "../events";
+import {ColumnApi, ColumnController} from "../columnController/columnController";
+import {GridApi} from "../gridApi";
 
 export interface SetScrollsVisibleParams {
     vBody: boolean;
@@ -16,6 +17,8 @@ export class ScrollVisibleService {
 
     @Autowired('eventService') private eventService: EventService;
     @Autowired('columnController') private columnController: ColumnController;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     private vBody: boolean;
     private hBody: boolean;
@@ -37,7 +40,12 @@ export class ScrollVisibleService {
             this.vPinnedLeft = params.vPinnedLeft;
             this.vPinnedRight = params.vPinnedRight;
 
-            this.eventService.dispatchEvent(Events.EVENT_SCROLL_VISIBILITY_CHANGED);
+            let event: ScrollVisibilityChangedEvent = {
+                type: Events.EVENT_SCROLL_VISIBILITY_CHANGED,
+                api: this.gridApi,
+                columnApi: this.columnApi
+            };
+            this.eventService.dispatchEvent(event);
         }
 
     }
@@ -63,7 +71,7 @@ export class ScrollVisibleService {
     }
 
     public getPinnedLeftWithScrollWidth(): number {
-        var result = this.getPinnedLeftWidth();
+        let result = this.getPinnedLeftWidth();
         if (this.vPinnedLeft) {
             result += _.getScrollbarWidth();
         }
@@ -75,7 +83,7 @@ export class ScrollVisibleService {
     }
 
     public getPinnedRightWithScrollWidth(): number {
-        var result = this.getPinnedRightWidth();
+        let result = this.getPinnedRightWidth();
         if (this.vPinnedRight) {
             result += _.getScrollbarWidth();
         }

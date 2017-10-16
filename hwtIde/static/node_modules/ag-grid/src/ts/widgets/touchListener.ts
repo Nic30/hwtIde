@@ -2,6 +2,15 @@
 import {EventService} from "../eventService";
 import {IEventEmitter} from "../interfaces/iEventEmitter";
 import {Utils as _} from "../utils";
+import {AgEvent} from "../events";
+
+export interface TapEvent extends AgEvent {
+    touchStart: Touch;
+}
+
+export interface LongTapEvent extends AgEvent {
+    touchStart: Touch;
+}
 
 export class TouchListener implements IEventEmitter {
 
@@ -24,24 +33,24 @@ export class TouchListener implements IEventEmitter {
     constructor(eElement: HTMLElement) {
         this.eElement = eElement;
 
-        var startListener = this.onTouchStart.bind(this);
-        var moveListener = this.onTouchMove.bind(this);
-        var endListener = this.onTouchEnd.bind(this);
+        let startListener = this.onTouchStart.bind(this);
+        let moveListener = this.onTouchMove.bind(this);
+        let endListener = this.onTouchEnd.bind(this);
 
-        this.eElement.addEventListener('touchstart', startListener);
-        this.eElement.addEventListener('touchmove', moveListener);
-        this.eElement.addEventListener('touchend', endListener);
+        this.eElement.addEventListener('touchstart', startListener, <any>{passive:true});
+        this.eElement.addEventListener('touchmove', moveListener, <any>{passive:true});
+        this.eElement.addEventListener('touchend', endListener, <any>{passive:true});
 
         this.destroyFuncs.push( ()=> {
-            this.eElement.addEventListener('touchstart', startListener);
-            this.eElement.addEventListener('touchmove', moveListener);
-            this.eElement.addEventListener('touchend', endListener);
+            this.eElement.addEventListener('touchstart', startListener, <any>{passive:true});
+            this.eElement.addEventListener('touchmove', moveListener, <any>{passive:true});
+            this.eElement.addEventListener('touchend', endListener, <any>{passive:true});
         });
     }
 
     private getActiveTouch(touchList: TouchList): Touch {
-        for (var i = 0; i<touchList.length; i++) {
-            var matches = touchList[i].identifier === this.touchStart.identifier;
+        for (let i = 0; i<touchList.length; i++) {
+            let matches = touchList[i].identifier === this.touchStart.identifier;
             if (matches) {
                 return touchList[i];
             }
@@ -75,7 +84,11 @@ export class TouchListener implements IEventEmitter {
 
             if (this.touching && touchesMatch && !this.moved) {
                 this.moved = true;
-                this.eventService.dispatchEvent(TouchListener.EVENT_LONG_TAP, this.touchStart);
+                let event: LongTapEvent = {
+                    type: TouchListener.EVENT_LONG_TAP,
+                    touchStart: this.touchStart
+                };
+                this.eventService.dispatchEvent(event);
             }
         }, 500);
     }
@@ -83,12 +96,12 @@ export class TouchListener implements IEventEmitter {
     private onTouchMove(touchEvent: TouchEvent): void {
         if (!this.touching) { return; }
 
-        var touch = this.getActiveTouch(touchEvent.touches);
+        let touch = this.getActiveTouch(touchEvent.touches);
         if (!touch) {
             return;
         }
 
-        var eventIsFarAway = !_.areEventsNear(touch, this.touchStart, 4);
+        let eventIsFarAway = !_.areEventsNear(touch, this.touchStart, 4);
         if (eventIsFarAway) {
             this.moved = true;
         }
@@ -99,7 +112,11 @@ export class TouchListener implements IEventEmitter {
         if (!this.touching) { return; }
 
         if (!this.moved) {
-            this.eventService.dispatchEvent(TouchListener.EVENT_TAP, this.touchStart);
+            let event: TapEvent = {
+                type: TouchListener.EVENT_TAP,
+                touchStart: this.touchStart
+            };
+            this.eventService.dispatchEvent(event);
         }
 
         this.touching = false;

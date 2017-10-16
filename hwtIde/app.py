@@ -24,7 +24,8 @@ def index():
 # http://roberto.open-lab.com/2012/06/14/the-javascript-gantt-odyssey/
 @app.route('/gantt/')
 def gantt():
-    return render_template('hls/gantt_chart.html', ganttTasks=[], ganttTaskNames=[])
+    return render_template('hls/gantt_chart.html',
+                           ganttTasks=[], ganttTaskNames=[])
 
 
 app.register_blueprint(connectionsBp)
