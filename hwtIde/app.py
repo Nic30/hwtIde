@@ -3,6 +3,7 @@ from flask.helpers import send_from_directory
 
 from hwtIde.dependencyViews import dependenciesBp
 from hwtIde.hls_connections_views import connectionsBp
+from hwtIde.hls_expr_tree import hlsExprTreeBp
 from hwtIde.wave_views import waveBp
 
 
@@ -31,6 +32,7 @@ def gantt():
 app.register_blueprint(connectionsBp)
 app.register_blueprint(dependenciesBp)
 app.register_blueprint(waveBp)
+app.register_blueprint(hlsExprTreeBp)
 
 if __name__ == '__main__':
     app.run(debug=True)
