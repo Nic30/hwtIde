@@ -80,8 +80,6 @@ export class HeaderRenderer {
         this.setHeight();
     }
 
-    // this is called from the API and refreshes everything, should be broken out
-    // into refresh everything vs just something changed
     public refreshHeader() {
 
         this.setHeight();
@@ -94,9 +92,9 @@ export class HeaderRenderer {
     private setHeight(): void {
         // if forPrint, overlay is missing
         if (this.eHeaderOverlay) {
-            var rowHeight = this.gridOptionsWrapper.getHeaderHeight();
+            let rowHeight = this.gridOptionsWrapper.getHeaderHeight();
             // we can probably get rid of this when we no longer need the overlay
-            var dept = this.columnController.getHeaderRowCount();
+            let dept = this.columnController.getHeaderRowCount();
             this.eHeaderOverlay.style.height = rowHeight + 'px';
             this.eHeaderOverlay.style.top = ((dept-1) * rowHeight) + 'px';
         }

@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "ag-grid":              "latest",
+    "ag-grid-angular":      "latest",
     "angular":              "latest",
     "angular-animate":      "latest",
     "angular-cookies":      "latest",
@@ -20,7 +21,9 @@
     "jquery":               "latest",
     "metismenu":            "latest",
     "mocha":                "latest",
-    "raphael":              "latest"
+    "morris.js":               "latest",
+    "raphael":              "latest",
+    "startbootstrap-sb-admin-2": "latest"
   },
   "devDependencies": {},
   "scripts": {

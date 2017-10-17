@@ -1,19 +1,35 @@
-import {Utils as _} from "../utils";
+import {NumberSequence, Utils as _} from "../utils";
 import {Context} from "../context/context";
 import {BeanStub} from "../context/beanStub";
-import {IComponent} from "../interfaces/iComponent";
+import {IAfterGuiAttachedParams, IComponent} from "../interfaces/iComponent";
+import {AgEvent} from "../events";
 
-export class Component extends BeanStub implements IComponent<any> {
+let compIdSequence = new NumberSequence();
+
+export interface VisibleChangedEvent extends AgEvent {
+    visible: boolean;
+}
+
+export class Component extends BeanStub implements IComponent<any, IAfterGuiAttachedParams> {
 
     public static EVENT_VISIBLE_CHANGED = 'visibleChanged';
 
-    private eGui: HTMLElement;
+    private template: string;
 
-    private childComponents: IComponent<any>[] = [];
+    private eHtmlElement: HTMLElement;
+
+    private childComponents: IComponent<any, IAfterGuiAttachedParams>[] = [];
+
+    private hydrated = false;
 
     private annotatedEventListeners: any[] = [];
 
     private visible = true;
+
+    // unique id for this row component. this is used for getting a reference to the HTML dom.
+    // we cannot use the RowNode id as this is not unique (due to animation, old rows can be lying
+    // around as we create a new rowComp instance for the same row node).
+    private compId = compIdSequence.next();
 
     constructor(template?: string) {
         super();
@@ -22,132 +38,207 @@ export class Component extends BeanStub implements IComponent<any> {
         }
     }
 
+    public setTemplateNoHydrate(template: string): void {
+        this.template = template;
+    }
+
+    public afterGuiAttached(params: IAfterGuiAttachedParams): void {
+        if (!this.eHtmlElement && params.eComponent) {
+            this.setHtmlElement(params.eComponent);
+        }
+    }
+
+    public getCompId(): number {
+        return this.compId;
+    }
+
     public instantiate(context: Context): void {
-        this.instantiateRecurse(this.getGui(), context);
+        let element = this.getHtmlElement();
+        this.instantiateRecurse(element, context);
     }
 
     private instantiateRecurse(parentNode: Element, context: Context): void {
-        var childCount = parentNode.childNodes ? parentNode.childNodes.length : 0;
-        for (var i = 0; i<childCount; i++) {
-            var childNode = parentNode.childNodes[i];
-            var newComponent = context.createComponent(<Element>childNode);
+        let childCount = parentNode.childNodes ? parentNode.childNodes.length : 0;
+        for (let i = 0; i < childCount; i++) {
+            let childNode = parentNode.childNodes[i];
+            let newComponent = context.createComponent(<Element>childNode);
             if (newComponent) {
                 this.swapComponentForNode(newComponent, parentNode, childNode);
             } else {
                 if (childNode.childNodes) {
                     this.instantiateRecurse(<Element>childNode, context);
+
                 }
             }
         }
     }
 
     private swapComponentForNode(newComponent: Component, parentNode: Element, childNode: Node): void {
-        parentNode.replaceChild(newComponent.getGui(), childNode);
+        let element = newComponent.getHtmlElement();
+        parentNode.replaceChild(element, childNode);
         this.childComponents.push(newComponent);
         this.swapInComponentForQuerySelectors(newComponent, childNode);
     }
 
     private swapInComponentForQuerySelectors(newComponent: Component, childNode: Node): void {
-        var metaData = (<any>this).__agComponentMetaData;
-        if (!metaData || !metaData.querySelectors) { return; }
 
-        var thisNoType = <any> this;
-        metaData.querySelectors.forEach( (querySelector: any) => {
-            if (thisNoType[querySelector.attributeName]===childNode) {
-                thisNoType[querySelector.attributeName] = newComponent;
+        let thisProto: any = Object.getPrototypeOf(this);
+
+        let thisNoType = <any> this;
+        while (thisProto != null) {
+            let metaData = thisProto.__agComponentMetaData;
+            let currentProtoName = (thisProto.constructor).name;
+
+            if (metaData && metaData[currentProtoName] && metaData[currentProtoName].querySelectors) {
+                metaData[currentProtoName].querySelectors.forEach((querySelector: any) => {
+                    if (thisNoType[querySelector.attributeName] === childNode) {
+                        thisNoType[querySelector.attributeName] = newComponent;
+                    }
+                });
             }
-        } );
+
+            thisProto = Object.getPrototypeOf(thisProto);
+        }
     }
 
     public setTemplate(template: string): void {
+        this.template = template;
         let eGui = _.loadTemplate(<string>template);
-        this.setTemplateFromElement(eGui);
+        this.setHtmlElement(eGui);
     }
 
-    public setTemplateFromElement(element: HTMLElement): void {
-        this.eGui = element;
-        (<any>this.eGui).__agComponent = this;
+    public setHtmlElement(element: HTMLElement): void {
+        this.eHtmlElement = element;
+        (<any>this.eHtmlElement).__agComponent = this;
+        this.hydrate();
+    }
+
+    private hydrate(): void {
         this.addAnnotatedEventListeners();
         this.wireQuerySelectors();
+        this.hydrated = true;
     }
 
     public attributesSet(): void {
     }
 
     private wireQuerySelectors(): void {
-        var metaData = (<any>this).__agComponentMetaData;
-        if (!metaData || !metaData.querySelectors) { return; }
+        let element = this.getHtmlElement();
+        if (!element) {
+            return;
+        }
 
-        if (!this.eGui) { return; }
+        let thisProto: any = Object.getPrototypeOf(this);
 
-        var thisNoType = <any> this;
-        metaData.querySelectors.forEach( (querySelector: any) => {
-            var resultOfQuery = this.eGui.querySelector(querySelector.querySelector);
-            if (resultOfQuery) {
-                var backingComponent = (<any>resultOfQuery).__agComponent;
-                if (backingComponent) {
-                    thisNoType[querySelector.attributeName] = backingComponent;
-                } else {
-                    thisNoType[querySelector.attributeName] = resultOfQuery;
-                }
-            } else {
-                // put debug msg in here if query selector fails???
+        while (thisProto != null) {
+            let metaData = thisProto.__agComponentMetaData;
+            let currentProtoName = (thisProto.constructor).name;
+
+            if (metaData && metaData[currentProtoName] && metaData[currentProtoName].querySelectors) {
+                let thisNoType = <any> this;
+                metaData[currentProtoName].querySelectors.forEach((querySelector: any) => {
+                    let resultOfQuery = element.querySelector(querySelector.querySelector);
+                    if (resultOfQuery) {
+                        let backingComponent = (<any>resultOfQuery).__agComponent;
+                        if (backingComponent) {
+                            thisNoType[querySelector.attributeName] = backingComponent;
+                        } else {
+                            thisNoType[querySelector.attributeName] = resultOfQuery;
+                        }
+                    } else {
+                        // put debug msg in here if query selector fails???
+                    }
+                });
             }
-        } );
+
+            thisProto = Object.getPrototypeOf(thisProto);
+        }
     }
 
     private addAnnotatedEventListeners(): void {
         this.removeAnnotatedEventListeners();
+        let element = this.getHtmlElement();
 
-        var metaData = (<any>this).__agComponentMetaData;
-        if (!metaData || !metaData.listenerMethods) { return; }
-
-        if (!this.eGui) { return; }
-
-        if (!this.annotatedEventListeners) {
-            this.annotatedEventListeners = [];
+        if (!element) {
+            return;
         }
 
-        metaData.listenerMethods.forEach( (eventListener: any) => {
-            var listener = (<any>this)[eventListener.methodName].bind(this);
-            this.eGui.addEventListener(eventListener.eventName, listener);
-            this.annotatedEventListeners.push({eventName: eventListener.eventName, listener: listener});
-        });
+        let thisProto: any = Object.getPrototypeOf(this);
+
+        while (thisProto != null) {
+            let metaData = thisProto.__agComponentMetaData;
+            let currentProtoName = (thisProto.constructor).name;
+
+            if (metaData && metaData[currentProtoName] && metaData[currentProtoName].listenerMethods) {
+
+                if (!this.annotatedEventListeners) {
+                    this.annotatedEventListeners = [];
+                }
+
+                metaData[currentProtoName].listenerMethods.forEach((eventListener: any) => {
+                    let listener = (<any>this)[eventListener.methodName].bind(this);
+                    element.addEventListener(eventListener.eventName, listener);
+                    this.annotatedEventListeners.push({eventName: eventListener.eventName, listener: listener});
+                });
+            }
+
+            thisProto = Object.getPrototypeOf(thisProto);
+        }
     }
 
     private removeAnnotatedEventListeners(): void {
-        if (!this.annotatedEventListeners) { return; }
-        if (!this.eGui) { return; }
-        this.annotatedEventListeners.forEach( (eventListener: any) => {
-            this.eGui.removeEventListener(eventListener.eventName, eventListener.listener);
+        if (!this.annotatedEventListeners) {
+            return;
+        }
+        let element = this.getHtmlElement();
+        if (!element) {
+            return;
+        }
+        this.annotatedEventListeners.forEach((eventListener: any) => {
+            element.removeEventListener(eventListener.eventName, eventListener.listener);
         });
         this.annotatedEventListeners = null;
     }
 
-    public getGui(): HTMLElement {
-        return this.eGui;
+    public getGui(): HTMLElement | string {
+        if (this.eHtmlElement) {
+            return this.eHtmlElement;
+        } else {
+            return this.template;
+        }
     }
 
-    // this method is for older code, that wants to provide the gui element,
-    // it is not intended for this to be in ag-Stack
-    protected setGui(eGui: HTMLElement): void {
-        this.eGui = eGui;
+    public getHtmlElement(): HTMLElement {
+        if (this.eHtmlElement) {
+            return this.eHtmlElement;
+        } else {
+            console.warn('getHtmlElement() called on component before gui was attached');
+            return null;
+        }
+    }
+
+    // used by Cell Comp (and old header code), design is a bit poor, overlap with afterGuiAttached???
+    protected setHtmlElementNoHydrate(eHtmlElement: HTMLElement): void {
+        this.eHtmlElement = eHtmlElement;
     }
 
     protected queryForHtmlElement(cssSelector: string): HTMLElement {
-        return <HTMLElement> this.eGui.querySelector(cssSelector);
+        let element = this.getHtmlElement();
+        return <HTMLElement> element.querySelector(cssSelector);
     }
 
     protected queryForHtmlInputElement(cssSelector: string): HTMLInputElement {
-        return <HTMLInputElement> this.eGui.querySelector(cssSelector);
+        let element = this.getHtmlElement();
+        return <HTMLInputElement> element.querySelector(cssSelector);
     }
 
-    public appendChild(newChild: Node|IComponent<any>): void {
+    public appendChild(newChild: Node | IComponent<any, IAfterGuiAttachedParams>): void {
+        let element = this.getHtmlElement();
         if (_.isNodeOrElement(newChild)) {
-            this.eGui.appendChild(<Node>newChild);
+            element.appendChild(<Node>newChild);
         } else {
-            var childComponent = <IComponent<any>>newChild;
-            this.eGui.appendChild(childComponent.getGui());
+            let childComponent = <IComponent<any, IAfterGuiAttachedParams>>newChild;
+            element.appendChild(_.ensureElement(childComponent.getGui()));
             this.childComponents.push(childComponent);
         }
     }
@@ -164,42 +255,53 @@ export class Component extends BeanStub implements IComponent<any> {
     }
 
     public setVisible(visible: boolean): void {
+        let element = this.getHtmlElement();
         if (visible !== this.visible) {
             this.visible = visible;
-            _.addOrRemoveCssClass(this.eGui, 'ag-hidden', !visible);
-            this.dispatchEvent(Component.EVENT_VISIBLE_CHANGED, {visible: this.visible});
+            _.addOrRemoveCssClass(element, 'ag-hidden', !visible);
+            let event: VisibleChangedEvent = {
+                type: Component.EVENT_VISIBLE_CHANGED,
+                visible: this.visible
+            };
+            this.dispatchEvent(event);
         }
     }
 
     public addOrRemoveCssClass(className: string, addOrRemove: boolean): void {
-        _.addOrRemoveCssClass(this.eGui, className, addOrRemove);
+        let element = this.getHtmlElement();
+        _.addOrRemoveCssClass(element, className, addOrRemove);
     }
-    
+
     public destroy(): void {
         super.destroy();
-        this.childComponents.forEach( childComponent => childComponent.destroy() );
+        this.childComponents.forEach(childComponent => childComponent.destroy());
         this.childComponents.length = 0;
 
-        this.removeAnnotatedEventListeners();
+        if (this.hydrated) {
+            this.removeAnnotatedEventListeners();
+        }
     }
 
-    public addGuiEventListener(event: string, listener: (event: any)=>void): void {
-        this.getGui().addEventListener(event, listener);
-        this.addDestroyFunc( ()=> this.getGui().removeEventListener(event, listener));
+    public addGuiEventListener(event: string, listener: (event: any) => void): void {
+        let element = this.getHtmlElement();
+        element.addEventListener(event, listener);
+        this.addDestroyFunc(() => element.removeEventListener(event, listener));
     }
 
     public addCssClass(className: string): void {
-        _.addCssClass(this.getGui(), className);
+        let element = this.getHtmlElement();
+        _.addCssClass(element, className);
     }
 
     public removeCssClass(className: string): void {
-        _.removeCssClass(this.getGui(), className);
+        let element = this.getHtmlElement();
+        _.removeCssClass(element, className);
     }
 
     public getAttribute(key: string): string {
-        var eGui = this.getGui();
-        if (eGui) {
-            return eGui.getAttribute(key);
+        let element = this.getHtmlElement();
+        if (element) {
+            return element.getAttribute(key);
         } else {
             return null;
         }

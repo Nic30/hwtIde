@@ -3,37 +3,51 @@ import {Bean, Autowired} from "../context/context";
 import {Column} from "../entities/column";
 import {RowNode} from "../entities/rowNode";
 import {GridOptionsWrapper} from "../gridOptionsWrapper";
+import {ExpressionService} from "../valueService/expressionService";
+import {ValueFormatterParams} from "../entities/colDef";
 
 @Bean('valueFormatterService')
 export class ValueFormatterService {
 
     @Autowired('gridOptionsWrapper') private gridOptionsWrapper: GridOptionsWrapper;
+    @Autowired('expressionService') private expressionService: ExpressionService;
 
     public formatValue(column: Column,
                        rowNode: RowNode,
                        $scope: any,
-                       rowIndex: number,
                        value: any): string {
-        var formatter: (value:any)=>string;
-        var colDef = column.getColDef();
+
+        let formatter: (value:any)=>string;
+        let colDef = column.getColDef();
         // if floating, give preference to the floating formatter
-        if (rowNode.floating) {
-            formatter = colDef.floatingCellFormatter ? colDef.floatingCellFormatter : colDef.cellFormatter;
+        if (rowNode && rowNode.rowPinned) {
+            formatter = colDef.pinnedRowValueFormatter ? colDef.pinnedRowValueFormatter : colDef.valueFormatter;
         } else {
-            formatter = colDef.cellFormatter;
+            formatter = colDef.valueFormatter;
         }
-        var result: string = null;
+        let result: string = null;
         if (formatter) {
-            var params = {
+            let params: ValueFormatterParams = {
                 value: value,
                 node: rowNode,
+                data: rowNode ? rowNode.data : null,
+                colDef: column.getColDef(),
                 column: column,
-                $scope: $scope,
-                rowIndex: rowIndex,
                 api: this.gridOptionsWrapper.getApi(),
+                columnApi: this.gridOptionsWrapper.getColumnApi(),
                 context: this.gridOptionsWrapper.getContext()
             };
-            result = formatter(params);
+
+            // originally we put the angular 1 scope here, but we don't want the scope
+            // in the params interface, as other frameworks will see the interface, and
+            // angular 1 is not cool any more. so we hack the scope in here (we cannot
+            // include it above, as it's not in the interface, so would cause a compile error).
+            // in the future, when we stop supporting angular 1, we can take this out.
+            (<any>params).$scope = $scope;
+
+            result = this.expressionService.evaluate(formatter, params);
+        } else if(colDef.refData) {
+            return colDef.refData[value];
         }
         return result;
     }

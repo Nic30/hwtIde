@@ -1,3 +1,6 @@
+// get ag-Grid to create an Angular module and register the ag-Grid directive
+agGrid.initialiseAgGridWithAngular1(angular);
+
 var App = angular.module('App', [ 'ngCookies', 'agGrid', 'cfp.hotkeys', 'ngAnimate', 'toastr']);
 App.config(function(toastrConfig) {
   angular.extend(toastrConfig, {

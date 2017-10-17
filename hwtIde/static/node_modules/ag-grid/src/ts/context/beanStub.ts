@@ -2,6 +2,8 @@
 import {IEventEmitter} from "../interfaces/iEventEmitter";
 import {EventService} from "../eventService";
 import {GridOptionsWrapper} from "../gridOptionsWrapper";
+import {_} from "../utils";
+import {AgEvent} from "../events";
 
 export class BeanStub implements IEventEmitter {
 
@@ -27,19 +29,19 @@ export class BeanStub implements IEventEmitter {
         }
     }
 
-    public dispatchEventAsync(eventType: string, event?: any): void {
-        setTimeout( ()=> this.dispatchEvent(eventType, event), 0);
+    public dispatchEventAsync(event: AgEvent): void {
+        setTimeout( ()=> this.dispatchEvent(event), 0);
     }
 
-    public dispatchEvent(eventType: string, event?: any): void {
+    public dispatchEvent(event: AgEvent): void {
         if (this.localEventService) {
-            this.localEventService.dispatchEvent(eventType, event);
+            this.localEventService.dispatchEvent(event);
         }
     }
 
     public addDestroyableEventListener(eElement: HTMLElement|IEventEmitter|GridOptionsWrapper, event: string, listener: (event?: any)=>void): void {
         if (eElement instanceof HTMLElement) {
-            (<HTMLElement>eElement).addEventListener(event, listener);
+            _.addSafePassiveEventListener((<HTMLElement>eElement), event, listener)
         } else if (eElement instanceof GridOptionsWrapper) {
             (<GridOptionsWrapper>eElement).addEventListener(event, listener);
         } else {

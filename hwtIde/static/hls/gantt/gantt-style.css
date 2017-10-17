@@ -103,7 +103,7 @@ h1 {
 }
 
 button {
-  background: #222 url(button-overlay.png) repeat-x;
+  background: #222 /* url(button-overlay.png) repeat-x */ ;
   font: 12px Helvetica Neue;
   color: #fff;
   text-shadow: 0 -1px 1px #222;
