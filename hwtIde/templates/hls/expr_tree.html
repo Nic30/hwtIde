@@ -36,40 +36,27 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
 <body>
 <svg id="exprtree"></svg>
 <script type="text/javascript">
-    var chartWidth = 800,
-      chartHeight = 500,
-      nodeWidth = 20,
-      nodeHeight = 20;
     
-    var fill = d3.scaleOrdinal(d3.schemeCategory10)();
-    
-    var nodes = d3.range(100).map(function(i) {
-        return {index: i};
-    });
-      
     var dragging = 0;
     
-    var svg = d3.select("#exprtree")
-                .attr("width", chartWidth)
-                .attr("height", chartHeight);
+    var svg = d3.select("#exprtree");
     var simulation;
 
     d3.json("/expr-tree-data/", function(error, data) {
     	var levelCnt = 5;
         var y = d3.scaleBand()
                   .domain(d3.range(levelCnt))
-                  .rangeRound([0, levelCnt * 100])
+                  .rangeRound([100, (levelCnt + 1) * 100])
     	
     	 simulation = d3.forceSimulation()
          .force("link", d3.forceLink().distance(30))
          .force("collide", d3.forceCollide(function(d) {
         	                                    return d.r + 8
-        	                              }).iterations(16) )
+        	                              }).iterations(16))
          .force("charge", d3.forceManyBody().strength(-1000))
-         .force("center", d3.forceCenter(chartWidth / 2, chartHeight / 2))
-         .force("y", d3.forceY(0))
-         .force("x", d3.forceX(0))
- 
+         
+		resize()
+         
         var link = svg.append("g")
             .attr("class", "links")
             .selectAll("line")
@@ -160,6 +147,21 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
         } 
         
     });
+    
+    function resize() {
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+    	console.log("resize", width, height)
+
+        svg.attr("width", width)
+           .attr("height", height);
+    	simulation.stop();
+        simulation.force("y", d3.forceY(height / 2))
+                  .force("x", d3.forceX(width / 2))
+                  .alpha(.2).restart();
+    }
+    d3.select(window).on("resize", resize);
+
 </script>
 </body>
 </html>
