@@ -8,11 +8,17 @@ It contains various of tools for hardware developement.
 ## Wave viewer
 Prototype of wave viewer, input is vcd/outputs from HWT simulator in memory.
 
+![Wave viewer](/doc/wave.png)
+
 ## Connection editor
 Simple component connection editor used for visualization of of hierarchical components and simple editing.
 
 ## HLS visualizations
 * Gantt graph, pipeline mapping graphs etc.
+
+![pepeline_graph](/doc/pipeline_graph.png)
+
+![gantt](/doc/gantt.png)
 
 
 # Installation
