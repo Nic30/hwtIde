@@ -1,8 +1,6 @@
 from flask.blueprints import Blueprint
 from flask.json import jsonify
 from flask.templating import render_template
-from hwt.synthesizer.interfaceLevel.unit import Unit
-from hwt.interfaces.std import VectSignal
 
 
 hlsExprTreeBp = Blueprint('hlsExprTree',
@@ -13,20 +11,6 @@ hlsExprTreeBp = Blueprint('hlsExprTree',
 @hlsExprTreeBp.route('/expr-tree-test/')
 def expr_tree_test():
     return render_template('expr_tree.html')
-
-
-class ExampleUnit(Unit):
-    def _declr(self):
-        self.a = VectSignal(32)
-        self.b = VectSignal(32)
-        self.c = VectSignal(32)
-        self.d = VectSignal(32)
-
-        self.e = VectSignal(32)
-
-    def _impl(self):
-        e = (self.a + self.b) * (self.c + self.d)
-        self.e(e)
 
 
 @hlsExprTreeBp.route("/expr-tree-data/", methods=["POST", 'GET'])
