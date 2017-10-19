@@ -15,6 +15,22 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
             height: 600px;
             border: 1px solid lightgray;
         }
+
+		.links line {
+		  stroke: #999;
+		  stroke-opacity: 0.6;
+		}
+		
+		.nodes circle {
+		  stroke: #fff;
+		  stroke-width: 1.5px;
+		  r: 10;
+		  fill: #aec7e8;
+		}
+		
+		.labels text {
+		   text-anchor: middle;
+		}
   </style>
   <script src="/static/node_modules/d3/build/d3.js"></script>
 </head>
@@ -35,8 +51,8 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
     var dragging = 0;
     
     var svg = d3.select("#exprtree")
-      .attr("width", chartWidth)
-      .attr("height", chartHeight);
+                .attr("width", chartWidth)
+                .attr("height", chartHeight);
     var simulation;
 
     d3.json("/expr-tree-data/", function(error, data) {
@@ -67,17 +83,29 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
             .attr("class", "nodes")
             .selectAll("circle")
             .data(data.nodes)
-            .enter().append("circle")
-            .attr("r", 10)
+            .enter()
+            .append("circle")
             .call(d3.drag()
                 .on("start", drag_started)
                 .on("drag", dragged)
-                .on("end", drag_ended));    
+                .on("end", drag_ended))
+            
+        var labels = svg.append("g")
+           .attr("class", "labels")
+           .selectAll("text")
+           .data(data.nodes)
+           .enter()
+           .append("text")
+		   .text(function(d) { return d.label })
+           .attr("dy", ".35em")  // lower the text little bit
+		   .attr("x", function(d) { return d.x; }) // set text on same possition as nodes
+           .attr("y", function(d) { return d.y; });    
         
-        
+        var levelize = 0;
+
         var ticked = function() {
              var k = simulation.alpha();
-        	 if(!dragging) {
+        	 if(levelize && !dragging) {
                  k *= 10;
                  data.nodes.forEach(function(o, i) {
                       o.y += (y(o.level) - o.y) * k;
@@ -93,6 +121,9 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
             node
                 .attr("cx", function(d) { return d.x; })
                 .attr("cy", function(d) { return d.y; });
+            labels
+	 		    .attr("x", function(d) { return d.x; })
+	            .attr("y", function(d) { return d.y; }); 
         }  
         
         simulation
@@ -101,6 +132,10 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
         
         simulation.force("link")
                   .links(data.edges);    
+
+        // [HOTFIX]
+        // wait unitl tree is partialy sorted and then start to order it to levels
+        setTimeout(function () {levelize = 1;}, 1000);
         
         
         function drag_started(d) {
@@ -125,8 +160,6 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
         } 
         
     });
-
-
 </script>
 </body>
 </html>
