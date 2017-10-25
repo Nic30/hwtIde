@@ -21,17 +21,17 @@ def expr_tree_data():
     # print(query)
 
     nodes = [
-        {"id": 0, "label": "input a[0]", "level": 0},
-        {"id": 1, "label": "input a[1]", "level": 0},
-        {"id": 2, "label": "input a[2]", "level": 0},
-        {"id": 3, "label": "input a[3]", "level": 0},
+        {"id": 0, "label": "a", "level": 0},
+        {"id": 1, "label": "b", "level": 0},
+        {"id": 2, "label": "c", "level": 0},
+        {"id": 3, "label": "d", "level": 0},
 
         {"id": 4, "label": "*", "level": 1},
         {"id": 5, "label": "*", "level": 1},
         {"id": 6, "label": "+", "level": 2},
-        {"id": 7, "label": "output[0]", "level": 3},
+        {"id": 7, "label": "o0", "level": 3},
         {"id": 8, "label": "-", "level": 2},
-        {"id": 9, "label": "output[1]", "level": 3},
+        {"id": 9, "label": "o1", "level": 3},
     ]
 
     edges = [
