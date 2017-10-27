@@ -1,8 +1,6 @@
 from flask.blueprints import Blueprint
 from flask.json import jsonify
 from flask.templating import render_template
-from hwt.synthesizer.interfaceLevel.unit import Unit
-from hwt.interfaces.std import VectSignal
 
 
 hlsExprTreeBp = Blueprint('hlsExprTree',
@@ -15,20 +13,6 @@ def expr_tree_test():
     return render_template('expr_tree.html')
 
 
-class ExampleUnit(Unit):
-    def _declr(self):
-        self.a = VectSignal(32)
-        self.b = VectSignal(32)
-        self.c = VectSignal(32)
-        self.d = VectSignal(32)
-
-        self.e = VectSignal(32)
-
-    def _impl(self):
-        e = (self.a + self.b) * (self.c + self.d)
-        self.e(e)
-
-
 @hlsExprTreeBp.route("/expr-tree-data/", methods=["POST", 'GET'])
 def expr_tree_data():
     # if not request.json:
@@ -37,17 +21,17 @@ def expr_tree_data():
     # print(query)
 
     nodes = [
-        {"id": 0, "label": "input a[0]", "level": 0},
-        {"id": 1, "label": "input a[1]", "level": 0},
-        {"id": 2, "label": "input a[2]", "level": 0},
-        {"id": 3, "label": "input a[3]", "level": 0},
+        {"id": 0, "label": "a", "level": 0},
+        {"id": 1, "label": "b", "level": 0},
+        {"id": 2, "label": "c", "level": 0},
+        {"id": 3, "label": "d", "level": 0},
 
         {"id": 4, "label": "*", "level": 1},
         {"id": 5, "label": "*", "level": 1},
         {"id": 6, "label": "+", "level": 2},
-        {"id": 7, "label": "output[0]", "level": 3},
+        {"id": 7, "label": "o0", "level": 3},
         {"id": 8, "label": "-", "level": 2},
-        {"id": 9, "label": "output[1]", "level": 3},
+        {"id": 9, "label": "o1", "level": 3},
     ]
 
     edges = [

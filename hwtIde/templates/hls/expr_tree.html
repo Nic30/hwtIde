@@ -24,53 +24,49 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
 		.nodes circle {
 		  stroke: #fff;
 		  stroke-width: 1.5px;
-		  r: 10;
 		  fill: #aec7e8;
 		}
 		
-		.labels text {
+		.nodelabels text {
 		   text-anchor: middle;
 		}
+		
+		.levellines line {
+		   stroke: silver;
+		   stroke-dasharray: 8,8;
+		}
+		
   </style>
   <script src="/static/node_modules/d3/build/d3.js"></script>
 </head>
 <body>
 <svg id="exprtree"></svg>
 <script type="text/javascript">
-    var chartWidth = 800,
-      chartHeight = 500,
-      nodeWidth = 20,
-      nodeHeight = 20;
     
-    var fill = d3.scaleOrdinal(d3.schemeCategory10)();
-    
-    var nodes = d3.range(100).map(function(i) {
-        return {index: i};
-    });
-      
     var dragging = 0;
     
-    var svg = d3.select("#exprtree")
-                .attr("width", chartWidth)
-                .attr("height", chartHeight);
-    var simulation;
+    var svg = d3.select("#exprtree");
+    var simulation, levellines, levellabels;
 
     d3.json("/expr-tree-data/", function(error, data) {
-    	var levelCnt = 5;
-        var y = d3.scaleBand()
+    	var levelCnt = 0;
+    	data.nodes.forEach(function(n) {
+    		if (n.level > levelCnt)
+    			levelCnt = n.level;
+    	})
+    	levelCnt += 1;
+
+    	var y = d3.scaleBand()
                   .domain(d3.range(levelCnt))
-                  .rangeRound([0, levelCnt * 100])
+                  .rangeRound([100, (levelCnt + 1) * 100])
     	
     	 simulation = d3.forceSimulation()
-         .force("link", d3.forceLink().distance(30))
-         .force("collide", d3.forceCollide(function(d) {
-        	                                    return d.r + 8
-        	                              }).iterations(16) )
-         .force("charge", d3.forceManyBody().strength(-1000))
-         .force("center", d3.forceCenter(chartWidth / 2, chartHeight / 2))
-         .force("y", d3.forceY(0))
-         .force("x", d3.forceX(0))
- 
+            .force("link", d3.forceLink().distance(30))
+            .force("collide", d3.forceCollide(function(d) {
+           	                                    return d.r + 8
+           	                              }).iterations(16))
+            .force("charge", d3.forceManyBody().strength(-1000))
+         
         var link = svg.append("g")
             .attr("class", "links")
             .selectAll("line")
@@ -85,13 +81,14 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
             .data(data.nodes)
             .enter()
             .append("circle")
+            .attr("r", 15)
             .call(d3.drag()
                 .on("start", drag_started)
                 .on("drag", dragged)
                 .on("end", drag_ended))
             
-        var labels = svg.append("g")
-           .attr("class", "labels")
+        var nodelabels = svg.append("g")
+           .attr("class", "nodelabels")
            .selectAll("text")
            .data(data.nodes)
            .enter()
@@ -101,6 +98,35 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
 		   .attr("x", function(d) { return d.x; }) // set text on same possition as nodes
            .attr("y", function(d) { return d.y; });    
         
+        var levels = d3.range(levelCnt).map(
+        		           function (level){  
+        		        	   return {
+        		        		  y: y(level) - 10,
+        		        		  level: level 
+        		        	   };
+        		           })
+
+        levellines = svg.append("g")
+            .attr("class", "levellines")
+            .selectAll("line")
+            .data(levels)
+            .enter()
+            .append("line")
+			.attr("x1", 0)
+            .attr("y1", function (d) { return d.y; })
+            .attr("y2", function (d) { return d.y; })
+       
+       levellabels = svg.append("g")
+            .attr("class", "levellabels")
+            .selectAll("text")
+            .data(levels)
+            .enter()
+            .append("text")
+			.attr("x", 0)
+            .attr("y", function (d) { return d.y + 20; })
+            .text(function(d) { return d.level })
+       
+            
         var levelize = 0;
 
         var ticked = function() {
@@ -121,7 +147,8 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
             node
                 .attr("cx", function(d) { return d.x; })
                 .attr("cy", function(d) { return d.y; });
-            labels
+
+            nodelabels
 	 		    .attr("x", function(d) { return d.x; })
 	            .attr("y", function(d) { return d.y; }); 
         }  
@@ -158,8 +185,24 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
             d.fy = null;
             dragging = false;
         } 
+		resize()
         
     });
+    
+    function resize() {
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        svg.attr("width", width)
+           .attr("height", height);
+    	simulation.stop();
+        simulation.force("y", d3.forceY(height / 2))
+                  .force("x", d3.forceX(width / 2))
+                  .alpha(.2).restart();
+        levellines.attr("x2", width);
+    }
+    d3.select(window).on("resize", resize);
+
 </script>
 </body>
 </html>
