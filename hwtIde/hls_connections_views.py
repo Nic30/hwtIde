@@ -7,7 +7,7 @@ import os
 import glob
 
 from connectionsJsonObj import FSEntry, jsonResp
-from hwt.synthesizer.interfaceLevel.unit import Unit
+from hwt.synthesizer.unit import Unit
 from hls_connections import serializeUnit
 
 

@@ -1,6 +1,11 @@
 from flask.blueprints import Blueprint
 from flask.json import jsonify
 from flask.templating import render_template
+from hwtHls.platform.virtual import VirtualHlsPlatform
+from hwtHls.samples.example1 import HlsMAC_example
+from hwt.synthesizer.utils import toRtl
+from hwtHls.codeObjs import ReadOpPromise, HlsOperation, WriteOpPromise
+from hwt.synthesizer.interfaceLevel.unitImplHelpers import getSignalName
 
 
 hlsExprTreeBp = Blueprint('hlsExprTree',
@@ -13,43 +18,61 @@ def expr_tree_test():
     return render_template('expr_tree.html')
 
 
-@hlsExprTreeBp.route("/expr-tree-data/", methods=["POST", 'GET'])
-def expr_tree_data():
-    # if not request.json:
-    #    abort(400)
-    # query = request.json
-    # print(query)
+class WebDumpHlsPlatform(VirtualHlsPlatform):
+    """
+    Wrapper for HLS target platform which allows to acess
+    results of HLS synthesis
+    """
 
-    nodes = [
-        {"id": 0, "label": "a", "level": 0},
-        {"id": 1, "label": "b", "level": 0},
-        {"id": 2, "label": "c", "level": 0},
-        {"id": 3, "label": "d", "level": 0},
+    def __init__(self):
+        super(WebDumpHlsPlatform, self).__init__()
+        self.hls = []
 
-        {"id": 4, "label": "*", "level": 1},
-        {"id": 5, "label": "*", "level": 1},
-        {"id": 6, "label": "+", "level": 2},
-        {"id": 7, "label": "o0", "level": 3},
-        {"id": 8, "label": "-", "level": 2},
-        {"id": 9, "label": "o1", "level": 3},
-    ]
+    def onHlsInit(self, hls):
+        self.hls.append(hls)
 
-    edges = [
-        {"id": 0, "source": 0, "target": 4},
-        {"id": 1, "source": 1, "target": 4},
-        {"id": 2, "source": 2, "target": 5},
-        {"id": 3, "source": 3, "target": 5},
 
-        {"id": 4, "source": 4, "target": 6},
-        {"id": 5, "source": 5, "target": 6},
-        {"id": 6, "source": 6, "target": 7},
+def schedulizationGraphAsJSON(hls):
+    scheduler = hls.scheduler
+    nodes = [None for _ in range(len(hls.nodes))]
+    edges = []
+    nodeIds = {}
+    for nodeId, node in enumerate(hls.nodes):
+        nodeIds[node] = nodeId
 
-        {"id": 7, "source": 4, "target": 8},
-        {"id": 8, "source": 5, "target": 8},
-        {"id": 9, "source": 8, "target": 9}
-    ]
+    for level, _nodes in enumerate(scheduler.schedulization):
+        for node in _nodes:
+            nodeId = nodeIds[node]
+            if isinstance(node, ReadOpPromise):
+                label = getSignalName(node.intf)
+            elif isinstance(node, HlsOperation):
+                label = node.operator.id
+            elif isinstance(node, WriteOpPromise):
+                label = getSignalName(node.where)
+            else:
+                raise TypeError(node)
+
+            _node = {"id": nodeId,
+                     "label": label,
+                     "level": level}
+            nodes[nodeId] = _node
+            for usedBy in node.usedBy:
+                edge = {"source": nodeId,
+                        "target": nodeIds[usedBy] & 0xffff}
+                edges.append(edge)
+
     data = {
         "nodes": nodes,
         "edges": edges,
     }
+    return data
+
+
+@hlsExprTreeBp.route("/expr-tree-data/", methods=["POST", 'GET'])
+def expr_tree_data():
+    p = WebDumpHlsPlatform()
+    u = HlsMAC_example()
+    toRtl(u, targetPlatform=p)
+    hls = p.hls[0]
+    data = schedulizationGraphAsJSON(hls)
     return jsonify(data)
