@@ -155,7 +155,8 @@ d3.json("/expr-tree-data/", function(error, data) {
         d.fy = null;
         dragging = false;
     } 
-resize()
+
+    resize();
     
 });
 

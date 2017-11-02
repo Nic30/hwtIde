@@ -2,7 +2,7 @@ from flask.blueprints import Blueprint
 from flask.json import jsonify
 from flask.templating import render_template
 from hwtHls.platform.virtual import VirtualHlsPlatform
-from hwtHls.samples.example1 import HlsMAC_example
+from hwtHls.samples.mac import HlsMAC_example
 from hwt.synthesizer.utils import toRtl
 from hwtHls.codeObjs import ReadOpPromise, HlsOperation, WriteOpPromise
 from hwt.synthesizer.interfaceLevel.unitImplHelpers import getSignalName
