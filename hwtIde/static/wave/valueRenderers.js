@@ -1,3 +1,4 @@
+
 function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding, waveRowX, waveRowY){
 	var invalidRanges = []
 	var lastInvalid = null
@@ -16,7 +17,7 @@ function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding
 		} else
 			if (lastInvalid != null){
 				invalidRanges.push([lastInvalid[0], d[0]])
-				lastInvalid = nullrenderWaveRow
+				lastInvalid = nullrenderWaveRow // [TODO]
 			}
 		
 	})
@@ -38,7 +39,7 @@ function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding
     	      .curve(d3.curveStepAfter)
 		
     // wave line
-    g.append("g")
+    parent.append("g")
      .attr("clip-path", "url(#clip)")
      .append("path")
      .datum(lineData)
@@ -65,25 +66,26 @@ function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding
 	  })
 }
 
-function renderBitsLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding, waveRowX, waveRowY){
+function renderBitsLine(parent, data, signalWidth, waveRowHeight,
+		                waveRowYpadding, waveRowX, waveRowY) {
 	var waveRowHeight = 20
 	var waveRowYpadding = 5
 
-	var rectG =  g.selectAll("value-rect")	
-				  .data(data)
-				  .enter()
-				  .append("g")	
-				  .attr("transform", function(d) {
-					  return "translate(" + 
-					  		[waveRowX(d[0]) , (waveRowY(0) - waveRowHeight + waveRowYpadding)]
-					  					  + ")"
-				  }).attr("class", function(d){ 
-				   if(d[1].indexOf('x') < 0){
-					   return "value-rect-valid"
-				   } else {
-					   return "value-rect-invalid"
-				   }
-				  })
+	var rectG =  parent.selectAll("value-rect")	
+				       .data(data)
+				       .enter()
+				       .append("g")	
+				       .attr("transform", function(d) {
+				  	     return "translate(" + 
+				  	     		[waveRowX(d[0]) , (waveRowY(0) - waveRowHeight + waveRowYpadding)]
+				  	     					  + ")"
+				       }).attr("class", function(d){ 
+				        if(d[1].indexOf('x') < 0){
+				  	      return "value-rect-valid"
+				        } else {
+				  	      return "value-rect-invalid"
+				        }
+				       })
 				   
 	 rectG.append("path")
 	 	  .attr("d", function(d, indx){
@@ -119,15 +121,12 @@ function renderBitsLine(parent, data, signalWidth, waveRowHeight, waveRowYpaddin
 	   .attr("y", (waveRowHeight) / 2 +  waveRowYpadding)
 }
 
-function renderWaveRow(indx, signalType, data, rowRange){
-	var waveRowWidth = graphWidth
-	var waveRowHeight = 20
-	var waveRowYpadding = 5
-
-	var waveRowX =  d3.scaleLinear()
-					  .domain(rowRange)
-					  .range([0, waveRowWidth]);
-
+function renderWaveRow(indx, signalType, data, graph){
+	var waveRowHeight = graph.sizes.row.height;
+	var waveRowYpadding = graph.sizes.row.ypadding;
+	var rowRange = graph.sizes.row.range;
+	var waveRowX = graph.waveRowX;
+	var parent = graph.g;
 	var waveRowY = d3.scaleLinear()
 	                 .domain([0, 1])
 	                 .range([(waveRowHeight + waveRowYpadding) * (indx + 1) - waveRowYpadding,
@@ -138,10 +137,10 @@ function renderWaveRow(indx, signalType, data, rowRange){
 	
 	if (signalType.name === T_BIT){
 		var signalWidth = 1
-		renderBitLine(g, data, signalWidth, waveRowHeight, waveRowYpadding,
-				 waveRowX, waveRowY)
-	 } else {
+		renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding,
+				      waveRowX, waveRowY)
+	} else {
 		 renderBitsLine(parent, data, signalType.width, waveRowHeight, waveRowYpadding, 
-				 waveRowX, waveRowY)
+				        waveRowX, waveRowY)
 	}
 }
