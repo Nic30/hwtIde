@@ -167,22 +167,23 @@ function WaveGraph(svg) {
         var t = d3.event.transform;
         var width = graph.sizes.width
         var intervalRange = defaultSize[1] - defaultSize[0];
-        graph.sizes.row.range = defaultSize.map(function (x) {
+        var newRange = defaultSize.map(function (x) {
         	return (x  - (t.x / width * intervalRange)) / t.k
         })
-       	console.log(d3.event.transform)
-        console.log(graph.sizes.row.range)
+        if (newRange[0] < 0)
+        	newRange[0] = 0
+        graph.sizes.row.range = newRange; 
         graph.draw()
-
      }
-     var margin = this.sizes.margin;
-     var maxT = 500
-     var zoom = d3.zoom()
-         .scaleExtent([0, 40])
-         .translateExtent([[0, 0], [maxT, 0]])
-         .extent([[0, 0], [maxT, 0]])
-         .on("zoom", zoomed);
-     svg.call(zoom)
+
+    var margin = this.sizes.margin;
+    var maxT = 500;
+    var zoom = d3.zoom()
+        .scaleExtent([0, 40])
+        .translateExtent([[0, 0], [maxT, 0]])
+        .extent([[0, 0], [maxT, 0]])
+        .on("zoom", zoomed);
+    svg.call(zoom)
 }
 
 
