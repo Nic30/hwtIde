@@ -1,3 +1,7 @@
+const T_BIT = "bit"
+const T_ENUM = "enum"
+const T_BITS = "bits"
+
 
 function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding, waveRowX, waveRowY){
 	var invalidRanges = []
@@ -39,15 +43,16 @@ function renderBitLine(parent, data, signalWidth, waveRowHeight, waveRowYpadding
     	      .curve(d3.curveStepAfter)
 		
     // wave line
-    parent.append("g")
-     .attr("clip-path", "url(#clip)")
-     .append("path")
-     .datum(lineData)
-     .attr("class", "value-line")
-     .attr("d", line)
+    parent.attr("clip-path", "url(#clip)")
+    var lines = parent.selectAll("path")
+                      .data([lineData])
+    lines.enter().append("path")
+          .attr("class", "value-line")
+          .merge(lines)
+          .attr("d", line)
 
 	
-	// Add the scatterplot
+	// Add the scatterplot for invalid values
 	parent.selectAll("rect")	
 	 .data(invalidRanges)
 	 .enter()
@@ -70,69 +75,87 @@ function renderBitsLine(parent, data, signalWidth, waveRowHeight,
 		                waveRowYpadding, waveRowX, waveRowY) {
 	var waveRowHeight = 20
 	var waveRowYpadding = 5
+    var rect = parent.selectAll("g .value-rect")
+                     .data(data);
+	var newRects = rect.enter()
+	                   .append("g")
+	newRects.append("path")
+	newRects.append("text")
 
-	var rectG =  parent.selectAll("value-rect")	
-				       .data(data)
-				       .enter()
-				       .append("g")	
-				       .attr("transform", function(d) {
-				  	     return "translate(" + 
-				  	     		[waveRowX(d[0]) , (waveRowY(0) - waveRowHeight + waveRowYpadding)]
-				  	     					  + ")"
-				       }).attr("class", function(d){ 
-				        if(d[1].indexOf('x') < 0){
-				  	      return "value-rect-valid"
-				        } else {
-				  	      return "value-rect-invalid"
-				        }
-				       })
-				   
-	 rectG.append("path")
-	 	  .attr("d", function(d, indx){
-	 		  //  <==> like shape
- 	 		  if (indx+1 == data.length){
-	 	 		var next = d[0]+1
-		 	  } else {
-		 	  	var next = data[indx+1][0]
-		 	  }
-	 	      var right = waveRowX(next-d[0])
-	 	      var top = waveRowHeight
-	 	  	  return 'M '+ [0, top/2] + 
-	 	  	         ' L ' + [5, top] + 
-	 	  	         ' L '+ [right - 5, top] + 
-	 	  	         ' L '+ [right, top/2] +
-	 	  	         ' L '+ [right - 5, 0] + 
-	 	  	         ' L '+ [5, 0] +' Z'
-	 	  })
-	   
-	 rectG
-	   .append("text")
+    var rectG = newRects.merge(rect)
+                  .attr("transform", function(d) {
+				    return "translate(" + 
+				    		[waveRowX(d[0]) ,
+				    		(waveRowY(0) - waveRowHeight + waveRowYpadding)]
+				    		+ ")";
+				  }).attr("class", function(d){ 
+                        if(d[1].indexOf('x') < 0) {
+                           return "value-rect value-rect-valid"
+                        } else {
+                           return "value-rect value-rect-invalid"
+                        }
+		           })
+    rect.exit().remove()
+
+    // can not use index from d function because it is always 0
+    var index = 0;
+    rectG.selectAll("path")
+       .attr("d", function(d) {
+ 	 	 var isLast = index + 1 == data.length
+    	 if (isLast) {
+	 		var nextTime = d[0] + 1
+    	 } else {
+		 	var nextTime = data[index + 1][0]
+    	 }
+
+	     var right = waveRowX(nextTime - d[0])
+	     var top = waveRowHeight
+	     if (d[0] > nextTime)
+	    	 throw new Error("Time flow corrupted")
+	 	 index += 1
+	 	 //  <==> like shape
+         var edgeW = 2
+	 	 return 'M '+ [0, top/2] + 
+	 	         ' L ' + [edgeW, top] + 
+	 	         ' L '+ [right - edgeW, top] + 
+	 	         ' L '+ [right, top/2] +
+	 	         ' L '+ [right - edgeW, 0] + 
+	 	         ' L '+ [edgeW, 0] +' Z'
+	    })
+    
+    // can not use index from d function because it is always 0
+	var index = 0
+    rectG.selectAll("text")
 	   .text(function(d) {
 		   return d[1]
 	   })
-	   .attr("x", function (d, indx){ 
-			if (indx+1 == data.length){
-				var next = d[0]+1
+	   .attr("x", function (d){ 
+			if (index + 1 == data.length){
+				var next = d[0] + 1
 			} else {
-				var next = data[indx+1][0]
+				var next = data[index + 1][0]
 			}
-			return waveRowX(next-d[0]) / 2 
+			index += 1
+			return waveRowX(next - d[0]) / 2 
 	   })
 	   .attr("y", (waveRowHeight) / 2 +  waveRowYpadding)
+
 }
 
-function renderWaveRow(indx, signalType, data, graph){
+function renderWaveRow(indx, signalType, data, graph, parent){
 	var waveRowHeight = graph.sizes.row.height;
 	var waveRowYpadding = graph.sizes.row.ypadding;
 	var rowRange = graph.sizes.row.range;
 	var waveRowX = graph.waveRowX;
-	var parent = graph.g;
 	var waveRowY = d3.scaleLinear()
 	                 .domain([0, 1])
-	                 .range([(waveRowHeight + waveRowYpadding) * (indx + 1) - waveRowYpadding,
-	                	     (waveRowHeight + waveRowYpadding) * indx + waveRowYpadding] );
-	var last = data[data.length-1]
-	if(last[0]< rowRange[1])
+	                 .range([(waveRowHeight + waveRowYpadding)
+	                	      * (indx + 1) - waveRowYpadding,
+	                	     (waveRowHeight + waveRowYpadding)
+	                	      * indx + waveRowYpadding] );
+
+	var last = data[data.length - 1]
+	if(last[0] < rowRange[1])
 		data.push([rowRange[1], last[1]])
 	
 	if (signalType.name === T_BIT){
@@ -144,3 +167,4 @@ function renderWaveRow(indx, signalType, data, graph){
 				        waveRowX, waveRowY)
 	}
 }
+
