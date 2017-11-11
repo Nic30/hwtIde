@@ -45,7 +45,7 @@ function WaveGraph(svg) {
         var vhl = this.verticalHelpLine
         var graph = this;
         if (vhl) {
-        	vhl.attr('y2', height).moveToFront();
+        	vhl.attr('y2', height)
         } else {
         	this.verticalHelpLine = g.append('line')
         	.attr('class', 'vertical-help-line')
