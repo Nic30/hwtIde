@@ -5,7 +5,7 @@ function drawExternalPorts(svgGroup, exterPortNodes){
 		.data(exterPortNodes)
 		.enter()
 		.append("g")
-		.classed({"external-port" :true});
+		.classed("external-port", true);
 	
 	// adding external port icon
 	externalPorts.append("image")
@@ -52,7 +52,7 @@ function drawComponents(svgGroup, componentNodes){
 		.data(componentNodes)
 		.enter()
 		.append("g")
-	    .classed({"component": true})
+	    .classed("component", true)
 	    .attr("transform", function (d) {
 			return "translate(" + d.x + "," + d.y + ")";
 		});
@@ -70,7 +70,7 @@ function drawComponents(svgGroup, componentNodes){
 	    .attr("height", function(d) { return d.height});
 
 	componentWrap.append('text')
-		.classed({"component-title": true})
+		.classed("component-title", true)
 		.attr("y", 0)	
 		.attr("x", function(d){
 			return d.width/2;
@@ -91,7 +91,7 @@ function drawComponents(svgGroup, componentNodes){
 		})
 		.enter()
 		.append('g')
-		.classed({"port-input": true})
+		.classed("port-input", true)
 		.on("click", onPortClick)
 		.on("mousemove", onPortMouseMove)
 		.on("mouseout", onPortMouseOut);
@@ -130,7 +130,7 @@ function drawComponents(svgGroup, componentNodes){
 		})
 		.enter()
 		.append('g')
-		.classed({"port-output": true})
+		.classed("port-output", true)
 		.on("click", onPortClick)
 		.on("mousemove", onPortMouseMove)
 		.on("mouseout", onPortMouseOut);

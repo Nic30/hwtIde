@@ -79,7 +79,8 @@ def serializeRtlUnit(interface, unit):
     for s in unit.signals:
         driver = s.getDriver()
 
-        if driver and isinstance(driver, PortItem):  # has driver inside schema
+        if driver and isinstance(driver, PortItem):
+            # has driver inside schema
             n = Net()
             n.name = s.name
             n.source = Connection(
@@ -115,4 +116,5 @@ def serializeRtlUnit(interface, unit):
         #    nets.append(n)
 
     nets = sorted(nets, key=lambda x: x.name)
-    return {"nodes": nodes, "nets": nets}
+    return {"nodes": nodes,
+            "nets": nets}

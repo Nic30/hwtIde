@@ -372,7 +372,7 @@ function diagramEditorCntrl($scope, hotkeys){
 		
 		if(line.empty()){
 			line = api.diagramSvg.append("svg:path")
-				       .classed({"routing-help-line": true})
+				       .classed("routing-help-line", true)
 		}
 		line
 	        .style("stroke-dasharray", ("3, 3"))
@@ -487,8 +487,9 @@ function diagramEditorCntrl($scope, hotkeys){
 	
 	api.resetLinkingState = function() {
 		$scope.newLink = [];
-		api.diagramSvg.selectAll('.routing-help-line')
-					  .remove();
+		if (api.diagramSvg)
+			api.diagramSvg.selectAll('.routing-help-line')
+						  .remove();
 		api.onMouseroverDiagram = null;
 	}
 }
