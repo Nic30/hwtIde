@@ -1,6 +1,9 @@
 
 
 function ExprTreeGraph(svg) {
+	/*
+	 * DAG with nodes separated into leveles based on scheduelization time 
+	 * */
     var simulation = d3.forceSimulation()
 	    .force("link", d3.forceLink().distance(30))
 	    .force("collide", d3.forceCollide(function(d) {
@@ -12,7 +15,7 @@ function ExprTreeGraph(svg) {
     var dragging = false;
     var levelize = 0;
 
-    this.data = {nodes:[], edges:[]}
+    this.data = {nodes:[], edges:[]};
     /* where node = {id: ..., label: ..., level: ...}
      *       edge = {source:nodeId, target:nodeId}
      */
@@ -102,7 +105,7 @@ function ExprTreeGraph(svg) {
            .append("text")
            .text(function(d) { return d.label })
            .attr("dy", ".35em")  // lower the text little bit
-           .attr("x", function(d) { return d.x; }) // set text on same possition as nodes
+           .attr("x", function(d) { return d.x; })
            .attr("y", function(d) { return d.y; });    
         
         var levels = d3.range(levelCnt).map(
@@ -122,6 +125,7 @@ function ExprTreeGraph(svg) {
             .append("line")
             .attr("x1", 0)
             .attr("y1", function (d) { return d.y; })
+            .attr("x2", width)
             .attr("y2", function (d) { return d.y; });
        
        svg.selectAll(".levellabels").remove()
@@ -134,7 +138,6 @@ function ExprTreeGraph(svg) {
             .attr("x", 0)
             .attr("y", function (d) { return d.y + 20; })
             .text(function(d) { return d.level });
-       
             
         var ticked = function() {
              var k = simulation.alpha();
@@ -144,14 +147,12 @@ function ExprTreeGraph(svg) {
                  });
              }
             
-            link
-                .attr("x1", function(d) { return d.source.x; })
+            link.attr("x1", function(d) { return d.source.x; })
                 .attr("y1", function(d) { return d.source.y; })
                 .attr("x2", function(d) { return d.target.x; })
                 .attr("y2", function(d) { return d.target.y; });
         
-            node
-                .attr("cx", function(d) { return d.x; })
+            node.attr("cx", function(d) { return d.x; })
                 .attr("cy", function(d) { return d.y; });
 
             nodelabels
@@ -160,9 +161,13 @@ function ExprTreeGraph(svg) {
         }
         
         
-        simulation
-            .nodes(data.nodes)
-            .on("tick", ticked);
+        simulation.stop();
+        simulation.force("y", d3.forceY(height / 2))
+                  .force("x", d3.forceX(width / 2))
+                  .alpha(.2).restart();
+
+        simulation.nodes(data.nodes)
+                  .on("tick", ticked);
         
         simulation.force("link")
                   .links(data.edges);    
@@ -170,11 +175,6 @@ function ExprTreeGraph(svg) {
         // [HOTFIX]
         // wait unitl tree is partialy sorted and then start to order it to levels
         setTimeout(function () {levelize = 1;}, 1000);
-        simulation.stop();
-        simulation.force("y", d3.forceY(height / 2))
-                  .force("x", d3.forceX(width / 2))
-                  .alpha(.2).restart();
-        levellines.attr("x2", width);
     }
 
     this.bindData = function (data) {
