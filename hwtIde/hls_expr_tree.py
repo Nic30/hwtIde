@@ -54,11 +54,13 @@ def schedulizationGraphAsJSON(hls):
 
             _node = {"id": nodeId,
                      "label": label,
-                     "level": (node.asap_start + node.asap_end) / 2}
+                     "level": (node.asap_start + node.asap_end) / 2
+                     }
             nodes[nodeId] = _node
             for usedBy in node.usedBy:
                 edge = {"source": nodeId,
-                        "target": nodeIds[usedBy] & 0xffff}
+                        "target": nodeIds[usedBy]
+                        }
                 edges.append(edge)
 
     return {
