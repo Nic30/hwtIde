@@ -40,7 +40,7 @@ def schedulizationGraphAsJSON(hls):
     for nodeId, node in enumerate(hls.nodes):
         nodeIds[node] = nodeId
 
-    for level, _nodes in enumerate(scheduler.schedulization):
+    for _nodes in scheduler.schedulization:
         for node in _nodes:
             nodeId = nodeIds[node]
             if isinstance(node, ReadOpPromise):
@@ -61,11 +61,10 @@ def schedulizationGraphAsJSON(hls):
                         "target": nodeIds[usedBy] & 0xffff}
                 edges.append(edge)
 
-    data = {
+    return {
         "nodes": nodes,
         "edges": edges,
     }
-    return data
 
 
 @hlsExprTreeBp.route("/expr-tree-data/", methods=["POST", 'GET'])
