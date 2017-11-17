@@ -2,10 +2,11 @@ import os
 from flask.blueprints import Blueprint
 from hwt.pyUtils.fileHelpers import find_files
 from flask import render_template
+from os.path import expanduser
 
-# [TODO] move gui out of hwt
+dependenciesBp = Blueprint('dependencies', __name__,
+                           template_folder='templates/dependencies/')
 
-dependenciesBp = Blueprint('dependencies', __name__, template_folder='templates/dependencies/')
 
 def rel(root, f):
     """
@@ -17,21 +18,25 @@ def rel(root, f):
 # http://www.coppelia.io/2014/07/an-a-to-z-of-extra-features-for-the-d3-force-layout/
 @dependenciesBp.route('/dependencies/')
 def dependencyGraph():
+    # [TODO] this is dependent on deprecated hwt parsers
+
     # unisimFiles = ['/opt/Xilinx/Vivado/2015.2/data/vhdl/src/unisims/retarget_VCOMP.vhd']
-    workspace = "/home/nic30/Documents/workspace/sprobe10/fpgalibs/src/hfer/"
-    # workspace = "/home/nic30/Documents/workspace/sprobe10/fpgalibs/src/"
+    workspace = "~/Documents/workspace/sprobe10/fpgalibs/src/hfer/"
+    # workspace = "~/Documents/workspace/sprobe10/fpgalibs/src/"
     # workspace = "../../hwtLib/hwtLib/samples/vhdlCodesign/vhdl/dependencies0"
-    r = lambda df: rel(workspace, df.fileInfo.fileName) 
+    workspace = expanduser(workspace)
+
+    def r(df): return rel(workspace, df.fileInfo.fileName)
     files = []
     files.extend(find_files(workspace, '*.vhd'))
-    # files.extend(list(find_files(workspace + 'util/', '*.vhd')) 
+    # files.extend(list(find_files(workspace + 'util/', '*.vhd'))
     #           + list(find_files(workspace + 'axi/', '*.vhd')))
     #
-    files = list(map(lambda f : ParserFileInfo(f, "work"), files))
+    files = list(map(lambda f: ParserFileInfo(f, "work"), files))
     # unisimDesFiles = DesignFile.loadFiles(unisimFiles, libName='unisim')
     desFiles = DesignFile.loadFiles(files, debug=True)
     DesignFile.resolveDependencies(desFiles)  # + unisimDesFiles)
-    
+
     nodes = []
     links = []
     indexes = {}
