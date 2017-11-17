@@ -1,15 +1,15 @@
 
 
 function ExprTreeGraph(svg) {
-	/*
-	 * DAG with nodes separated into leveles based on scheduelization time 
-	 * */
+    /*
+     * DAG with nodes separated into leveles based on scheduelization time 
+     * */
     var simulation = d3.forceSimulation()
-	    .force("link", d3.forceLink().distance(30))
-	    .force("collide", d3.forceCollide(function(d) {
-	                                           return d.r + 8
-	                                     }).iterations(16))
-	    .force("charge", d3.forceManyBody().strength(-1000));
+        .force("link", d3.forceLink().distance(30))
+        .force("collide", d3.forceCollide(function(d) {
+                                               return d.r + 8
+                                         }).iterations(16))
+        .force("charge", d3.forceManyBody().strength(-1000));
     var levellines = null; 
     var levellabels = null;
     var dragging = false;
@@ -58,15 +58,17 @@ function ExprTreeGraph(svg) {
 
     
     this.redraw = function() {
-    	var width = parseInt(svg.style("width"))
-    	var height = parseInt(svg.style("height"))
-    	var data = this.data;
+        var width = parseInt(svg.style("width"))
+        var height = parseInt(svg.style("height"))
+        var data = this.data;
         var levelCnt = 0;
 
         data.nodes.forEach(function(n) {
             if (n.level > levelCnt)
                 levelCnt = n.level;
         })
+        if (levelCnt <= 1)
+        	levelCnt += 1;
         var levelHeight = height / levelCnt;
 
         var y = d3.scaleLinear()
@@ -178,7 +180,7 @@ function ExprTreeGraph(svg) {
     }
 
     this.bindData = function (data) {
-    	this.data = data;
+        this.data = data;
     }
 
     this.resize = function(width, height) {
@@ -191,13 +193,14 @@ function ExprTreeGraph(svg) {
 var svg = d3.select("#exprtree");
 var graph = new ExprTreeGraph(svg);
 
-d3.json("/expr-tree-data/", function(error, data) {
-	graph.bindData(data);
-    graph.redraw();
+d3.json("/expr-tree-data/" + MODULE_NAME + "/" + IN_MODULE_NAME,
+    function(error, data) {
+        graph.bindData(data);
+        graph.redraw();
 });
 
 function resize() {
-	var width = window.innerWidth;
+    var width = window.innerWidth;
     var height = window.innerHeight;
     graph.resize(width, height);
 }
