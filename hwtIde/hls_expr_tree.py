@@ -4,7 +4,7 @@ from flask.templating import render_template
 
 from hwt.synthesizer.interfaceLevel.unitImplHelpers import getSignalName
 from hwt.synthesizer.utils import toRtl
-from hwtHls.codeObjs import ReadOpPromise, HlsOperation, WriteOpPromise,\
+from hwtHls.codeOps import HlsRead, HlsOperation, HlsWrite,\
     HlsConst
 from hwtHls.platform.virtual import VirtualHlsPlatform
 from importlib import import_module
@@ -48,11 +48,11 @@ def schedulizationGraphAsJSON(hls):
     for _nodes in scheduler.schedulization:
         for node in _nodes:
             nodeId = nodeIds[node]
-            if isinstance(node, ReadOpPromise):
+            if isinstance(node, HlsRead):
                 label = getSignalName(node.intf)
             elif isinstance(node, HlsOperation):
                 label = node.operator.id
-            elif isinstance(node, WriteOpPromise):
+            elif isinstance(node, HlsWrite):
                 label = getSignalName(node.where)
             elif isinstance(node, HlsConst):
                 label = VerilogSerializer.asHdl(node.val, None)
