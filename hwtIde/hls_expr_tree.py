@@ -60,7 +60,7 @@ def schedulizationGraphAsJSON(hls):
                 raise TypeError(node)
 
             _node = {"id": nodeId,
-                     "label": label,
+                     "label": label + ' ' + '{:.1f}-{:.1f}'.format(node.asap_start, node.asap_end),
                      "level": (node.asap_start + node.asap_end) / 2
                      }
             nodes[nodeId] = _node
