@@ -5,10 +5,10 @@ function ExprTreeGraph(svg) {
      * DAG with nodes separated into leveles based on scheduelization time 
      * */
     var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().distance(30))
+        .force("link", d3.forceLink().distance(100))
         .force("collide", d3.forceCollide(function(d) {
-                                               return d.r + 8
-                                         }).iterations(16))
+                                               return d.r + 32
+                                         }).iterations(32))
         .force("charge", d3.forceManyBody().strength(-1000));
     var levellines = null; 
     var levellabels = null;
