@@ -61,9 +61,10 @@ def schedulizationGraphAsJSON(hls):
 
             start = node.scheduledIn
             end = node.scheduledInEnd
+            clk_period = hls.clk_period
             _node = {"id": nodeId,
-                     "label": '{}\n{:.1f}-{:.1f}'.format(label, start * 1e9,
-                                                          end * 1e9),
+                     "label": '{}\n{:.1f}-{:.1f}'.format(label, start / clk_period,
+                                                         end / clk_period),
                      "level": (start + end) / (2 * hls.clk_period)
                      }
             nodes[nodeId] = _node
@@ -76,7 +77,7 @@ def schedulizationGraphAsJSON(hls):
     return {
         "nodes": nodes,
         "edges": edges,
-        "clk_period": hls.clk_period,
+        "clk_period": clk_period,
     }
 
 
