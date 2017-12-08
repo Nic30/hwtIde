@@ -93,7 +93,7 @@ function ExprTreeGraph(svg) {
             .data(data.nodes)
             .enter()
             .append("circle")
-            .attr("r", 15)
+            .attr("r", 20)
             .call(d3.drag()
                 .on("start", drag_started)
                 .on("drag", dragged)
