@@ -67,14 +67,13 @@ function ExprTreeGraph(svg) {
             if (n.level > levelCnt)
                 levelCnt = n.level;
         })
-        levelCnt = Math.ceil(levelCnt);
-        if (levelCnt <= 1)
-        	levelCnt += 1;
-        var levelHeight = height / levelCnt;
+        levelCnt = Math.ceil(levelCnt) + 1;
+        var levelHeight = height / (levelCnt+0.5);
 
         var y = d3.scaleLinear()
                   .domain([0, levelCnt])
-                  .range([levelHeight, d3.max([levelCnt, 1]) * levelHeight])
+                  .range([0.5 * levelHeight,
+                	      levelCnt * levelHeight])
         
                   
         svg.selectAll(".links").remove()
