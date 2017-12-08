@@ -49,19 +49,22 @@ def schedulizationGraphAsJSON(hls):
         for node in _nodes:
             nodeId = nodeIds[node]
             if isinstance(node, HlsRead):
-                label = ''#getSignalName(node.intf)
+                label = getSignalName(node.intf)
             elif isinstance(node, HlsOperation):
-                label = node.operator.id[0]
+                label = node.operator.id
             elif isinstance(node, HlsWrite):
-                label = ''
+                label = getSignalName(node.where)
             elif isinstance(node, HlsConst):
-                label = ''#VerilogSerializer.asHdl(node.val, None)
+                label = VerilogSerializer.asHdl(node.val, None)
             else:
                 raise TypeError(node)
 
+            start = node.scheduledIn
+            end = node.scheduledInEnd
             _node = {"id": nodeId,
-                     "label": label + ' ' + '{:.1f}-{:.1f}'.format(node.asap_start * 1e9, node.asap_end * 1e9),
-                     "level": (node.asap_start + node.asap_end) / (2 * hls.clk_period)
+                     "label": '{}\n{:.1f}-{:.1f}'.format(label, start * 1e9,
+                                                          end * 1e9),
+                     "level": (start + end) / (2 * hls.clk_period)
                      }
             nodes[nodeId] = _node
             for usedBy in node.usedBy:
