@@ -21,6 +21,7 @@
     "metismenu": "latest",
     "mocha": "latest",
     "raphael": "latest",
+    "seedrandom": "^2.4.3",
     "startbootstrap-sb-admin-2": "latest"
   },
   "devDependencies": {},

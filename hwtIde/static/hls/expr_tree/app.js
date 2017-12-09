@@ -5,15 +5,14 @@ function ExprTreeGraph(svg) {
      * DAG with nodes separated into leveles based on scheduelization time 
      * */
     var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().distance(100))
+        .force("link", d3.forceLink().distance(50))
         .force("collide", d3.forceCollide(function(d) {
-                                               return d.r + 32
+                                               return d.r + 16
                                          }).iterations(32))
         .force("charge", d3.forceManyBody().strength(-1000));
     var levellines = null; 
     var levellabels = null;
     var dragging = false;
-    var levelize = 0;
 
     this.data = {nodes:[], edges:[]};
     /* where node = {id: ..., label: ..., level: ...}
@@ -58,6 +57,8 @@ function ExprTreeGraph(svg) {
 
     
     this.redraw = function() {
+        Math.seedrandom('hls_expr_tree');
+        simulation.stop();
         var width = parseInt(svg.style("width"))
         var height = parseInt(svg.style("height"))
         var data = this.data;
@@ -67,13 +68,16 @@ function ExprTreeGraph(svg) {
             if (n.level > levelCnt)
                 levelCnt = n.level;
         })
-        levelCnt = Math.ceil(levelCnt) + 1;
-        var levelHeight = height / (levelCnt+0.5);
-
+        levelCnt = Math.ceil(levelCnt) + 0.5;
+        var levelHeight = height / (levelCnt);
+        if (levelCnt < 1)
+        	var levelOffset = Math.max((levelCnt/ 10), 0.1) * levelHeight;  
+        else
+        	var levelOffset = 0.5 * levelHeight;
         var y = d3.scaleLinear()
                   .domain([0, levelCnt])
-                  .range([0.5 * levelHeight,
-                	      levelCnt * levelHeight])
+                  .range([levelOffset,
+                          levelCnt * levelHeight])
         
                   
         svg.selectAll(".links").remove()
@@ -94,6 +98,14 @@ function ExprTreeGraph(svg) {
             .enter()
             .append("circle")
             .attr("r", 20)
+            .attr("cx", function(d) { 
+                d.x = width/ 2;
+                return d.x; 
+            })
+            .attr("cy", function(d) {
+                d.y = y(d.level); 
+                return d.y;
+            })
             .call(d3.drag()
                 .on("start", drag_started)
                 .on("drag", dragged)
@@ -131,8 +143,8 @@ function ExprTreeGraph(svg) {
             .attr("x2", width)
             .attr("y2", function (d) { return d.y; });
        
-       svg.selectAll(".levellabels").remove()
-       levellabels = svg.append("g")
+        svg.selectAll(".levellabels").remove()
+        levellabels = svg.append("g")
             .attr("class", "levellabels")
             .selectAll("text")
             .data(levels)
@@ -141,43 +153,44 @@ function ExprTreeGraph(svg) {
             .attr("x", 0)
             .attr("y", function (d) { return d.y + 20; })
             .text(function(d) { return d.level });
-            
+        
         var ticked = function() {
-             var k = simulation.alpha();
-             if(levelize && !dragging) {
-                 data.nodes.forEach(function(o, i) {
-                      o.y = y(o.level);
-                 });
-             }
+        	var alpha = Math.max(simulation.alpha(), 0.2)
+            node
+                .attr("cx", function(d) { return d.x; })
+                .attr("cy", function(d) { 
+                   var target = y(d.level);
+                   d.y += (target - d.y) * alpha;
+                   return d.y; 
+                });
             
-            link.attr("x1", function(d) { return d.source.x; })
+            link
+                .attr("x1", function(d) { return d.source.x; })
                 .attr("y1", function(d) { return d.source.y; })
                 .attr("x2", function(d) { return d.target.x; })
                 .attr("y2", function(d) { return d.target.y; });
-        
-            node.attr("cx", function(d) { return d.x; })
-                .attr("cy", function(d) { return d.y; });
-
+            
+            
             nodelabels
                 .attr("x", function(d) { return d.x; })
                 .attr("y", function(d) { return d.y; }); 
+        	
         }
-        
-        
-        simulation.stop();
+        simulation.nodes(data.nodes)
+            .on("tick", ticked)
+            .on("end", function () {
+                data.nodes.forEach(function(n) {
+                    n.y = y(n.level);
+                })
+                ticked();
+            });
+    
+        simulation.force("link")
+            .links(data.edges);    
+
         simulation.force("y", d3.forceY(height / 2))
                   .force("x", d3.forceX(width / 2))
-                  .alpha(.2).restart();
-
-        simulation.nodes(data.nodes)
-                  .on("tick", ticked);
-        
-        simulation.force("link")
-                  .links(data.edges);    
-
-        // [HOTFIX]
-        // wait unitl tree is partialy sorted and then start to order it to levels
-        setTimeout(function () {levelize = 1;}, 1000);
+                  .alpha(.4).restart();
     }
 
     this.bindData = function (data) {
