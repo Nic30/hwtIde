@@ -5,15 +5,21 @@ http://www.samsarin.com/project/dagre-d3/latest/demo/sentence-tokenization.html
 http://www.samsarin.com/project/dagre-d3/latest/demo/tcp-state-diagram.html
 http://plnkr.co/edit/r2zpfRJ3bsea1tqSBiyI?p=preview
 https://bl.ocks.org/curran/5905182da50a4667dc00
+http://petrdevaikin.com/duma/en/
  -->
 <head>
   <meta charset="UTF-8">
   <title>HLS Expr Tree</title>
   <style type="text/css">
-        #mynetwork {
-            width: 600px;
-            height: 600px;
+        #exprtree {
+            width: 100%;
+            height: 100%;
             border: 1px solid lightgray;
+			position:fixed;
+			top:0;
+			left:0;
+			bottom:0;
+			right:0;
         }
 
         path.link {
@@ -43,6 +49,11 @@ https://bl.ocks.org/curran/5905182da50a4667dc00
 		
   </style>
   <script src="/static/node_modules/d3/build/d3.js"></script>
+  <script src="/static/node_modules/seedrandom/seedrandom.js"></script>
+  <script type="text/javascript">
+  var MODULE_NAME = "{{MODULE_NAME}}";
+  var IN_MODULE_NAME = "{{IN_MODULE_NAME}}";
+  </script>
 </head>
 <body>
   <svg id="exprtree"></svg>

@@ -8,7 +8,7 @@ var svg = wrap.append("svg");
 var color = d3.scale.category20();
 
 // Set up the force layout
-var force = d3.layout.force().charge(-120).linkDistance(80).size(
+var force = d3.forceSimulation().charge(-120).linkDistance(80).size(
 		[ width, height ]);
 
 // Append a SVG to the body of the html page. Assign this SVG as an object to
@@ -40,8 +40,11 @@ var link = svg.selectAll(".link").data(links).enter().append("line").attr(
 
 // Do the same with the circles for the nodes - no
 // Changed
-var node = svg.selectAll(".node").data(nodes).enter().append("g").attr("class",
-		"node").call(force.drag);
+var node = svg.selectAll(".node")
+              .data(nodes).enter()
+              .append("g")
+              .attr("class", "node")
+              .call(force.drag);
 
 node.append("circle").attr("r", 8).style("fill", function(d) {
 	return color(d.group);

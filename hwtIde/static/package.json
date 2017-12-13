@@ -20,8 +20,8 @@
     "jquery": "latest",
     "metismenu": "latest",
     "mocha": "latest",
-    "morris.js": "latest",
     "raphael": "latest",
+    "seedrandom": "^2.4.3",
     "startbootstrap-sb-admin-2": "latest"
   },
   "devDependencies": {},

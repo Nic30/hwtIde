@@ -19,7 +19,7 @@ function debugRouterDots(svgGroup, grid){
 		.data(flatenMap)
 		.enter()
 		.append("path")
-		.classed({"debug-link2component": true})
+		.classed("debug-link2component", true)
 		.attr("d", function (d) {
 			var sx = d.pos()[0];
 			var sy = d.pos()[1];
@@ -53,7 +53,7 @@ function debugRouterDots(svgGroup, grid){
 		.data(interNodeLines)
 		.enter()
 		.append("path")
-		.classed({"debug-link-between-nodes" : true	})
+		.classed("debug-link-between-nodes", true)
 		.attr("d", function(d) {	
 			return "M" + d.p0[0] + "," + d.p0[1] + " L " + d.p1[0] + "," + d.p1[1];
 		});
@@ -86,7 +86,7 @@ function debugRouterDots(svgGroup, grid){
 		.data(arrows)
 		.enter()
 		.append("svg:g")
-		.classed({"debug-routing-arrow": true})
+		.classed("debug-routing-arrow", true)
 		.attr("transform", function(d) { 
 			return "translate(" + d.routingNode.pos() + ") " + "rotate("+ d.angle + ")"; 
 		})
@@ -99,7 +99,7 @@ function debugRouterDots(svgGroup, grid){
 		.data(flatenMap)
 		.enter()
 		.append("circle")
-		.classed({"debug-routing-node":true})
+		.classed("debug-routing-node", true)
 		.style("fill", "steelblue")
 		.attr("r", 2)
 		.attr("cx", function(d){

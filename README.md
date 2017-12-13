@@ -13,6 +13,8 @@ Prototype of wave viewer, input is vcd/outputs from HWT simulator in memory.
 ## Connection editor
 Simple component connection editor used for visualization of of hierarchical components and simple editing.
 
+![Connections viewer](/doc/connections.png)
+
 ## HLS visualizations
 * Gantt graph, pipeline mapping graphs etc.
 

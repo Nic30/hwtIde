@@ -28,7 +28,8 @@ def connections_save():
         nets = data["nets"]
         with open(path, mode='w') as f:
             json.dump(
-                {"name": data["name"], "nodes": nodes, "nets": nets}, f, indent=4)
+                {"name": data["name"], "nodes": nodes, "nets": nets},
+                f, indent=4)
         return jsonify(success=True)
     else:
         raise Exception("Not implemented")
@@ -72,8 +73,8 @@ def connectionData(path):
         #    module = importlib.reload(sys.modules[path])
         # except KeyError:
         #    module = importlib.import_module(path.replace("/", "."))
-    from hwtLib.samples.iLvl.hierarchy.axiLiteSlaveContainer import AxiLiteSlaveContainer
-    u = AxiLiteSlaveContainer()
+    from hwtLib.samples.hierarchy.netFilter import NetFilter
+    u = NetFilter()
     # for _ in u._toRtl():
     #    pass
     data = serializeUnit(u)
