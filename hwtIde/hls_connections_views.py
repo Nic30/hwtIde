@@ -5,8 +5,9 @@ import importlib
 import json
 import os
 import sys
-
-from connectionsJsonObj import FSEntry, jsonResp, serializeUnit
+from fsEntry import FSEntry
+from json_resp import jsonResp
+from layoutContainers import Unit_to_Layout
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -63,13 +64,13 @@ def connectionData(path):
         #    module = importlib.reload(sys.modules[path])
         # except KeyError:
         #    module = importlib.import_module(path.replace("/", "."))
-    #from hwtLib.samples.hierarchy.netFilter import NetFilter
-    #u = NetFilter()
-    from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
-    u = SimpleSubunit()
+    from hwtLib.samples.hierarchy.netFilter import NetFilter
+    u = NetFilter()
+    # from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
+    # u = SimpleSubunit()
     # for _ in u._toRtl():
     #    pass
-    data = serializeUnit(u)
+    data = Unit_to_Layout(u)
 
     # elif path.endswith(".json"):
     #    with open(path) as f:

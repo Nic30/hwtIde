@@ -1,7 +1,4 @@
-from flask.wrappers import Response
 from itertools import chain
-import json
-from typing import List
 
 from hwt.hdl.constants import INTF_DIRECTION, DIRECTION, DIRECTION_to_str
 from hwt.hdl.portItem import PortItem
@@ -11,6 +8,7 @@ from hwt.synthesizer.rtlLevel.rtlSignal import RtlSignal
 from hwt.synthesizer.unit import Unit
 from hwt.synthesizer.utils import toRtl
 import xml.etree.ElementTree as etree
+from layoutGeometry import GeometryRect
 
 
 UNIT_HEADER_OFFSET = 20
@@ -23,66 +21,23 @@ def width_of_str(s):
     return len(s) * 12
 
 
-class IdCtx(dict):
+def mxCell(**kvargs):
+    return etree.Element("mxCell", attrib=kvargs)
+
+
+class LayoutIdCtx(dict):
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
         self.max_id = 0
         self.orig_to_layout = {}
 
     def register(self, origObj, layoutObj) -> int:
-        print("reg", origObj)
         assert origObj not in self.orig_to_layout, origObj
         i = self.max_id
         self[i] = layoutObj
         self.orig_to_layout[origObj] = layoutObj
         self.max_id += 1
         return i
-
-
-def jsonResp(data):
-    return Response(response=json.dumps(
-        data,
-        default=_defaultToJson),
-        status=200, mimetype="application/json")
-
-
-def _defaultToJson(obj):
-    if hasattr(obj, "toJson"):
-        return obj.toJson()
-    return obj.__dict__
-
-
-class GeometryRect():
-    def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-
-    def toMxGraph(self, as_="geometry"):
-        return etree.Element(
-            "mxGeometry",
-            {"x": str(self.x),
-             "y": str(self.y),
-             "width": str(self.width),
-             "height": str(self.height),
-             "as": as_})
-
-    def toJson(self):
-        return {
-            "x": self.x,
-            "y": self.y,
-            "width": self.width,
-            "height": self.height
-        }
-
-
-class GeometryPath():
-    def __init__(self, points):
-        self.points = points
-
-    def toJson(self):
-        return self.points
 
 
 class LayoutPort():
@@ -97,7 +52,7 @@ class LayoutPort():
     :ivar id: unique id in layout diagram
     """
 
-    def __init__(self, id_ctx: IdCtx, portItem: PortItem, parent: "LayoutUnit",
+    def __init__(self, id_ctx: LayoutIdCtx, portItem: PortItem, parent: "LayoutUnit",
                  on_parent_index: int, name: str, direction):
         self.parent = parent
         self.on_parent_index = on_parent_index
@@ -139,7 +94,7 @@ class LayoutUnit():
     :ivar id: unique diagram id of this object
     """
 
-    def __init__(self, id_ctx: IdCtx, unit: Unit, name: str, class_name: str):
+    def __init__(self, id_ctx: LayoutIdCtx, unit: Unit, name: str, class_name: str):
         self.name = name
         self.class_name = class_name
         self.inputs = []
@@ -190,7 +145,7 @@ class LayoutUnit():
         portArr.append(p)
 
     @classmethod
-    def fromIntfUnit(cls, id_ctx: IdCtx, u: Unit):
+    def fromIntfUnit(cls, id_ctx: LayoutIdCtx, u: Unit):
         self = cls(id_ctx, u, u._name, u.__class__.__name__)
         for intf in u._interfaces:
             self.add_port(intf)
@@ -222,7 +177,7 @@ class LayoutUnit():
 
 
 class LayoutExternalPort(LayoutUnit):
-    def __init__(self, id_ctx: IdCtx, intf):
+    def __init__(self, id_ctx: LayoutIdCtx, intf):
         super(LayoutExternalPort, self).__init__(
             id_ctx, intf,
             intf._name, intf.__class__.__name__)
@@ -247,7 +202,7 @@ class LayoutExternalPort(LayoutUnit):
 
 
 class LayoutNet():
-    def __init__(self, id_ctx: IdCtx,
+    def __init__(self, id_ctx: LayoutIdCtx,
                  signal: RtlSignal,
                  name=None):
 
@@ -291,15 +246,11 @@ class LayoutNet():
         return j
 
 
-def mxCell(**kvargs):
-    return etree.Element("mxCell", attrib=kvargs)
-
-
 class Layout():
     def __init__(self):
         self.nets = []
         self.nodes = []
-        self.id_ctx = IdCtx()
+        self.id_ctx = LayoutIdCtx()
 
     def add_stm_as_unit(self, stm: HdlStatement) -> LayoutUnit:
         u = LayoutUnit(self.id_ctx, stm, stm.__class__.__name__,
@@ -335,7 +286,24 @@ class Layout():
             offset += 200
 
     def toMxGraph(self) -> etree.Element:
-        gm = etree.Element("mxGraphModel")
+        gm = etree.Element("mxGraphModel", {
+            "dx": "0",
+            "dy": "0",
+            "grid": "1",
+            "gridSize": "10",
+            "guides": "1",
+            "tooltips": "1",
+            "connect": "1",
+            "arrows": "1",
+            "fold": "1",
+            "page": "1",
+            "pageScale": "1",
+            # "pageWidth":"0",
+            # "pageHeight":"0"
+            "background": "#ffffff",
+            "math": "0",
+            "shadow": "0"
+        })
         root = etree.Element("root")
         gm.append(root)
         topCell = mxCell(id="0")
@@ -413,11 +381,12 @@ def Unit_to_Layout(u):
 
 
 if __name__ == "__main__":
+    import os
     from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
     u = SimpleSubunit()
     s = Unit_to_Layout(u)
     # print(s.toJson())
-    with open("/home/nic30/Downloads/test.xml", "wb") as f:
+    with open(os.path.expanduser("~/test.xml"), "wb") as f:
         s = etree.tostring(s.toMxGraph())
         f.write(s)
         print(s)
