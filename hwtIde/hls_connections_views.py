@@ -1,14 +1,12 @@
 from flask import render_template, request, jsonify
 from flask.blueprints import Blueprint
-import json
-import importlib
-import sys
-import os
 import glob
+import importlib
+import json
+import os
+import sys
 
-from connectionsJsonObj import FSEntry, jsonResp
-from hwt.synthesizer.unit import Unit
-from hls_connections import serializeUnit
+from connectionsJsonObj import FSEntry, jsonResp, serializeUnit
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"

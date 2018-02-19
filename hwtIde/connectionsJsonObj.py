@@ -1,15 +1,15 @@
 from flask.wrappers import Response
 from itertools import chain
 import json
-import os
-from stat import S_ISDIR
-import time
 from typing import List
 
 from hwt.hdl.constants import INTF_DIRECTION, DIRECTION, DIRECTION_to_str
+from hwt.hdl.portItem import PortItem
+from hwt.hdl.statements import HdlStatement
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.rtlLevel.rtlSignal import RtlSignal
 from hwt.synthesizer.unit import Unit
+from hwt.synthesizer.utils import toRtl
 import xml.etree.ElementTree as etree
 
 
@@ -20,7 +20,7 @@ UNIT_PADDING = 5
 
 
 def width_of_str(s):
-    return len(s) * 5
+    return len(s) * 12
 
 
 class IdCtx(dict):
@@ -30,6 +30,7 @@ class IdCtx(dict):
         self.orig_to_layout = {}
 
     def register(self, origObj, layoutObj) -> int:
+        print("reg", origObj)
         assert origObj not in self.orig_to_layout, origObj
         i = self.max_id
         self[i] = layoutObj
@@ -61,10 +62,10 @@ class GeometryRect():
     def toMxGraph(self, as_="geometry"):
         return etree.Element(
             "mxGeometry",
-            {"x": self.x,
-             "y": self.y,
-             "width": self.width,
-             "height": self.height,
+            {"x": str(self.x),
+             "y": str(self.y),
+             "width": str(self.width),
+             "height": str(self.height),
              "as": as_})
 
     def toJson(self):
@@ -96,18 +97,28 @@ class LayoutPort():
     :ivar id: unique id in layout diagram
     """
 
-    def __init__(self, id_ctx: IdCtx, parent: "LayoutUnit",
+    def __init__(self, id_ctx: IdCtx, portItem: PortItem, parent: "LayoutUnit",
                  on_parent_index: int, name: str, direction):
         self.parent = parent
         self.on_parent_index = on_parent_index
         self.name = name
         self.direction = direction
         self.geometry = None
-        self.id = id_ctx.register(self)
+        self.id = id_ctx.register(portItem, self)
 
     def updateGeometry(self, x_offset, y_offset, width):
         y = y_offset + UNIT_HEADER_OFFSET + self.on_parent_index * PORT_HEIGHT
         self.geometry = GeometryRect(x_offset, y, width, PORT_HEIGHT)
+
+    def getMxGraphId(self):
+        p = self.parent.geometry
+        g = self.geometry
+        x_rel = (g.x - p.x) / p.width
+        y_rel = (g.y - p.y) / p.height
+        assert x_rel >= 0.0 and x_rel <= 1.0
+        assert y_rel >= 0.0 and y_rel <= 1.0
+
+        return x_rel, y_rel, self.parent.getMxGraphId()
 
     def toJson(self):
         return {"id": self.id,
@@ -156,17 +167,26 @@ class LayoutUnit():
 
         self.geometry = GeometryRect(x, y, width, height)
 
-    def add_port(self, intf: Interface):
-        if intf._direction == INTF_DIRECTION.MASTER:
-            portArr = self.outputs
-        elif intf._direction == INTF_DIRECTION.SLAVE:
-            portArr = self.inputs
+    def add_port(self, intf: Interface, reverse_dir=False):
+        d = intf._direction
+        if d == INTF_DIRECTION.MASTER:
+            if reverse_dir:
+                portArr = self.inputs
+            else:
+                portArr = self.outputs
+            pi = intf._sigInside.endpoints[0]
+        elif d == INTF_DIRECTION.SLAVE:
+            if reverse_dir:
+                portArr = self.outputs
+            else:
+                portArr = self.inputs
+            pi = intf._sigInside.drivers[0]
         else:
             raise Exception()
 
-        p = LayoutPort(self._id_ctx, self,
-                       len(portArr), intf._name,
-                       intf._direction)
+        assert isinstance(pi, PortItem)
+        p = LayoutPort(self._id_ctx, pi, self,
+                       len(portArr), intf._name, d)
         portArr.append(p)
 
     @classmethod
@@ -178,13 +198,14 @@ class LayoutUnit():
         return self
 
     def getMxGraphId(self):
-        raise self.id + 2
+        return str(self.id + 2)
 
     def toMxGraph(self):
         c = mxCell(
             value=self.name,
+            id=self.getMxGraphId(),
             style="rounded=0;whiteSpace=wrap;html=1;",
-            parent=1, vertex=1)
+            parent="1", vertex="1")
         c.append(self.geometry.toMxGraph())
         return c
 
@@ -203,9 +224,9 @@ class LayoutUnit():
 class LayoutExternalPort(LayoutUnit):
     def __init__(self, id_ctx: IdCtx, intf):
         super(LayoutExternalPort, self).__init__(
-            id_ctx, intf._sigInside,
+            id_ctx, intf,
             intf._name, intf.__class__.__name__)
-        self.add_port(intf)
+        self.add_port(intf, reverse_dir=True)
         self.direction = intf._direction
 
     def toMxGraph(self):
@@ -228,32 +249,36 @@ class LayoutExternalPort(LayoutUnit):
 class LayoutNet():
     def __init__(self, id_ctx: IdCtx,
                  signal: RtlSignal,
-                 source: LayoutPort,
-                 endpoints: List[LayoutPort], name=None):
+                 name=None):
+
         self.id = id_ctx.register(signal, self)
         self.name = name
-        self.source = source
-        self.endpoints = endpoints
+        self.source = None
+        self.endpoints = None
 
     def getMxGraphId(self):
-        return self.id + 2
+        return str(self.id + 2)
 
     def toMxGraph(self):
         for ep in self.endpoints:
             srcX, srcY, srcId = self.source.getMxGraphId()
             dstX, dstY, dstId = ep.getMxGraphId()
+            assert srcX >= 0.5, self.source.name
+            srcX = 0
+            assert dstX < 0.5, ep.name
+            dstX = 1
             c = mxCell(
-                "mxCell",
-                {
-                    "id": self.getMxGraphId(),
-                    "style": ("edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" +
-                              "exitX=%f;exitY=%f;entryX=%f;entryY=%f;" % (dstX, dstY, srcX, srcY) +
-                              "jettySize=auto;orthogonalLoop=1;"),
-                    "edge": "1",
-                    "parent": "1",
-                    "source": srcId,
-                    "target": dstId,
-                })
+                id=self.getMxGraphId(),
+                style=("edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" +
+                       "exitX=%f;exitY=%f;entryX=%f;entryY=%f;" % (dstX, dstY, srcX, srcY) +
+                       "jettySize=auto;orthogonalLoop=1;"),
+                edge="1",
+                parent="1",
+                source=srcId,
+                target=dstId,
+            )
+            c.append(etree.Element("mxGeometry", {
+                     "relative": "1", "as": "geometry"}))
             yield c
 
     def toJson(self):
@@ -261,7 +286,7 @@ class LayoutNet():
         if self.name:
             j['name'] = self.name
         j['source'] = self.source.id
-        j['targets'] = list(map(lambda t: t.id, self.targets))
+        j['endpoints'] = list(map(lambda t: t.id, self.endpoints))
 
         return j
 
@@ -276,71 +301,123 @@ class Layout():
         self.nodes = []
         self.id_ctx = IdCtx()
 
-    def add_unit(self, u: Unit):
+    def add_stm_as_unit(self, stm: HdlStatement) -> LayoutUnit:
+        u = LayoutUnit(self.id_ctx, stm, stm.__class__.__name__,
+                       stm.__class__.__name__)
+        dummy_obj = object()
+        u.outputs.append(LayoutPort(self.id_ctx, dummy_obj,
+                                    u, 0, "out", INTF_DIRECTION.MASTER))
+        dummy_obj = object()
+        u.inputs.append(LayoutPort(self.id_ctx, dummy_obj,
+                                   u, 0, "in", INTF_DIRECTION.SLAVE))
+        self.nodes.append(u)
+        return u
+
+    def add_unit(self, u: Unit) -> LayoutUnit:
         n = LayoutUnit.fromIntfUnit(self.id_ctx, u)
         self.nodes.append(n)
+        return n
 
-    def add_port(self, intf: Interface):
+    def add_port(self, intf: Interface) -> LayoutExternalPort:
         n = LayoutExternalPort(self.id_ctx, intf)
         self.nodes.append(n)
+        return n
 
-    def add_net(self, s: RtlSignal):
-        o_to_l = self.id_ctx.orig_to_layout
-        n = LayoutNet(self.id_ctx,
-                      o_to_l[s],
-                      [o_to_l[e] for e in s.endpoints],
-                      name=s.name)
+    def register_net(self, s: RtlSignal) -> LayoutNet:
+        n = LayoutNet(self.id_ctx, s, name=s.name)
         self.nets.append(n)
+        return n
 
-    def resolveGeometry(self):
+    def resolveGeometry(self) -> None:
         offset = 0
         for n in self.nodes:
             n.updateGeometry(offset, 0)
             offset += 200
 
-    def toMxGraph(self):
+    def toMxGraph(self) -> etree.Element:
         gm = etree.Element("mxGraphModel")
         root = etree.Element("root")
         gm.append(root)
-        topCell = mxCell(id=0)
-        mainCell = mxCell(id=1, parent=0)
+        topCell = mxCell(id="0")
+        mainCell = mxCell(id="1", parent="0")
         root.extend([topCell, mainCell])
 
+        for n in self.nets:
+            for l in n.toMxGraph():
+                root.append(l)
+
         for n in self.nodes:
-            gm.append(n.toMxGraph())
+            root.append(n.toMxGraph())
+
+        return gm
 
     def toJson(self):
         # nets = sorted(nets , key=lambda x : x.name)
-        return {"nodes": self.nodes,
-                "nets": self.nets}
+        return {"nodes": [n.toJson() for n in self.nodes],
+                "nets": [n.toJson() for n in self.nets]}
 
 
-class FSEntry():
-    def __init__(self, name, isGroup):
-        self.isGroup = isGroup
-        self.name = name
-        self.size = ""
-        self.type = ""
-        self.dateModified = None
-        self.children = []
+def getParentUnit(intf):
+    while isinstance(intf._parent, Interface):
+        intf = intf._parent
 
-    @classmethod
-    def fromFile(cls, fileName):
-        st = os.stat(fileName)
+    return intf._parent
 
-        self = cls(os.path.basename(fileName), S_ISDIR(st.st_mode))
-        self.size = st.st_size
-        # "%Y/%m/%d  %H:%M:%S"
-        self.dateModified = time.strftime(
-            "%Y/%m/%d  %H:%M:%S", time.gmtime(st.st_ctime))
 
-        return self
+def Unit_to_Layout(u):
+    toRtl(u)
+    la = Layout()
 
-    def toJson(self):
-        return {"group": self.isGroup,
-                "data": {"name": self.name,
-                         "size": self.size,
-                         "type": self.type,
-                         "dateModified": self.dateModified},
-                "children": []
-                }
+    # create subunits
+    for su in u._units:
+        la.add_unit(su)
+
+    for stm in u._ctx.statements:
+        la.add_stm_as_unit(stm)
+
+    # create ports and nets
+    for s in u._ctx.signals:
+        if not s.hidden:
+            la.register_net(s)
+            if hasattr(s, "_interface"):
+                intf = s._interface
+                if intf._isExtern and getParentUnit(intf) is u:
+                    la.add_port(s._interface)
+
+    # create
+    o_to_l = la.id_ctx.orig_to_layout
+    for s in u._ctx.signals:
+        if not s.hidden:
+            n = o_to_l[s]
+            assert len(s.drivers) == 1, s
+            for stm in s.drivers:
+                la_stm = o_to_l[stm]
+                assert n.source is None
+                if isinstance(stm, PortItem):
+                    n.source = la_stm
+                else:
+                    n.source = la_stm.outputs[0]
+
+            eps = n.endpoints = []
+            for stm in s.endpoints:
+                la_stm = o_to_l[stm]
+                if isinstance(stm, PortItem):
+                    eps.append(la_stm)
+                else:
+                    eps.append(la_stm.inputs[0])
+
+    la.resolveGeometry()
+
+    # nets = sorted(nets , key=lambda x : x.name)
+    return la
+
+
+if __name__ == "__main__":
+    from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
+    u = SimpleSubunit()
+    s = Unit_to_Layout(u)
+    # print(s.toJson())
+    with open("/home/nic30/Downloads/test.xml", "wb") as f:
+        s = etree.tostring(s.toMxGraph())
+        f.write(s)
+        print(s)
