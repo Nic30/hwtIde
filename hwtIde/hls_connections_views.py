@@ -56,15 +56,6 @@ def connectionDataLs(path=""):
     return jsonResp(data)
 
 
-@connectionsBp.route('/hls/connections-view/<path:path>')
-def connectionView(path):
-    path = os.path.join(WORKSPACE_DIR, path)
-    with open(path) as f:
-        data = Unit.fromJson(json.loads(f.read()), path)
-
-    return jsonResp(data)
-
-
 @connectionsBp.route('/hls/connections-data/<path:path>')
 def connectionData(path):
     # path = os.path.join(WORKSPACE_DIR, path)
@@ -74,8 +65,10 @@ def connectionData(path):
         #    module = importlib.reload(sys.modules[path])
         # except KeyError:
         #    module = importlib.import_module(path.replace("/", "."))
-    from hwtLib.samples.hierarchy.netFilter import NetFilter
-    u = NetFilter()
+    #from hwtLib.samples.hierarchy.netFilter import NetFilter
+    #u = NetFilter()
+    from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
+    u = SimpleSubunit()
     # for _ in u._toRtl():
     #    pass
     data = serializeUnit(u)
