@@ -11,7 +11,7 @@ from hwt.synthesizer.unit import Unit
 from hls_connections import serializeUnit
 
 
-WORKSPACE_DIR = "../hwt/samples/"
+WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
 sys.path.append(WORKSPACE_DIR)
 
 connectionsBp = Blueprint('connections', __name__,
@@ -49,8 +49,9 @@ def connections_test():
 @connectionsBp.route('/hls/connections-data-ls/<path:path>')
 def connectionDataLs(path=""):
     data = []
-    path = os.path.join(WORKSPACE_DIR, path) + "/*"
-    for f in glob.glob(path):
+    path = os.path.join(WORKSPACE_DIR, path)
+    assert os.path.exists(path), (path, os.getcwd())
+    for f in glob.glob(path+"/*"):
         data.append(FSEntry.fromFile(f))
     return jsonResp(data)
 

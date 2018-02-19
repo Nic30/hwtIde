@@ -1,6 +1,7 @@
-from connectionsJsonObj import Net, Connection, ExternalPort, Unit
+from connectionsJsonObj import LayoutNet, LayoutConnection, LayoutExternalPort, LayoutUnit
 from hwt.hdl.constants import DIRECTION
 from hwt.hdl.portItem import PortItem
+from hwt.synthesizer.utils import toRtl
 
 
 class PortIndexLookup():
@@ -43,24 +44,20 @@ class PortIndexLookup():
 def serializeUnit(u):
     nets = []
     nodes = []
-    indx = 1
-    u._guiIndex = 0
+    toRtl(u)
 
-    for _, su in u._subUnits.items():
-        su._guiIndex = indx
-        n = Unit.fromIntfUnit(su)
+    for su in u._units:
+        n = LayoutUnit.fromIntfUnit(su)
         nodes.append(n)
-        indx += 1
 
-    for _, intf in u._interfaces.items():
-        if intf._isExtern:
-            n = ExternalPort(intf)
-            n._guiIndex = indx
-            intf._guiExternPort = n
+    for s in u._ctx.signals:
+        if hasattr(s, "_interface") and s._interface._isExtern:
+            # [TODO] check if it is extern port of this unit or subunit
+            n = LayoutExternalPort(s._interface)
             nodes.append(n)
-            indx += 1
-        if intf._destinations:
-            n = Net(intf, intf._destinations)
+
+        if s.endpoints:
+            n = LayoutNet(s, [e for e in s.endpoints])
             nets.append(n)
 
     # nets = sorted(nets , key=lambda x : x.name)
@@ -81,21 +78,21 @@ def serializeRtlUnit(interface, unit):
 
         if driver and isinstance(driver, PortItem):
             # has driver inside schema
-            n = Net()
+            n = LayoutNet()
             n.name = s.name
-            n.source = Connection(
+            n.source = LayoutConnection(
                 driver.unit, driver.portItem, portIndexLookup=indxLookup)
             for expr in s.expr:
                 if isinstance(expr, PortItem) and expr.portItem.direction == DIRECTION.IN:
-                    t = Connection(expr.unit, expr.portItem,
-                                   portIndexLookup=indxLookup)
+                    t = LayoutConnection(expr.unit, expr.portItem,
+                                         portIndexLookup=indxLookup)
                     n.targets.append(t)
 
             isOuterInterface = driver.sig in interface
             if isOuterInterface:
-                outputPort = ExternalPort(driver.sig.name, DIRECTION.OUT)
+                outputPort = LayoutExternalPort(driver.sig.name, DIRECTION.OUT)
                 nodes.append(outputPort)
-                t = Connection(outputPort, outputPort, index=0)
+                t = LayoutConnection(outputPort, outputPort, index=0)
                 n.targets.append(t)
 
             if len(n.targets) > 0:
