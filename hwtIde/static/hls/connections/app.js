@@ -22,7 +22,7 @@ App.controller('mainController', function($scope, $http, toastr, $cookies,$cooki
 		nets : [],
 		msg:toastr,
 		unimplemented: function(msg){
-			$scope.api.msg.error("Unimplemented",msg);
+			$scope.api.msg.error("Unimplemented", msg);
 		}
 	};
 })
