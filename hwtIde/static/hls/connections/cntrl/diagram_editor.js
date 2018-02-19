@@ -39,7 +39,7 @@ function diagramEditorCntrl($scope, hotkeys){
 					api.fileDialog(true);
 				}
 			}, {combo: 'ctrl+d',
-				description: 'Delete component',
+				description: 'Delete',
 				callback: function(e) {
 					e.stopPropagation(this);
 					e.preventDefault(this);
@@ -178,33 +178,34 @@ function diagramEditorCntrl($scope, hotkeys){
 		var rmFromTargets = new Set();
 		var netIndexes = {};
 		
-		
-		objects.forEach(function(o){
-			var obj = o.__data__;
-			objects2remove.push([obj, api.nodes.indexOf(obj)]);
-			api.nets.forEach(function(net, netIndx){
-				if(net.source.id == obj.id){
-					nets2remove.add(net);
-					netIndexes[net] = netIndx;
-				}else {
-					 net.targets.forEach(function(target, i){
-						if(target.id == obj.id){
-							if(net.targets.length == 1){
-								nets2remove.add(net);
-							}else{
-								rmFromTargets.add([net, i, target]);
-								netIndexes[net] = netIndx;
-							} 
-						}
-					 });
-				}
-			});
-		});
-		// For all selected links
-		links.forEach(function(l){
-			var net = l.__data__.net;
-			nets2remove.add(net);
-		})
+		if (objects)
+		    objects.forEach(function(o) {
+		    	var obj = o.__data__;
+		    	objects2remove.push([obj, api.nodes.indexOf(obj)]);
+		    	api.nets.forEach(function(net, netIndx) {
+		    		if (net.source.id == obj.id) {
+		    			nets2remove.add(net);
+		    			netIndexes[net] = netIndx;
+		    		} else {
+		    			 net.targets.forEach(function(target, i) {
+		    				if(target.id == obj.id){
+		    					if (net.targets.length == 1) {
+		    						nets2remove.add(net);
+		    					} else {
+		    						rmFromTargets.add([net, i, target]);
+		    						netIndexes[net] = netIndx;
+		    					} 
+		    				}
+		    			 });
+		    		}
+		    	});
+		    });
+		if (links)
+		    // For all selected links
+		    links.forEach(function(l){
+		    	var net = l.__data__.net;
+		    	nets2remove.add(net);
+		    })
 		
 		// remove target removes, for already removed nets
 		var rmFromTargets_fromRmNets = [];
@@ -218,7 +219,7 @@ function diagramEditorCntrl($scope, hotkeys){
 		})
 		
 		
-		function redo(){
+		function redo() {
 			nets2remove.forEach(function(net){
 				var index = api.nets.indexOf(net);
 				// Delete all selected links
@@ -238,7 +239,7 @@ function diagramEditorCntrl($scope, hotkeys){
 			});
 		}
 		
-		function undo(){
+		function undo() {
 			objects2remove.forEach(function (o){
 				var obj = o[0];
 				var objIndx = o[1];

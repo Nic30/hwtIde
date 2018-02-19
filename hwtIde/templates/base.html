@@ -25,6 +25,12 @@
 
 	{% block css_extra %}{% endblock %}
 
+   {% if not self.sidebaritems() %}<style type="text/css">
+	#page-wrapper {
+		margin: 0 0 0 0;
+	}
+	</style>{% endif %}
+    
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -42,29 +48,23 @@
         <!-- Navigation -->
         <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
             <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-				<a class="navbar-brand" href="/">HLS toolkit</a>
+				<a class="navbar-brand fa fa-home" href="/"></a>
             </div>
-            <!-- /.navbar-header -->
 
             <ul class="nav navbar-top-links navbar-left" {% block menu_attrib %}{% endblock %}>
-            {% block menu_extra %} {% endblock %}
+            {% block menu_extra %}{% endblock %}
 			</ul>
             <ul class="nav navbar-top-links navbar-right">
-            {% block menu_right %} {% endblock %}   
+            {% block menu_right %}{% endblock %}   
             </ul>       
         </nav>
+        {% if self.sidebaritems() %}
 		<div class="nav navbar-default navbar-fixed-top sidebar" role="navigation">
-
 			<div class="collapse" id="side-bar-Collapsing">
-			{% block sidebaritems %} {% endblock %}
+			{% block sidebaritems %}{% endblock %}
 			</div>
 		</div>
+		{% endif %}
         <div id="page-wrapper">
 			{% block componentAdd %}{% endblock %}
 			{% block componentEdit %}{% endblock %}

@@ -37,3 +37,12 @@
     background-color: #ffffff;
 }
 
+.file-browser {
+	width: 830px;
+	height: 580px;
+}
+
+.file-browser .ag-file-browser {
+	width: 800px;
+	height: 400px;
+}

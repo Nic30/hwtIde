@@ -5,44 +5,73 @@ function filebrowserCntrl($scope, $http) {
 	api.openedFile = '';
 	
 	var filesRowData = [];
-	function sizeCellStyle() {
-		return {
-			'text-align' : 'right'
-		};
+
+	function FileSizeRenderrer() {
 	}
+	FileSizeRenderrer.prototype.init = function (params) {
+	    this.eGui = document.createElement('span');
+	    this.eGui.setAttribute('text-align', 'right')
+	    var val = params.node.data.data.size;
+	    var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'],
+        ind = 0;
+        while (val >= 1024 && ind < units.length -1) {
+            val = val / 1024;
+            ind++;
+        }
+        var s = val.toFixed(2);
+        
+        // cut off redundant zeros
+        for (var end = s.length-1; end > 0; end--) {
+        	var ch = s[end];
+        	if (ch == "0") {
+        	} else if (ch == ".") {
+        		end--;
+        		break
+        	} else {
+        		break
+        	}
+        }
+        s = s.slice(0, end+1)
+        
+        this.eGui.innerHTML = s + ' ' + units[ind];
+	};
+	FileSizeRenderrer.prototype.getGui = function () {
+	    return this.eGui;
+	};	
 	
-	function innerCellRenderer(params) {
-		var image;
-		if (params.node.group) {
+	
+	function FileFolderRenderrer() {
+	}
+	FileFolderRenderrer.prototype.init = function (params) {
+	    this.eGui = document.createElement('span');
+	    var n = params.data;
+	    var image;
+		if (n.group) {
 			image = 'folder';
 		} else {
 			image = 'file';
 		}
 		var imageFullUrl = "/static/hls/connections/graphic/" + image + '.png';
-		return '<img src="' + imageFullUrl + '" style="padding-left: 4px;" /> '
-				+ params.data.name;
-	}
+        this.eGui.innerHTML = '<img src="' + imageFullUrl + '" style="padding-left: 4px;" /> ' + n.data.name;
+	};
 
+	FileFolderRenderrer.prototype.getGui = function () {
+	    return this.eGui;
+	};
+	
 	var columnDefs = [ {
 		headerName : "Name",
-		field : "name",
+		field : "data",
 		width : 350,
-		cellRenderer : {
-			renderer : 'group',
-			innerRenderer : innerCellRenderer
-		}
+		cellRenderer : FileFolderRenderrer
 	}, {
 		headerName : "Size",
-		field : "size",
+		field : "data.size",
 		width : 100,
-		cellStyle : sizeCellStyle
-	}, {
-		headerName : "Type",
-		field : "type",
-		width : 150
+		cellRenderer : FileSizeRenderrer,
 	}, {
 		headerName : "Date Modified",
-		field : "dateModified",
+		field : "data.dateModified",
 		width : 198
 	} ];
 	api.new = function(){
@@ -94,7 +123,6 @@ function filebrowserCntrl($scope, $http) {
 		columnDefs : columnDefs,
 		rowData : filesRowData,
 		rowSelection : 'multiple',
-		rowsAlreadyGrouped : true,
 		enableColResize : true,
 		enableSorting : true,
 		rowHeight : 20,
@@ -129,7 +157,7 @@ function filebrowserCntrl($scope, $http) {
 			$scope.fileGridOptions.api.setRowData(filesRowData);
 		});
 	}
-	api.import = function(path){
+	api.import = function(path) {
 		$http.get('/hls/connections-view/' + path)
 		.then(function(res) {
 			var node = res.data;

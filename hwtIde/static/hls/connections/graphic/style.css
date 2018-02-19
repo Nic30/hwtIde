@@ -1,3 +1,20 @@
+.navbar hr {
+	margin-top: 0.2rem;
+    margin-bottom: 0.2rem;
+}
+
+/*
+ * Normalize padding between items in dropdown menu
+ */
+.navbar-top-links .dropdown-messages li a {
+	padding: 0px;
+}
+.navbar-top-links .dropdown-messages li a div{
+	margin-left: 10px;
+	margin-right: 10px;
+}	
+
+
 svg {
 	/*background-color: cyan;*/
 	height: 100%;

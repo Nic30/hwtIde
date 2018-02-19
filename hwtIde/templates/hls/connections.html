@@ -23,6 +23,12 @@
 <link type="text/css" rel="stylesheet" href="/static/hls/connections/graphic/style.css"/>
 <link type="text/css" rel="stylesheet" href="/static/hls/connections/graphic/fileBrowser.css"/>
 
+<style type="text/css">
+.modal-dialog {
+    max-width: initial;
+}
+</style>
+
 {% endblock %} 
 
 {% block js_extra %}
@@ -37,9 +43,9 @@
 		};
 </script>
 
-<script>
+<script type="text/javascript">
 $(document).ready(function(){
-    $('[data-toggle="tooltip"]').tooltip();   
+    $('[data-toggle="tooltip"]').tooltip();
 });
 </script>
 
@@ -70,7 +76,6 @@ $(document).ready(function(){
 <script type="text/javascript" src="/static/hls/connections/cntrl/undo_redo.js"></script>
 <script type="text/javascript" src="/static/hls/connections/app.js"></script>
 
-
 {% endblock %} 
 
 {% block angular_app %} ng-app="App" ng-controller="mainController" {% endblock %}
@@ -80,12 +85,3 @@ $(document).ready(function(){
 <div ng-controller="undoRedoCntrl" ></div>
 <div id="chartWrapper" ng-controller="diagramCntrl" ></div>
 {% endblock %} 
-
-{% block sidebaritems %}
-<ul class="nav nav-second-level" id="side-menu">
-	<li class="dropdown">
-		<div class="side-menu-item">Text</div>
-		<div class="side-menu-item">More Text</div>
-	</li>
-</ul>
-{% endblock %}
