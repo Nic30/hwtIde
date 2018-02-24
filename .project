@@ -3,9 +3,9 @@
 	<name>hwtIde</name>
 	<comment></comment>
 	<projects>
+		<project>hwt</project>
 		<project>hwtHls</project>
 		<project>hwtLib</project>
-		<project>HWToolkit</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
