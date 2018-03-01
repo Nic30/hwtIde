@@ -52,8 +52,9 @@ class LayoutPort():
     :ivar id: unique id in layout diagram
     """
 
-    def __init__(self, id_ctx: LayoutIdCtx, portItem: PortItem, parent: "LayoutUnit",
-                 on_parent_index: int, name: str, direction):
+    def __init__(self, id_ctx: LayoutIdCtx, portItem: PortItem,
+                 parent: "LayoutUnit", on_parent_index: int,
+                 name: str, direction):
         self.parent = parent
         self.on_parent_index = on_parent_index
         self.name = name
@@ -123,6 +124,7 @@ class LayoutUnit():
         self.geometry = GeometryRect(x, y, width, height)
 
     def add_port(self, intf: Interface, reverse_dir=False):
+        # [TODO] hierarchical interfaces
         d = intf._direction
         if d == INTF_DIRECTION.MASTER:
             if reverse_dir:
@@ -382,8 +384,8 @@ def Unit_to_Layout(u):
 
 if __name__ == "__main__":
     import os
-    from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
-    u = SimpleSubunit()
+    from hwtLib.samples.hierarchy.simpleSubunit2 import SimpleSubunit2
+    u = SimpleSubunit2()
     s = Unit_to_Layout(u)
     # print(s.toJson())
     with open(os.path.expanduser("~/test.xml"), "wb") as f:
