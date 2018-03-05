@@ -1,6 +1,8 @@
 from math import inf
 from typing import Optional
+
 from layout.containers import LayoutNode, LayoutNodeLayer
+
 
 LAYERING_MIN_WIDTH_UPPER_BOUND_ON_WIDTH = 10
 LAYERING_MIN_WIDTH_UPPER_LAYER_ESTIMATION_SCALING_FACTOR = 1

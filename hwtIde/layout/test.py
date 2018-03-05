@@ -1,9 +1,9 @@
+from hwt.interfaces.std import Signal
+from hwt.synthesizer.unit import Unit
+from hwtLib.samples.simple import SimpleUnit
 from layout.containers import Unit_to_Layout
 from layout.greedyCycleBreaker import GreedyCycleBreaker
 from layout.minWidthLayerer import MinWidthLayerer
-from hwt.synthesizer.unit import Unit
-from hwt.interfaces.std import Signal
-from hwtLib.samples.simple import SimpleUnit
 
 
 class DualSubunit(Unit):

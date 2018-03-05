@@ -1,8 +1,9 @@
+from itertools import chain
+
 from layout.containers import LayoutPort, LayoutNode, Layout,\
     LayoutExternalPort, LayoutEdge, LayoutIdCtx, UNIT_HEADER_OFFSET, PORT_HEIGHT
 from layout.geometry import GeometryRect
 import xml.etree.ElementTree as etree
-from itertools import chain
 
 
 def mxCell(**kvargs):
