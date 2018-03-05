@@ -16,8 +16,8 @@ class MinWidthLayerer():
         # next step to normalize the different node sizes.
         minimumNodeSize = min(
             notInserted, key=lambda node: node.geometry.height)
-        # The minimum nodes size might be zero. If This is the case, then simply don't normalize the
-        # node sizes.
+        # The minimum nodes size might be zero. If This is the case, then simply don't normalize
+        # the node sizes.
         minimumNodeSize = max(1, minimumNodeSize.geometry.height)
 
         # We initialize the nodes' id and use it to refer to its in- and out-degree stored each in

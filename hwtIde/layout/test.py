@@ -28,8 +28,7 @@ if __name__ == "__main__":
         nodes.sort(key=lambda n: n.mark)
         for n in nodes:
             n.translate(x_offset, y_offset)
-            x_offset += 200
-        y_offset += 200
+        x_offset += 200
 
     # print(s.toJson())
     with open(os.path.expanduser("~/test.xml"), "wb") as f:
