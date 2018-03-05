@@ -273,7 +273,11 @@ class MinWidthLayerer():
             outNodes = set()
             for o in node.outputs:
                 for edge in o.connectedEdges:
-                    if not edge.isSelfLoop():
+                    if not edge.reversed and not edge.isSelfLoop():
+                        outNodes.add(edge.dstNode)
+            for i in node.inputs:
+                for edge in i.connectedEdges:
+                    if edge.reversed and not edge.isSelfLoop():
                         outNodes.add(edge.dstNode)
 
             successors[node] = outNodes
