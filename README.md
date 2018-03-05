@@ -1,7 +1,7 @@
 # hwtIde
 
 
-HwtIde is web based prototype of IDE for https://github.com/Nic30/HWToolkit .
+HwtIde is web based prototype of IDE for https://github.com/Nic30/hwt .
 It contains various of tools for hardware developement.
 
 
