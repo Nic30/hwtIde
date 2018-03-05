@@ -21,7 +21,7 @@ class ToMxGraph():
             GeometryRect: self.GeometryRect_toMxGraph
         }
 
-    def LayoutPort_getMxGraphId(self, lp):
+    def LayoutPort_coordinates(self, lp):
         p = lp.parent.geometry
         g = lp.geometry
         x_rel = (g.x - p.x) / p.width
@@ -29,7 +29,7 @@ class ToMxGraph():
         assert x_rel >= 0.0 and x_rel <= 1.0
         assert y_rel >= 0.0 and y_rel <= 1.0
 
-        return x_rel, y_rel, self.getMxGraphId(lp.parent)
+        return x_rel, y_rel
 
     def getMxGraphId(self, obj):
         return str(self.id_ctx[obj] + 2)
@@ -90,16 +90,19 @@ class ToMxGraph():
             _src = ln.src
             _dst = ln.dst
 
-        srcX, srcY, srcId = self.LayoutPort_getMxGraphId(_src)
-        dstX, dstY, dstId = self.LayoutPort_getMxGraphId(_dst)
+        srcId = self.getMxGraphId(_src.parent)
+        srcX, srcY = self.LayoutPort_coordinates(_src)
+        dstId = self.getMxGraphId(_dst.parent)
+        dstX, dstY = self.LayoutPort_coordinates(_dst)
         assert srcX >= 0.5, (srcX, ln.src.name)
-        srcX = 0
+        srcX = 1
         assert dstX < 0.5, ln.dst.name
-        dstX = 1
+        dstX = 0
         c = mxCell(
             id=self.getMxGraphId(ln),
             style=("edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" +
-                   "exitX=%f;exitY=%f;entryX=%f;entryY=%f;" % (dstX, dstY, srcX, srcY) +
+                   "exitX=%f;exitY=%f;entryX=%f;entryY=%f;"
+                   % (srcX, srcY, dstX, dstY) +
                    "jettySize=auto;orthogonalLoop=1;"),
             edge="1",
             parent="1",
