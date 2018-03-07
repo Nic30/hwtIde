@@ -1,6 +1,8 @@
 from math import inf
 from typing import Optional
+
 from layout.containers import LayoutNode, LayoutNodeLayer
+
 
 LAYERING_MIN_WIDTH_UPPER_BOUND_ON_WIDTH = 10
 LAYERING_MIN_WIDTH_UPPER_LAYER_ESTIMATION_SCALING_FACTOR = 1
@@ -273,7 +275,11 @@ class MinWidthLayerer():
             outNodes = set()
             for o in node.outputs:
                 for edge in o.connectedEdges:
-                    if not edge.isSelfLoop():
+                    if not edge.reversed and not edge.isSelfLoop():
+                        outNodes.add(edge.dstNode)
+            for i in node.inputs:
+                for edge in i.connectedEdges:
+                    if edge.reversed and not edge.isSelfLoop():
                         outNodes.add(edge.dstNode)
 
             successors[node] = outNodes
