@@ -1,14 +1,13 @@
 from itertools import chain
+from typing import List
 
-from hwt.hdl.constants import INTF_DIRECTION, DIRECTION, DIRECTION_to_str
+from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.portItem import PortItem
 from hwt.hdl.statements import HdlStatement
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.rtlLevel.rtlSignal import RtlSignal
 from hwt.synthesizer.unit import Unit
 from layout.geometry import GeometryRect
-from hwt.synthesizer.interfaceLevel.interfaceUtils.utils import walkPhysInterfaces
-from typing import List
 
 
 UNIT_HEADER_OFFSET = 20
@@ -305,44 +304,3 @@ def getParentUnit(intf):
 
     return intf._parent
 
-
-def Unit_to_Layout(u):
-    la = Layout()
-    toL = la._node2lnode
-    # create subunits
-    for su in u._units:
-        la.add_unit(su)
-
-    # create subunits from statements
-    for stm in u._ctx.statements:
-        n = la.add_stm_as_unit(stm)
-        toL.update(n._port_obj_map)
-
-    # create ports
-    for intf in u._interfaces:
-        for si in walkPhysInterfaces(intf):
-            la.add_port(si)
-
-    # connect nets
-    for s in u._ctx.signals:
-        if not s.hidden:
-            assert len(s.drivers) == 1, s
-            stm = s.drivers[0]
-            la_stm = toL[stm]
-            if isinstance(stm, PortItem):
-                src = la_stm
-            else:
-                src = la_stm.outputs[0]
-
-            for stm in s.endpoints:
-                la_stm = toL[stm]
-                if isinstance(stm, PortItem):
-                    dst = la_stm
-                else:
-                    dst = la_stm.inputs[0]
-                la.add_edge(s, s.name, src, dst)
-
-    for n in la.nodes:
-        n.initDim()
-
-    return la
