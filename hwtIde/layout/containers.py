@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import List
+from typing import List, Union
 
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.portItem import PortItem
@@ -45,21 +45,21 @@ class LayoutPort():
 
     :ivar portItem: original object which this node represents
     :ivar parent: parent unit of this port
-    :ivar on_parent_index: index of this port on parent
     :ivar name: name of this port
     :ivar direction: direction of this port
     :ivar geometry: absolute geometry in layout
+    :ivar children: list of children ports, before interface connecting phase
+            (when routing this list is empty and childrens are directly on parent LayoutNode)
     """
 
-    def __init__(self, portItem: PortItem, parent: "LayoutNode",
-                 on_parent_index: int, name: str, direction):
+    def __init__(self, portItem: PortItem, parent: "LayoutNode", name: str, direction):
         self.portItem = portItem
         self.parent = parent
-        self.on_parent_index = on_parent_index
         self.name = name
         self.direction = direction
         self.geometry = None
         self.connectedEdges = []
+        self.children = []
 
     def getNode(self):
         p = self
@@ -69,12 +69,13 @@ class LayoutPort():
                 return p
 
     def initDim(self, width, x=0, y=0):
-        _y = y + self.on_parent_index * PORT_HEIGHT
-        self.geometry = GeometryRect(x, _y, width, PORT_HEIGHT)
+        g = self.geometry = GeometryRect(x, y, width, PORT_HEIGHT)
+        return g.y + g.height
 
     def translate(self, x, y):
         self.geometry.x += x
         self.geometry.y += y
+        assert not self.children
 
     def _getDebugName(self) -> List[str]:
         names = []
@@ -94,24 +95,23 @@ class LayoutNode():
     """
     Component for component diagram
 
-    :ivar unit: original object which this node represents
+    :ivar origin: original object which this node represents
     :ivar name: name of this unit
     :ivar class_name: name of class of this unit
     :ivar inputs: list of LayoutPort for each input of this unit
     :ivar outputs: list of LayoutPort for each output of this unit
     """
 
-    def __init__(self, unit: Unit, name: str, class_name: str):
-        self.unit = unit
+    def __init__(self, origin: Unit, name: str, objMap):
+        self.origin = origin
         self.name = name
-        self.class_name = class_name
         self.inputs = []
         self.outputs = []
         self.geometry = None
         self.parent = None
 
         # {PortItem: LayoutPort}
-        self._port_obj_map = {}
+        self._port_obj_map = objMap
 
         # used by cycle breaker
         self.indeg = 0
@@ -136,12 +136,6 @@ class LayoutNode():
         self.indeg = indeg
         self.outdeg = outdeg
 
-    def getIncomingEdges(self):
-        raise NotImplementedError()
-
-    def getOutgoingEdges(self):
-        raise NotImplementedError()
-
     def initDim(self, x=0, y=0):
         label_w = width_of_str(self.name)
         port_w = max(*map(lambda p: width_of_str(p.name),
@@ -153,11 +147,13 @@ class LayoutNode():
         self.geometry = GeometryRect(x, y, width, height)
 
         port_width = width / 2
+        y = y + UNIT_HEADER_OFFSET
         for i in self.inputs:
-            i.initDim(port_width, x=x, y=y + UNIT_HEADER_OFFSET)
+            y = i.initDim(port_width, x=x, y=y)
 
+        y = y + UNIT_HEADER_OFFSET
         for o in self.outputs:
-            o.initDim(port_width, x=x+port_width, y=y + UNIT_HEADER_OFFSET)
+            y = o.initDim(port_width, x=x + port_width, y=y)
 
     def translate(self, x, y):
         self.geometry.x += x
@@ -165,46 +161,35 @@ class LayoutNode():
         for p in chain(self.inputs, self.outputs):
             p.translate(x, y)
 
-    def add_port(self, intf: Interface, reverse_dir=False):
-        d = intf._direction
-        if d == INTF_DIRECTION.MASTER:
+    def add_port(self, origin: Union[Interface, PortItem], direction, name: str, reverse_dir=False):
+        if direction == INTF_DIRECTION.MASTER:
             if reverse_dir:
                 portArr = self.inputs
             else:
                 portArr = self.outputs
-            pi = intf._sigInside.endpoints[0]
-        elif d == INTF_DIRECTION.SLAVE:
+
+        elif direction == INTF_DIRECTION.SLAVE:
             if reverse_dir:
                 portArr = self.outputs
             else:
                 portArr = self.inputs
-            pi = intf._sigInside.drivers[0]
         else:
-            raise Exception()
+            raise ValueError()
 
-        assert isinstance(pi, PortItem)
-        p = LayoutPort(pi, self, len(portArr), intf._name, d)
+        p = LayoutPort(origin, self, name, direction)
         portArr.append(p)
-        self._port_obj_map[pi] = p
-
-    @classmethod
-    def fromIntfUnit(cls, u: Unit):
-        self = cls(u, u._name, u.__class__.__name__)
-        for intf in u._interfaces:
-            self.add_port(intf)
-
-        return self
+        self._port_obj_map[origin] = p
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.name)
 
 
 class LayoutExternalPort(LayoutNode):
-    def __init__(self, intf):
+    def __init__(self, origin, name, direction, objMap):
         super(LayoutExternalPort, self).__init__(
-            intf, intf._name, intf.__class__.__name__)
-        self.add_port(intf, reverse_dir=True)
-        self.direction = intf._direction
+            origin, name, objMap)
+        self.add_port(origin, origin._direction, name, reverse_dir=True)
+        self.direction = direction
 
 
 class LayoutNodeLayer(list):
@@ -270,25 +255,20 @@ class Layout():
         return self.nodes
 
     def add_stm_as_unit(self, stm: HdlStatement) -> LayoutNode:
-        u = LayoutNode(stm, stm.__class__.__name__,
-                       stm.__class__.__name__)
+        u = LayoutNode(stm, stm.__class__.__name__, self._node2lnode)
         self._node2lnode[stm] = u
-        u.outputs.append(LayoutPort(None, u, 0, "out", INTF_DIRECTION.MASTER))
-        u.inputs.append(LayoutPort(None, u, 0, "in", INTF_DIRECTION.SLAVE))
+        u.outputs.append(LayoutPort(None, u, "out", INTF_DIRECTION.MASTER))
+        u.inputs.append(LayoutPort(None, u, "in", INTF_DIRECTION.SLAVE))
         self.nodes.append(u)
         return u
 
     def add_unit(self, u: Unit) -> LayoutNode:
-        n = LayoutNode.fromIntfUnit(u)
-        self._node2lnode[u] = n
-        self._node2lnode.update(n._port_obj_map)
+        n = LayoutNode.fromIntfUnit(u, self._node2lnode)
         self.nodes.append(n)
         return n
 
     def add_port(self, intf: Interface) -> LayoutExternalPort:
-        n = LayoutExternalPort(intf)
-        self._node2lnode[intf] = n
-        self._node2lnode.update(n._port_obj_map)
+        n = LayoutExternalPort(intf, intf._name, intf._direction, self._node2lnode)
         self.nodes.append(n)
         return n
 
@@ -304,4 +284,3 @@ def getParentUnit(intf):
         intf = intf._parent
 
     return intf._parent
-
