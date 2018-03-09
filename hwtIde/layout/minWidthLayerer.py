@@ -246,8 +246,8 @@ class MinWidthLayerer():
 
     def selectNode(self, nodes, targets) -> Optional[LayoutNode]:
         """
-        Returns the first node in the given Set, whose outgoing edges end only in nodes of
-        the Set {@code targets}. Self-loops are ignored.
+        Returns the first node in the given Set, whose outgoing edges end only
+        in nodes of the Set targets. Self-loops are ignored.
 
         :warning: Returns None, if such a node doesn't exist.
 
@@ -265,8 +265,8 @@ class MinWidthLayerer():
 
     def precalcSuccessors(self, nodes):
         """
-        Calculates for a given Collection of nodes all its successors (i.e. a Set of
-        nodes without self-loops.
+        Calculates for a given Collection of nodes all its successors
+        (i.e. a Set of nodes without self-loops.
 
         :param nodes: a Collection of nodes
         :return: dict {node: Set of successor}
@@ -284,8 +284,5 @@ class MinWidthLayerer():
                             or d == INTF_DIRECTION.SLAVE and edge.reversed:
                         outNodes.add(edge.dstNode)
 
-
             successors[node] = outNodes
-        from pprint import pprint
-        pprint(successors)
         return successors

@@ -99,7 +99,7 @@ class ToMxGraph():
         srcX, srcY = self.LayoutPort_coordinates(_src)
         dstId = self.getMxGraphId(_dst.getNode())
         dstX, dstY = self.LayoutPort_coordinates(_dst)
-        print(e, srcY, dstY)
+
         c = mxCell(
             id=self.getMxGraphId(e),
             style=("edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" +

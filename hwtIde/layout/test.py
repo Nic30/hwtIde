@@ -1,26 +1,26 @@
 import os
+from typing import Set, List
 
+from hwt.hdl.assignment import Assignment
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.portItem import PortItem
 from hwt.interfaces.std import Signal
+from hwt.pyUtils.arrayQuery import single
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.unit import Unit
 from hwt.synthesizer.utils import toRtl
+from hwtLib.amba.axis import AxiStream
 from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
 from hwtLib.samples.simple import SimpleUnit
 from hwtLib.samples.simpleAxiStream import SimpleUnitAxiStream
 from layout.containers import Layout, LayoutPort, LayoutExternalPort, LayoutNode,\
     LayoutEdge
-from layout.examples import LinearDualSubunit
+from layout.examples import LinearDualSubunit, DualSubunit
 from layout.greedyCycleBreaker import GreedyCycleBreaker
 from layout.minWidthLayerer import MinWidthLayerer
 from layout.toMxGraph import ToMxGraph
 from layout.toSvg import ToSvg
 import xml.etree.ElementTree as etree
-from typing import Set, List
-from hwt.hdl.assignment import Assignment
-from hwt.pyUtils.arrayQuery import single
-from hwtLib.amba.axis import AxiStream
 
 
 def origin_obj_of_port(intf):
@@ -30,25 +30,29 @@ def origin_obj_of_port(intf):
     elif d == INTF_DIRECTION.MASTER:
         # has hierarchy
         origin = intf._sigInside.endpoints[0]
-        assert isinstance(origin, PortItem)
+        assert isinstance(origin, PortItem), (intf, origin)
     elif d == INTF_DIRECTION.SLAVE:
         origin = intf._sigInside.drivers[0]
-        assert isinstance(origin, PortItem)
+        assert isinstance(origin, PortItem), (intf, origin)
     else:
-        raise ValueError()
+        raise ValueError(d)
 
     return origin
 
 
-def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface):
+def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface, reverseDirection=False):
     """
     add port to LayoutPort for interface
     """
     origin = origin_obj_of_port(intf)
-    new_lp = LayoutPort(origin, lp, intf._name, intf._direction)
+    d = intf._direction
+    if reverseDirection:
+        d = INTF_DIRECTION.opposite(d)
+
+    new_lp = LayoutPort(origin, lp, intf._name, d)
     if intf._interfaces:
         for child_intf in intf:
-            _add_port(new_lp, child_intf)
+            _add_port(new_lp, child_intf, reverseDirection=reverseDirection)
 
     lp.children.append(new_lp)
     new_lp.parent = lp
@@ -57,24 +61,31 @@ def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface):
     return new_lp
 
 
-def add_port_to_unit(ln: LayoutNode, intf: Interface):
-    p = ln.add_port(intf, intf._direction, intf._name)
+def add_port_to_unit(ln: LayoutNode, intf: Interface, reverseDirection=False):
+    origin = origin_obj_of_port(intf)
+
+    d = intf._direction
+    if reverseDirection:
+        d = INTF_DIRECTION.opposite(d)
+
+    p = ln.add_port(origin,
+                    d,
+                    intf._name)
     for _intf in intf._interfaces:
-        _add_port(ln, p, _intf)
+        _add_port(ln, p, _intf, reverseDirection=reverseDirection)
 
 
 def add_port(la: Layout, intf: Interface):
     """
     Add LayoutExternalPort for interface
     """
-    ext_p = la.add_port(intf)
-    if ext_p.left:
-        p = ext_p.left[0]
-    else:
-        p = ext_p.right[0]
-
-    for i in intf._interfaces:
-        _add_port(ext_p, p, i)
+    origin = origin_obj_of_port(intf)
+    ext_p = LayoutExternalPort(
+        origin, intf._name,
+        INTF_DIRECTION.opposite(intf._direction),
+        la._node2lnode)
+    la.nodes.append(ext_p)
+    add_port_to_unit(ext_p, intf, reverseDirection=True)
 
     return ext_p
 
@@ -121,7 +132,7 @@ def get_connected_node(port: LayoutPort):
         assert e.dst is port
 
 
-def count_directly_connected_nodes(port: LayoutPort, result: dict) -> int:
+def count_directly_connected(port: LayoutPort, result: dict) -> int:
     """
     Count how many ports are directly connected to other nodes
 
@@ -132,7 +143,7 @@ def count_directly_connected_nodes(port: LayoutPort, result: dict) -> int:
         ch_cnt = 0
         assert not edges, (port, edges)
         for ch in port.children:
-            ch_cnt += count_directly_connected_nodes(ch, result)
+            ch_cnt += count_directly_connected(ch, result)
         return ch_cnt
     elif not edges:
         print("Warning", port, "not connected")
@@ -140,11 +151,14 @@ def count_directly_connected_nodes(port: LayoutPort, result: dict) -> int:
         assert len(edges) == 1, (port, len(edges))
         e = edges[0]
         if e.src is port:
-            n = e.dstNode
+            p = e.dst.parent
         else:
             assert e.dst is port
-            n = e.srcNode
-        result[n] = result.get(n, 0) + 1
+            p = e.src.parent
+
+        if not isinstance(p, LayoutNode):
+            result[p] = result.get(p, 0) + 1
+
         return 1
 
 
@@ -156,18 +170,25 @@ def port_try_reduce(port: LayoutPort,
     Check if majority of children is connected to same port
     if it is the case reduce children and connect this port instead children
     """
+    if not port.children:
+        return
 
     for p in port.children:
         port_try_reduce(p, nodes_to_remove, edges_to_remove, new_edges)
 
     target_nodes = {}
-    ch_cnt = count_directly_connected_nodes(port, target_nodes)
+    ch_cnt = count_directly_connected(port, target_nodes)
     if not target_nodes:
         return
+
     n, cnt = max(target_nodes.items(), key=lambda x: x[1])
     if cnt < ch_cnt / 2 or cnt == 1 and ch_cnt == 2:
         return
-    print("[TODO] reduce children", port)
+
+    # disconnect selected children and destroy them if possible
+    # destroy childrens of new target if possible
+    # connect this port to new target as it was connected by childrens before
+    print("[TODO] reduce children of", port)
 
 
 def flatten_port(port: LayoutPort):
@@ -265,14 +286,14 @@ def Unit_to_Layout(u: Unit) -> Layout:
 
 if __name__ == "__main__":
     #u = LinearDualSubunit()
-    u = LinearDualSubunit(AxiStream)
+    u = DualSubunit(AxiStream)
     toRtl(u)
     g = Unit_to_Layout(u)
     cycleBreaker = GreedyCycleBreaker()
     cycleBreaker.process(g)
-    #
-    #layer = MinWidthLayerer()
-    #layer.process(g)
+
+    layer = MinWidthLayerer()
+    layer.process(g)
 
     if not g.layers:
         nodes = g.nodes
@@ -280,7 +301,8 @@ if __name__ == "__main__":
         for n in nodes:
             g.layers.append([n, ])
     x_step = max(g.nodes, key=lambda x: x.geometry.width).geometry.width + 100
-    y_step = max(g.nodes, key=lambda x: x.geometry.height).geometry.height + 100
+    y_step = max(
+        g.nodes, key=lambda x: x.geometry.height).geometry.height + 100
 
     x_offset = 0
     for i, nodes in enumerate(g.layers):
@@ -294,11 +316,17 @@ if __name__ == "__main__":
     g.width = x_offset
     g.height = y_offset
 
-    # print(s.toJson())
-    with open(os.path.expanduser("~/test.svg"), "wb") as f:
-        root = ToSvg().Layout_toSvg(g)
-        #root = ToMxGraph().Layout_toMxGraph(g)
+    def asSvg():
+        with open(os.path.expanduser("~/test.svg"), "wb") as f:
+            root = ToSvg().Layout_toSvg(g)
+            s = etree.tostring(root)
+            f.write(s)
 
-        s = etree.tostring(root)
-        f.write(s)
-        print(s)
+    def asMxGraph():
+        with open(os.path.expanduser("~/test.xml"), "wb") as f:
+            root = ToMxGraph().Layout_toMxGraph(g)
+            s = etree.tostring(root)
+            f.write(s)
+
+    asMxGraph()
+    asSvg()
