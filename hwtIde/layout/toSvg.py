@@ -49,7 +49,8 @@ def svg_line(points, stroke="black"):
 
 
 class ToSvg():
-    def __init__(self):
+    def __init__(self, reversed_edge_stroke="black"):
+        self.reversed_edge_stroke = reversed_edge_stroke
         self.id_ctx = LayoutIdCtx()
 
         self._toSvg = {
@@ -98,7 +99,7 @@ class ToSvg():
         if ln.reversed:
             _src = ln.dst
             _dst = ln.src
-            stroke = "lightcoral"
+            stroke = self.reversed_edge_stroke
         else:
             _src = ln.src
             _dst = ln.dst
@@ -110,7 +111,7 @@ class ToSvg():
 
         yield svg_line(points, stroke=stroke)
 
-    def Layout_toSvg(self, la) -> etree.Element:
+    def Layout_toSvg(self, la: Layout) -> etree.Element:
         svg = etree.Element("svg", {
             "width": str(la.width),
             "height": str(la.height),
