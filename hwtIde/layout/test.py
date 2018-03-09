@@ -2,37 +2,34 @@ from os.path import expanduser
 
 from hwt.synthesizer.utils import toRtl
 from hwtLib.amba.axis import AxiStream
+from layout.containers import Layout
 from layout.examples import LinearDualSubunit
 from layout.fromHwtToLayout import Unit_to_Layout
 from layout.greedyCycleBreaker import GreedyCycleBreaker
+from layout.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layout.minWidthLayerer import MinWidthLayerer
 from layout.toMxGraph import ToMxGraph
 from layout.toSvg import ToSvg
 import xml.etree.ElementTree as etree
 
+"""
+Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 174+
+"""
 
-if __name__ == "__main__":
-    u = LinearDualSubunit(AxiStream)
-    #u = DualSubunit(AxiStream)
-    toRtl(u)
-    g = Unit_to_Layout(u)
-    cycleBreaker = GreedyCycleBreaker()
-    cycleBreaker.process(g)
 
-    layer = MinWidthLayerer()
-    layer.process(g)
-
+def renderer_temporal(g: Layout):
     if not g.layers:
         nodes = g.nodes
         nodes.sort(key=lambda n: n.mark)
         for n in nodes:
             g.layers.append([n, ])
+
     x_step = max(g.nodes, key=lambda x: x.geometry.width).geometry.width + 100
     y_step = max(
         g.nodes, key=lambda x: x.geometry.height).geometry.height + 100
 
     x_offset = 0
-    for i, nodes in enumerate(g.layers):
+    for nodes in g.layers:
         nodes.sort(key=lambda n: n.mark)
         y_offset = 0
         for n in nodes:
@@ -42,6 +39,21 @@ if __name__ == "__main__":
 
     g.width = x_offset
     g.height = y_offset
+
+
+if __name__ == "__main__":
+    u = LinearDualSubunit(AxiStream)
+    #u = DualSubunit(AxiStream)
+    toRtl(u)
+    g = Unit_to_Layout(u)
+    cycleBreaker = GreedyCycleBreaker()
+    layer = MinWidthLayerer()
+    crossMin = LayerSweepCrossingMinimizer()
+
+    cycleBreaker.process(g)
+    layer.process(g)
+    crossMin.process(g)
+    renderer_temporal(g)
 
     def asSvg():
         with open(expanduser("~/test.svg"), "wb") as f:
