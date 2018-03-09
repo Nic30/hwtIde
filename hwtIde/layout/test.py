@@ -40,7 +40,8 @@ def origin_obj_of_port(intf):
     return origin
 
 
-def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface, reverseDirection=False):
+def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface,
+              reverseDirection=False):
     """
     add port to LayoutPort for interface
     """

@@ -164,18 +164,12 @@ class LayoutNode():
         for p in self.iterPorts():
             p.translate(x, y)
 
-    def add_port(self, origin: Union[Interface, PortItem], direction, name: str, reverse_dir=False):
+    def add_port(self, origin: Union[Interface, PortItem], direction,
+                 name: str):
         if direction == INTF_DIRECTION.MASTER:
-            if reverse_dir:
-                portArr = self.left
-            else:
-                portArr = self.right
-
+            portArr = self.right
         elif direction == INTF_DIRECTION.SLAVE:
-            if reverse_dir:
-                portArr = self.right
-            else:
-                portArr = self.left
+            portArr = self.left
         else:
             raise ValueError()
 
@@ -192,7 +186,6 @@ class LayoutExternalPort(LayoutNode):
     def __init__(self, origin, name, direction, objMap):
         super(LayoutExternalPort, self).__init__(
             origin, name, objMap)
-        self.add_port(origin, origin._direction, name, reverse_dir=True)
         self.direction = direction
 
 
@@ -268,12 +261,6 @@ class Layout():
 
     def add_node(self, origin: Unit, name: str) -> LayoutNode:
         n = LayoutNode(origin, origin._name, self._node2lnode)
-        self.nodes.append(n)
-        return n
-
-    def add_port(self, intf: Interface) -> LayoutExternalPort:
-        n = LayoutExternalPort(
-            intf, intf._name, intf._direction, self._node2lnode)
         self.nodes.append(n)
         return n
 
