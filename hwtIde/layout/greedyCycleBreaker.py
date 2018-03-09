@@ -1,4 +1,5 @@
-from layout.containers import LayoutExternalPort
+from layout.containers import LayoutExternalPort, LayoutNode
+from hwt.hdl.constants import INTF_DIRECTION
 
 
 class GreedyCycleBreaker():
@@ -49,11 +50,14 @@ class GreedyCycleBreaker():
                 nextLeft += 1
                 self.updateNeighbors(source)
 
-            # while there are unprocessed nodes left that are neither sinks nor sources...
+            # while there are unprocessed nodes left that are neither sinks nor
+            # sources...
             if not sinks and not sources and unresolved:
                 # find the set of unprocessed node (=> mark == 0), with the largest out flow
-                # randomly select a node from the ones with maximal outflow and put it left
-                maxNode = max(unresolved, key=lambda node: node.outdeg - node.indeg)
+                # randomly select a node from the ones with maximal outflow and
+                # put it left
+                maxNode = max(
+                    unresolved, key=lambda node: node.outdeg - node.indeg)
                 maxNode.mark = nextLeft
                 unresolved.remove(maxNode)
                 nextLeft += 1
@@ -67,13 +71,14 @@ class GreedyCycleBreaker():
 
         # reverse edges that point left
         for node in nodes:
-                # look at the node's outgoing edges
-                for outPort in node.outputs:
-                    for edge in outPort.connectedEdges:
+            # look at the node's outgoing edges
+            for port in node.iterPorts():
+                if port.direction == INTF_DIRECTION.MASTER:
+                    for edge in port.connectedEdges:
                         if node.mark > edge.dstNode.mark:
                             edge.reverse()
 
-    def updateNeighbors(self, node):
+    def updateNeighbors(self, node: LayoutNode):
         """
         Updates indegree and outdegree values of the neighbors of the given node,
         simulating its removal from the graph. the sources and sinks lists are
@@ -81,20 +86,22 @@ class GreedyCycleBreaker():
 
         :param node: node for which neighbors are updated
         """
-        for p in node.inputs:
+        for p in node.iterPorts():
+            isOutput = p.direction == INTF_DIRECTION.MASTER
             for e in p.connectedEdges:
-                other = e.srcNode
-                if not e.isSelfLoop() and other.mark == 0:
-                    other.indeg -= 1
-                    if other.indeg <= 0 and other.outdeg > 0:
-                        self.unresolved.discard(other)
-                        self.sinks.add(other)
+                if isOutput:
+                    other = e.dstNode
+                else:
+                    other = e.srcNode
 
-        for p in node.outputs:
-            for e in p.connectedEdges:
-                other = e.dstNode
                 if not e.isSelfLoop() and other.mark == 0:
-                    other.outdeg -= 1
-                    if other.outdeg <= 0 and other.indeg > 0:
-                        self.unresolved.discard(other)
-                        self.sources.add(other)
+                    if isOutput:
+                        other.outdeg -= 1
+                        if other.outdeg <= 0 and other.indeg > 0:
+                            self.unresolved.discard(other)
+                            self.sources.add(other)
+                    else:
+                        other.indeg -= 1
+                        if other.indeg <= 0 and other.outdeg > 0:
+                            self.unresolved.discard(other)
+                            self.sinks.add(other)

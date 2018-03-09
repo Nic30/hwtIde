@@ -2,6 +2,7 @@ from math import inf
 from typing import Optional
 
 from layout.containers import LayoutNode, LayoutNodeLayer
+from hwt.hdl.constants import INTF_DIRECTION
 
 
 LAYERING_MIN_WIDTH_UPPER_BOUND_ON_WIDTH = 10
@@ -184,6 +185,7 @@ class MinWidthLayerer():
             # will return {@code null} if such a node doesn't exist.
             currentNode = self.selectNode(unplacedNodes,
                                           alreadyPlacedInOtherLayers)
+            assert currentLayer or currentNode is not None, ("Cycle in graph", self.successors)
 
             # If a node is found in the previous step:
             if currentNode is not None:
@@ -273,14 +275,17 @@ class MinWidthLayerer():
 
         for node in nodes:
             outNodes = set()
-            for o in node.outputs:
+            for o in node.iterPorts():
                 for edge in o.connectedEdges:
-                    if not edge.reversed and not edge.isSelfLoop():
-                        outNodes.add(edge.dstNode)
-            for i in node.inputs:
-                for edge in i.connectedEdges:
-                    if edge.reversed and not edge.isSelfLoop():
+                    if edge.isSelfLoop():
+                        continue
+                    d = o.direction
+                    if d == INTF_DIRECTION.MASTER and not edge.reversed \
+                            or d == INTF_DIRECTION.SLAVE and edge.reversed:
                         outNodes.add(edge.dstNode)
 
+
             successors[node] = outNodes
+        from pprint import pprint
+        pprint(successors)
         return successors

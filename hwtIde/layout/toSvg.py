@@ -5,10 +5,13 @@ from layout.containers import LayoutPort, LayoutNode, Layout,\
 from layout.geometry import GeometryRect
 import xml.etree.ElementTree as etree
 
+EXTERNAL_PORT_FILL = "mediumpurple"
+COMPONENT_FILL = "cornflowerblue"
 
-def svg_rect_from_geom(geom: GeometryRect, label=None):
+
+def svg_rect_from_geom(geom: GeometryRect, label=None, fill=COMPONENT_FILL):
     g = etree.Element("g")
-    r = svg_rect(geom.x, geom.y, geom.width, geom.height)
+    r = svg_rect(geom.x, geom.y, geom.width, geom.height, fill=fill)
     g.append(r)
     if label is not None:
         g.append(svg_text(geom.x + geom.width / 2,
@@ -17,9 +20,9 @@ def svg_rect_from_geom(geom: GeometryRect, label=None):
     return g
 
 
-def svg_rect(x, y, width, height):
+def svg_rect(x, y, width, height, fill=COMPONENT_FILL):
     return etree.Element("rect", attrib={
-        "style": "fill:cornflowerblue;stroke:black;stroke-width:2;",
+        "style": "fill:%s;stroke:black;stroke-width:2;" % fill,
         "x": str(x),
         "y": str(y),
         "width": str(width),
@@ -36,11 +39,11 @@ def svg_text(x, y, text):
     return t
 
 
-def svg_line(points):
+def svg_line(points, stroke="black"):
     p_str = " ".join("%r,%r" % p for p in points)
     return etree.Element("polyline", attrib={
         "points": p_str,
-        "style": "fill:none;stroke:black;stroke-width:2",
+        "style": "fill:none;stroke:%s;stroke-width:2" % stroke,
         "marker-start": "url(#markerCircle)",
         "marker-end": "url(#markerArrow)",
     })
@@ -57,8 +60,8 @@ class ToSvg():
             Layout: self.Layout_toSvg,
         }
 
-    def LayoutPort_coordinates(self, lp):
-        p = lp.parent.geometry
+    def LayoutPort_coordinates(self, lp: LayoutPort):
+        p = lp.getNode().geometry
         g = lp.geometry
         is_out = g.x >= p.x + p.width / 2
         if is_out:
@@ -73,10 +76,10 @@ class ToSvg():
     def getSvgId(self, obj):
         return str(self.id_ctx[obj] + 2)
 
-    def LayoutNode_toSvg(self, lu: LayoutNode):
-        n = svg_rect_from_geom(lu.geometry, label=lu.name)
+    def LayoutNode_toSvg(self, lu: LayoutNode, fill=COMPONENT_FILL):
+        n = svg_rect_from_geom(lu.geometry, label=lu.name, fill=fill)
 
-        for lp in chain(lu.inputs, lu.outputs):
+        for lp in lu.iterPorts():
             for obj in self.LayoutPort_toSvg(lp):
                 n.append(obj)
         yield n
@@ -85,20 +88,26 @@ class ToSvg():
         yield svg_rect_from_geom(lp.geometry, label=lp.name)
 
     def LayoutExternalPort_toSvg(self, lep: LayoutExternalPort):
-        yield svg_rect_from_geom(lep.geometry, label=lep.name)
+        if len(lep.left) + len(lep.right) == 1:
+            yield svg_rect_from_geom(lep.geometry, label=lep.name, fill=EXTERNAL_PORT_FILL)
+        else:
+            yield from self.LayoutNode_toSvg(lep, fill=EXTERNAL_PORT_FILL)
 
     def LayoutEdge_toSvg(self, ln: LayoutNode):
         if ln.reversed:
             _src = ln.dst
             _dst = ln.src
+            stroke = "lightcoral"
         else:
             _src = ln.src
             _dst = ln.dst
+            stroke = "black"
 
         srcX, srcY = self.LayoutPort_coordinates(_src)
         dstX, dstY = self.LayoutPort_coordinates(_dst)
         points = [(srcX, srcY), (dstX, dstY)]
-        yield svg_line(points)
+
+        yield svg_line(points, stroke=stroke)
 
     def Layout_toSvg(self, la) -> etree.Element:
         svg = etree.Element("svg", {
