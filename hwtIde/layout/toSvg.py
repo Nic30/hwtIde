@@ -1,9 +1,8 @@
-from itertools import chain
-
 from layout.containers import LayoutPort, LayoutNode, Layout,\
-    LayoutExternalPort, LayoutEdge, LayoutIdCtx, UNIT_HEADER_OFFSET, PORT_HEIGHT
+    LayoutExternalPort, LayoutEdge, LayoutIdCtx, PORT_HEIGHT
 from layout.geometry import GeometryRect
 import xml.etree.ElementTree as etree
+
 
 EXTERNAL_PORT_FILL = "mediumpurple"
 COMPONENT_FILL = "cornflowerblue"
@@ -44,7 +43,7 @@ def svg_line(points, stroke="black"):
     return etree.Element("polyline", attrib={
         "points": p_str,
         "style": "fill:none;stroke:%s;stroke-width:2" % stroke,
-        "marker-start": "url(#markerCircle)",
+        #"marker-start": "url(#markerCircle)",
         "marker-end": "url(#markerArrow)",
     })
 
@@ -63,8 +62,8 @@ class ToSvg():
     def LayoutPort_coordinates(self, lp: LayoutPort):
         p = lp.getNode().geometry
         g = lp.geometry
-        is_out = g.x >= p.x + p.width / 2
-        if is_out:
+        is_on_right = g.x >= p.x + p.width / 2
+        if is_on_right:
             x = p.x + p.width
         else:
             x = p.x
@@ -89,7 +88,9 @@ class ToSvg():
 
     def LayoutExternalPort_toSvg(self, lep: LayoutExternalPort):
         if len(lep.left) + len(lep.right) == 1:
-            yield svg_rect_from_geom(lep.geometry, label=lep.name, fill=EXTERNAL_PORT_FILL)
+            yield svg_rect_from_geom(lep.geometry,
+                                     label=lep.name,
+                                     fill=EXTERNAL_PORT_FILL)
         else:
             yield from self.LayoutNode_toSvg(lep, fill=EXTERNAL_PORT_FILL)
 
@@ -111,7 +112,6 @@ class ToSvg():
 
     def Layout_toSvg(self, la) -> etree.Element:
         svg = etree.Element("svg", {
-            # [TODO]
             "width": str(la.width),
             "height": str(la.height),
         })
@@ -121,20 +121,21 @@ class ToSvg():
                 <marker id="markerCircle" markerWidth="8" markerHeight="8" refX="5" refY="5">
                     <circle cx="2" cy="2" r="2" style="stroke: none; fill:#000000;"/>
                 </marker>
-                <marker id="markerArrow" markerWidth="13" markerHeight="13"
-                    refX="10" refY="6" orient="auto">
-                    <path d="M2,2 L2,11 L10,6 L2,2" style="fill: #000000;" />
+                <marker id="markerArrow" viewBox="0 0 10 10" refX="1" refY="5" 
+                      markerUnits="strokeWidth" markerWidth="5" markerHeight="5"
+                      orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
                 </marker>
             </defs>""".replace("  ", ""))
         svg.append(defs)
 
-        for n in la.edges:
-            for l in self.toSvg(n):
-                svg.append(l)
-
         for n in la.nodes:
             for obj in self.toSvg(n):
                 svg.append(obj)
+
+        for n in la.edges:
+            for l in self.toSvg(n):
+                svg.append(l)
 
         return svg
 
