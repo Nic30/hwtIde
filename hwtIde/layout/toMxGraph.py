@@ -23,13 +23,14 @@ class ToMxGraph():
         }
 
     def LayoutPort_coordinates(self, lp):
-        p = lp.parent.geometry
+        p = lp.getNode().geometry
         g = lp.geometry
         x_rel = (g.x - p.x) / p.width
         y_rel = (g.y - p.y + PORT_HEIGHT / 2) / p.height
-        assert x_rel >= 0.0 and x_rel <= 1.0
-        assert y_rel >= 0.0 and y_rel <= 1.0
-
+        assert x_rel >= 0.0 and x_rel <= 1.0, x_rel
+        assert y_rel >= 0.0 and y_rel <= 1.0, y_rel
+        if x_rel >= 0.5:
+            x_rel = 1
         return x_rel, y_rel
 
     def getMxGraphId(self, obj):
@@ -58,7 +59,7 @@ class ToMxGraph():
         label.append(self.GeometryRect_toMxGraph(lg))
         yield label
 
-        for lp in chain(lu.inputs, lu.outputs):
+        for lp in lu.iterPorts():
             yield from self.LayoutPort_toMxGraph(lp, _id, g)
 
     def LayoutPort_toMxGraph(self, lp: LayoutPort, parentId, parentGeom):
@@ -74,33 +75,33 @@ class ToMxGraph():
         yield p
 
     def LayoutExternalPort_toMxGraph(self, lep):
-        c = mxCell(id=self.getMxGraphId(lep),
-                   value=lep.name,
-                   style="rounded=0;whiteSpace=wrap;html=1;",
-                   vertex="1",
-                   parent="1")
-        c.append(self.GeometryRect_toMxGraph(lep.geometry))
+        if len(lep.left) + len(lep.right) == 1:
+            c = mxCell(id=self.getMxGraphId(lep),
+                       value=lep.name,
+                       style="rounded=0;whiteSpace=wrap;html=1;",
+                       vertex="1",
+                       parent="1")
+            c.append(self.GeometryRect_toMxGraph(lep.geometry))
 
-        yield c
-
-    def LayoutEdge_toMxGraph(self, ln: LayoutNode):
-        if ln.reversed:
-            _src = ln.dst
-            _dst = ln.src
+            yield c
         else:
-            _src = ln.src
-            _dst = ln.dst
+            yield from self.LayoutNode_toMxGraph(lep)
 
-        srcId = self.getMxGraphId(_src.parent)
+    def LayoutEdge_toMxGraph(self, e: LayoutEdge):
+        if e.reversed:
+            _src = e.dst
+            _dst = e.src
+        else:
+            _src = e.src
+            _dst = e.dst
+
+        srcId = self.getMxGraphId(_src.getNode())
         srcX, srcY = self.LayoutPort_coordinates(_src)
-        dstId = self.getMxGraphId(_dst.parent)
+        dstId = self.getMxGraphId(_dst.getNode())
         dstX, dstY = self.LayoutPort_coordinates(_dst)
-        assert srcX >= 0.5, (srcX, ln.src.name)
-        srcX = 1
-        assert dstX < 0.5, ln.dst.name
-        dstX = 0
+        print(e, srcY, dstY)
         c = mxCell(
-            id=self.getMxGraphId(ln),
+            id=self.getMxGraphId(e),
             style=("edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" +
                    "exitX=%f;exitY=%f;entryX=%f;entryY=%f;"
                    % (srcX, srcY, dstX, dstY) +
@@ -139,13 +140,13 @@ class ToMxGraph():
         mainCell = mxCell(id="1", parent="0")
         root.extend([topCell, mainCell])
 
-        for n in la.edges:
-            for l in self.toMxGraph(n):
-                root.append(l)
-
         for n in la.nodes:
             for obj in self.toMxGraph(n):
                 root.append(obj)
+
+        for n in la.edges:
+            for l in self.toMxGraph(n):
+                root.append(l)
 
         return gm
 

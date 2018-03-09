@@ -5,7 +5,6 @@ from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.portItem import PortItem
 from hwt.hdl.statements import HdlStatement
 from hwt.synthesizer.interface import Interface
-from hwt.synthesizer.interfaceLevel.interfaceUtils.utils import walkPhysInterfaces
 from hwt.synthesizer.rtlLevel.rtlSignal import RtlSignal
 from hwt.synthesizer.unit import Unit
 from layout.geometry import GeometryRect
