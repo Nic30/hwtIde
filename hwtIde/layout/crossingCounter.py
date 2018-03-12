@@ -103,6 +103,10 @@ from typing import List, Tuple
 from layout.containers import LayoutNode
 
 class CrossingsCounter():
+    """
+    :note: ported from ELK
+    """
+
     def __init__(self, portPositions: List[int]):
         """
         Create crossings counter.

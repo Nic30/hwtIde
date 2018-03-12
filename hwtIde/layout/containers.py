@@ -8,6 +8,7 @@ from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.rtlLevel.rtlSignal import RtlSignal
 from hwt.synthesizer.unit import Unit
 from layout.geometry import GeometryRect
+from enum import Enum
 
 
 UNIT_HEADER_OFFSET = 20
@@ -36,6 +37,17 @@ class LayoutIdCtx(dict):
         i = len(self)
         self[obj] = i
         return i
+
+
+class NodeType(Enum):
+    NORMAL = 0
+    NORTH_SOUTH_PORT = 1
+    EXTERNAL_PORT = 2
+
+
+class PortType(Enum):
+    INPUT = 0
+    OUTPUT = 1
 
 
 class LayoutPort():
@@ -118,6 +130,8 @@ class LayoutNode():
         self.mark = 0
         # used by layerer
         self.normHeight = None
+        self.nestedGraph = None
+        self.type = NodeType.NORMAL
 
     def iterPorts(self):
         return chain(self.left, self.right)

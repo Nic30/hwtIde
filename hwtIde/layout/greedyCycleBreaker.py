@@ -3,6 +3,9 @@ from hwt.hdl.constants import INTF_DIRECTION
 
 
 class GreedyCycleBreaker():
+    """
+    :note: ported from ELK
+    """
     def initDegrees(self):
         add_unresolved = self.unresolved.add
         add_sink = self.sinks.add

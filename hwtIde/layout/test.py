@@ -1,4 +1,9 @@
+"""
+Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 174+
+"""
+
 from os.path import expanduser
+import xml.etree.ElementTree as etree
 
 from hwt.synthesizer.utils import toRtl
 from hwtLib.amba.axis import AxiStream
@@ -10,11 +15,6 @@ from layout.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layout.minWidthLayerer import MinWidthLayerer
 from layout.toMxGraph import ToMxGraph
 from layout.toSvg import ToSvg
-import xml.etree.ElementTree as etree
-
-"""
-Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 174+
-"""
 
 
 def renderer_temporal(g: Layout):
@@ -47,11 +47,11 @@ if __name__ == "__main__":
     toRtl(u)
     g = Unit_to_Layout(u)
     cycleBreaker = GreedyCycleBreaker()
-    layer = MinWidthLayerer()
+    layerer = MinWidthLayerer()
     crossMin = LayerSweepCrossingMinimizer()
 
     cycleBreaker.process(g)
-    layer.process(g)
+    layerer.process(g)
     crossMin.process(g)
     renderer_temporal(g)
 

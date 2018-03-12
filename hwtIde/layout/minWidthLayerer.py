@@ -13,6 +13,9 @@ COMPENSATOR_RANGE = (1, 2)
 
 
 class MinWidthLayerer():
+    """
+    :note: ported from ELK
+    """
 
     def precalculateConstants(self, notInserted):
         # Compute the minimum nodes size (of the real nodes). We're going to use this value in the
