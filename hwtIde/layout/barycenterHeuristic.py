@@ -123,9 +123,9 @@ class BarycenterHeuristic():
         :param preOrdered: whether the nodeGroups have been ordered in a previous run.
         """
         # Determine placements for nodes with undefined barycenter value
+        states = self.states
         if preOrdered:
             lastValue = -1
-            states = self.states
 
             for i, node in enumerate(node):
                 st = states[node]
@@ -221,7 +221,7 @@ class BarycenterHeuristic():
                 # calculation instead
                 fixedNode = fixedPort.getNode()
 
-                if fixedNode.getLayer() == node.getLayer():
+                if fixedNode.layoutIndex == node.layoutIndex:
                     # Self-loops are ignored
                     if fixedNode is not node:
                         # Find the fixed node's node group and calculate its
@@ -237,11 +237,11 @@ class BarycenterHeuristic():
                     st.degree += 1
 
         # Iterate over the node's barycenter associates
-        barycenterAssociates = node.barycenter_associates
+        barycenterAssociates = node.barycenterAssociates
         if barycenterAssociates is not None:
             for associate in barycenterAssociates:
                 # Make sure the associate is in the same layer as this node
-                if node.getLayer() == associate.getLayer():
+                if node.layoutIndex == associate.layoutIndex:
                     # Find the associate's node group and calculate its
                     # barycenter
                     calculateBarycenter(associate, forward)
