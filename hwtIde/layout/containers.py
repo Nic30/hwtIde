@@ -63,7 +63,7 @@ class LayoutPort():
             (when routing this list is empty and childrens are directly on parent LayoutNode)
     """
 
-    def __init__(self, portItem: PortItem, parent: "LayoutNode", name: str, direction):
+    def __init__(self, portItem: PortItem, parent: "LayoutNode", name: str, direction, side):
         self.portItem = portItem
         self.parent = parent
         self.name = name
@@ -71,6 +71,7 @@ class LayoutPort():
         self.geometry = None
         self.connectedEdges = []
         self.children = []
+        self.side = side
 
     def getNode(self):
         p = self
@@ -98,8 +99,19 @@ class LayoutPort():
             p = p.parent
         return list(reversed(names))
 
+    def getPredecessorPorts(self):
+        for e in self.connectedEdges:
+            if e.dst is self:
+                yield e.src
+
+    def getSuccessorPorts(self):
+        for e in self.connectedEdges:
+            if e.src is self:
+                yield e.dst
+
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, ".".join(self._getDebugName()))
+        return "<%s %s>" % (
+            self.__class__.__name__, ".".join(self._getDebugName()))
 
 
 class LayoutNode():
@@ -132,6 +144,8 @@ class LayoutNode():
         self.normHeight = None
         self.nestedGraph = None
         self.type = NodeType.NORMAL
+
+        self.layoutIndex = None
 
     def iterPorts(self):
         return chain(self.left, self.right)
@@ -182,12 +196,14 @@ class LayoutNode():
                  name: str):
         if direction == INTF_DIRECTION.MASTER:
             portArr = self.right
+            side = PortType.OUTPUT
         elif direction == INTF_DIRECTION.SLAVE:
             portArr = self.left
+            side = PortType.INPUT
         else:
             raise ValueError()
 
-        p = LayoutPort(origin, self, name, direction)
+        p = LayoutPort(origin, self, name, direction, side)
         portArr.append(p)
         self._port_obj_map[origin] = p
         return p
@@ -268,8 +284,8 @@ class Layout():
     def add_stm_as_unit(self, stm: HdlStatement) -> LayoutNode:
         u = LayoutNode(stm, stm.__class__.__name__, self._node2lnode)
         self._node2lnode[stm] = u
-        u.right.append(LayoutPort(None, u, "out", INTF_DIRECTION.MASTER))
-        u.left.append(LayoutPort(None, u, "in", INTF_DIRECTION.SLAVE))
+        u.right.append(LayoutPort(None, u, "out", INTF_DIRECTION.MASTER, PortType.OUTPUT))
+        u.left.append(LayoutPort(None, u, "in", INTF_DIRECTION.SLAVE, PortType.INPUT))
         self.nodes.append(u)
         return u
 

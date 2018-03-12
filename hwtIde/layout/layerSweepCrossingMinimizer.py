@@ -8,6 +8,7 @@ from layout.sweepCopy import SweepCopy
 from layout.barycenterHeuristic import BarycenterHeuristic
 from layout.forsterConstraintResolver import ForsterConstraintResolver
 from random import Random
+from _collections import deque
 
 
 class PortSide(Enum):
@@ -44,6 +45,10 @@ def isNotEnd(length, freeLayerIndex, isForwardSweep):
     return freeLayerIndex < length if isForwardSweep else freeLayerIndex >= 0
 
 
+def next_step(isForwardSweep: bool):
+    return 1 if isForwardSweep else -1
+
+
 class DummyPortDistributor():
 
     def distributePortsWhileSweeping(self, order: List[List[LayoutNode]],
@@ -66,6 +71,7 @@ class DummyPortDistributor():
         :param portType: the port type to consider
         """
         pass
+
 
 class LayerSweepCrossingMinimizer():
     """
@@ -123,6 +129,7 @@ class LayerSweepCrossingMinimizer():
         layers = graph.layers
         SEED = 0
         self.random = Random(SEED)
+        self.graphsWhoseNodeOrderChanged = set()
 
         emptyGraph = not layers or arr_all(layers, lambda l: not l)
         singleNode = len(layers) == 1 and len(layers[0]) == 1
@@ -148,7 +155,9 @@ class LayerSweepCrossingMinimizer():
             g.inLayerSuccessorConstraint = []
             for n in g.nodes:
                 assert not hasattr(n, "inLayerSuccessorConstraint")
+                assert not hasattr(n, "barycenterAssociates")
                 n.inLayerSuccessorConstraint = []
+                n.barycenterAssociates = []
 
         minimizingMethod = self.minimizeCrossingsWithCounter
         self.minimizeCrossings(graphsToSweepOn, minimizingMethod)
@@ -160,6 +169,23 @@ class LayerSweepCrossingMinimizer():
             del g.portDistributor
             for n in g.nodes:
                 del n.inLayerSuccessorConstraint
+                del n.barycenterAssociates
+
+    def countCurrentNumberOfCrossings(self, currentGraph):
+        """
+        We only need to count crossings below the current graph and also only
+        if they are marked as to be processed hierarchically.
+        """
+        totalCrossings = 0
+        countCrossingsIn = deque()
+        countCrossingsIn.append(currentGraph)
+        while countCrossingsIn:
+            gD = countCrossingsIn.pop()
+            totalCrossings += gD.crossCounter.countAllCrossings(gD.currentNodeOrder())
+            for child in gD.childGraphs:
+                if child.dontSweepInto():
+                    totalCrossings += self.countCurrentNumberOfCrossings(child)
+        return totalCrossings
 
     def minimizeCrossingsWithCounter(self, gData):
         isForwardSweep = bool(self.random.getrandbits(1))
@@ -261,13 +287,14 @@ class LayerSweepCrossingMinimizer():
         minimizeCrossings = graph.crossMinimizer.minimizeCrossings
         distributePortsWhileSweeping = graph.portDistributor.distributePortsWhileSweeping
         sweepInHierarchicalNodes = self.sweepInHierarchicalNodes
+        step = next_step(forward)
         while isNotEnd(length, i, forward):
             improved |= minimizeCrossings(
                 nodes, i, forward, firstSweep)
             improved |= distributePortsWhileSweeping(nodes, i, forward)
             improved |= sweepInHierarchicalNodes(
                 nodes[i], forward, firstSweep)
-            i += next(forward)
+            i += step
 
         self.graphsWhoseNodeOrderChanged.add(graph)
         return improved
