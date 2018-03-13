@@ -1,38 +1,31 @@
-from layout.containers import Layout, PortSide
-from _random import Random
+from layout.containers import Layout, PortSide, LNodeLayer, LEdge, LPort, LNode,\
+    NodeType
+from random import Random
+from typing import List
+
 
 class MockRandom(Random):
-        def __init__
-        current = 0
-        changeBy = 0.0001
-        nextBoolean = True
+    def __init__(self):
+        self.current = 0
+        self.changeBy = 0.0001
+        self.nextBoolean = True
 
-        
-        public boolean nextBoolean(self):
-            return nextBoolean
-        
+    def getrandbits(self, cnt):
+        assert cnt == 1
+        return int(self.nextBoolean)
+    
+    def random(self):
+        self.current += self.changeBy
+        return self.current
 
-        
-        public float nextFloat(self):
-            current += changeBy
-            return current
-        
+    def setNextBoolean(self, nextBoolean):
+        self.nextBoolean = nextBoolean
 
-        
-        public double nextDouble(self):
-            return nextFloat()
-        
+    def setChangeBy(self, changeBy):
+        self.changeBy = changeBy
 
-        def setNextBoolean(final boolean nextBoolean):
-            this.nextBoolean = nextBoolean
-        
-
-        def setChangeBy(final double changeBy):
-            this.changeBy = changeBy
-        
-
-        def setCurrent(final float current):
-            this.current = current
+    def setCurrent(self, current):
+        self.current = current
 
 
 class TestGraphCreator():
@@ -341,6 +334,13 @@ class TestGraphCreator():
 
         @return Graph of the form above.
         """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodeToLayer = self.addNodeToLayer
+        addPortOnSide = self.addPortOnSide
+        selfLoopOn = self.selfLoopOn
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
+
         leftLayer = makeLayer(graph)
         rightLayer = makeLayer(graph)
 
@@ -369,11 +369,13 @@ class TestGraphCreator():
         addEdgeBetweenPorts(bottomLeftPort, topRightPort)
         return selfLoopCrossGraph
 
-    def selfLoopOn(node: LNode, side: PortSide) -> None:
+    def selfLoopOn(self, node: LNode, side: PortSide) -> None:
         """
         Test for self loop.
         """
-        addEdgeBetweenPorts(addPortOnSide(node, side), addPortOnSide(node, side))
+        self.addEdgeBetweenPorts(
+            self.addPortOnSide(node, side),
+            self.addPortOnSide(node, side))
 
     def getMoreComplexThreeLayerGraph(self):
         """
@@ -388,6 +390,13 @@ class TestGraphCreator():
         
         @return Graph of the form above.
         """
+        makeLayer = self.makeLayer
+        graph = self.graph
+        addNodesToLayer = self.addNodesToLayer
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
         leftLayer = makeLayer(graph)
         middleLayer = makeLayer(graph)
         rightLayer = makeLayer(graph)
@@ -428,6 +437,11 @@ class TestGraphCreator():
         
         @return Graph of the form above.
         """
+        makeLayer = self.makeLayer
+        graph = self.graph
+        addNodeToLayer = self.addNodeToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
         leftLayer = makeLayer(graph)
         rightLayer = makeLayer(graph)
 
@@ -456,6 +470,11 @@ class TestGraphCreator():
 
         @return Graph of the form above.
         """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodeToLayer = self.addNodeToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
         leftLayer = makeLayer(graph)
         rightLayer = makeLayer(graph)
 
@@ -481,6 +500,11 @@ class TestGraphCreator():
 
         @return Graph of the form above.
         """
+        graph = self.graph
+        makeLayers = self.makeLayers
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
         layers = makeLayers(3)
 
         leftNodes = addNodesToLayer(2, layers[0])
@@ -506,6 +530,11 @@ class TestGraphCreator():
 
         @return Graph of the form above.
         """
+        graph = self.graph
+        makeLayers = self.makeLayers
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
         layers = makeLayers(3)
 
         leftNodes = addNodesToLayer(2, layers[0])
@@ -535,6 +564,13 @@ class TestGraphCreator():
         
         @return Graph of the form above.
         """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodesToLayer = self.addNodesToLayer
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
+        addPortOnSide = self.addPortOnSide
+        setFixedOrderConstraint = self.setFixedOrderConstraint
+        
         layer = makeLayer(graph)
         nodes = addNodesToLayer(2, layer)
         setFixedOrderConstraint(nodes[0])
@@ -549,60 +585,71 @@ class TestGraphCreator():
         
         return graph
 
-    """
-    <pre>
-    ____
-    |  |----
-    |__|\  |
-    ____ | |
-    |  |-+--
-    |__|-|
-    .
-    </pre>
-    
-    Port order fixed.
-    
-    @return Graph of the form above.
-    """
     def getFixedPortOrderInLayerEdgesWithCrossings(self):
-        Layer layer = makeLayer(graph)
-        LNode[] nodes = addNodesToLayer(2, layer)
+        """
+        <pre>
+        ____
+        |  |----
+        |__|\  |
+        ____ | |
+        |  |-+--
+        |__|-|
+        .
+        </pre>
+        
+        Port order fixed.
+        
+        @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodesToLayer = self.addNodesToLayer
+        addInLayerEdge = self.addInLayerEdge
+        setFixedOrderConstraint = self.setFixedOrderConstraint
+
+        layer = makeLayer(graph)
+        nodes = addNodesToLayer(2, layer)
         setFixedOrderConstraint(nodes[0])
         setFixedOrderConstraint(nodes[1])
         addInLayerEdge(nodes[0], nodes[1], PortSide.EAST)
         addInLayerEdge(nodes[0], nodes[1], PortSide.EAST)
 
-        
         return graph
-    
 
-    """
-    <pre>
-         ____
-       / |  |
-    *-+--|  |\
-      | /|  |-+-*
-    *-++-|__| |
-      ||      |
-      || ___  |
-      | \| | /
-    *-+--| |/
-    *-+--|_|
-       \
-        \
-         *
-    .
-    </pre>
-    
-    Port order fixed.
-    
-    @return Graph of the form above.
-    """
     def getMoreComplexInLayerGraph(self):
-        Layer[] layers = makeLayers(3)
-        LNode[] leftNodes = addNodesToLayer(4, layers[0])
-        LNode[] middleNodes = addNodesToLayer(3, layers[1])
-        LNode rightNode = addNodeToLayer(layers[2])
+        """
+        <pre>
+             ____
+           / |  |
+        *-+--|  |\
+          | /|  |-+-*
+        *-++-|__| |
+          ||      |
+          || ___  |
+          | \| | /
+        *-+--| |/
+        *-+--|_|
+           \
+            \
+             *
+        .
+        </pre>
+
+        Port order fixed.
+
+        @return Graph of the form above.
+        """
+        makeLayers = self.makeLayers
+        addNodesToLayer = self.addNodesToLayer
+        addNodeToLayer = self.addNodeToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+        addInLayerEdge = self.addInLayerEdge
+        setFixedOrderConstraint = self.setFixedOrderConstraint
+
+        layers = makeLayers(3)
+        leftNodes = addNodesToLayer(4, layers[0])
+        middleNodes = addNodesToLayer(3, layers[1])
+        rightNode = addNodeToLayer(layers[2])
         setFixedOrderConstraint(middleNodes[0])
         setFixedOrderConstraint(middleNodes[1])
 
@@ -617,27 +664,31 @@ class TestGraphCreator():
         addInLayerEdge(middleNodes[0], middleNodes[1], PortSide.EAST)
         eastWestEdgeFromTo(middleNodes[0], rightNode)
 
-        
-        return graph
+        return self.graph
 
-    """
-     * <pre>
-     * *==*  *
-     *     \/
-     *     /\
-     * *==*  *
-     * .
-     * </pre>
-     *
-     * First Layer and last layer in fixed order.
-     *
-     * @return graph of the form above.
-    """
     def getGraphWhichCouldBeWorsenedBySwitch(self):
-        Layer[] layers = makeLayers(3)
-        LNode[] leftNodes = addNodesToLayer(2, layers[0])
-        LNode[] middleNodes = addNodesToLayer(2, layers[1])
-        LNode[] rightNodes = addNodesToLayer(2, layers[2])
+        """
+         * <pre>
+         * *==*  *
+         *     \/
+         *     /\
+         * *==*  *
+         * .
+         * </pre>
+         *
+         * First Layer and last layer in fixed order.
+         *
+         * @return graph of the form above.
+        """
+        makeLayers = self.makeLayers
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+        setInLayerOrderConstraint = self.setInLayerOrderConstraint
+
+        layers = makeLayers(3)
+        leftNodes = addNodesToLayer(2, layers[0])
+        middleNodes = addNodesToLayer(2, layers[1])
+        rightNodes = addNodesToLayer(2, layers[2])
 
         setInLayerOrderConstraint(leftNodes[0], leftNodes[1])
         setInLayerOrderConstraint(rightNodes[0], rightNodes[1])
@@ -649,27 +700,32 @@ class TestGraphCreator():
         eastWestEdgeFromTo(leftNodes[1], middleNodes[1])
         eastWestEdgeFromTo(leftNodes[1], middleNodes[1])
 
-        
-        return graph
+        return self.graph
     
-    """
-     * <pre>
-     *     * <-- this ...
-     *    /
-     * *-+-* <-- cannot switch with this
-     *  / _|__
-     * *  |  |
-     *    |__|
-     *
-     * .
-     * </pre>
-     *
-     * @return graph of the form above.
-     """
+
     def getNodesInDifferentLayoutUnitsPreventSwitch(self):
-        Layer[] layers = makeLayers(2)
-        LNode[] leftNodes = addNodesToLayer(2, layers[0])
-        LNode[] rightNodes = addNodesToLayer(3, layers[1])
+        """
+        * <pre>
+        *     * <-- this ...
+        *    /
+        * *-+-* <-- cannot switch with this
+        *  / _|__
+        * *  |  |
+        *    |__|
+        *
+        * .
+        * </pre>
+        *
+        * @return graph of the form above.
+        """
+        makeLayers = self.makeLayers
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+        addNorthSouthEdge = self.addNorthSouthEdge
+
+        layers = makeLayers(2)
+        leftNodes = addNodesToLayer(2, layers[0])
+        rightNodes = addNodesToLayer(3, layers[1])
 
         eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
 
@@ -678,83 +734,94 @@ class TestGraphCreator():
         rightNodes[1].setProperty(InternalProperties.IN_LAYER_LAYOUT_UNIT, rightNodes[2])
         rightNodes[2].setProperty(InternalProperties.IN_LAYER_LAYOUT_UNIT, rightNodes[2])
 
-        
-        return graph
-    
+        return self.graph
 
-    """
-     * <pre>
-     *  ---*
-     *  |
-     *  | ____
-     * *+-|  |
-     * *+-|  |
-     *   \|__|
-     * Port order not fixed.
-     * .
-     * </pre>
-     *
-     * @return Graph of the form above.
-     """
     def multipleInBetweenLayerEdgesIntoNodeWithNoFixedPortOrder(self):
-        Layer leftLayer = makeLayer(graph)
-        LNode[] leftNodes = addNodesToLayer(2, leftLayer)
-        Layer rightLayer = makeLayer(graph)
-        LNode[] rightNodes = addNodesToLayer(2, rightLayer)
+        """
+         * <pre>
+         *  ---*
+         *  |
+         *  | ____
+         * *+-|  |
+         * *+-|  |
+         *   \|__|
+         * Port order not fixed.
+         * .
+         * </pre>
+         *
+         * @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
 
-        addInLayerEdge(rightNodes[0], rightNodes[1], PortSide.WEST)
+        leftLayer = makeLayer(graph)
+        leftNodes = addNodesToLayer(2, leftLayer)
+        rightLayer = makeLayer(graph)
+        rightNodes = addNodesToLayer(2, rightLayer)
+
+        self.addInLayerEdge(rightNodes[0], rightNodes[1], PortSide.WEST)
         eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
         eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
-        
+
         return graph
-    
 
-    """
-     * <pre>
-     *  ---*
-     *  |
-     *  | ____
-     * *+-|  |
-     * *+-|  |
-     *  | |__|
-     *   \
-     *    *
-     * Port order not fixed.
-     * .
-     * </pre>
-     *
-     * @return Graph of the form above.
-     """
     def multipleInBetweenLayerEdgesIntoNodeWithNoFixedPortOrderCauseCrossings(self):
-        Layer leftLayer = makeLayer(graph)
-        LNode[] leftNodes = addNodesToLayer(2, leftLayer)
-        Layer rightLayer = makeLayer(graph)
-        LNode[] rightNodes = addNodesToLayer(3, rightLayer)
+        """
+         * <pre>
+         *  ---*
+         *  |
+         *  | ____
+         * *+-|  |
+         * *+-|  |
+         *  | |__|
+         *   \
+         *    *
+         * Port order not fixed.
+         * .
+         * </pre>
+         *
+         * @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
 
-        addInLayerEdge(rightNodes[0], rightNodes[2], PortSide.WEST)
+        leftLayer = makeLayer(graph)
+        leftNodes = addNodesToLayer(2, leftLayer)
+        rightLayer = makeLayer(graph)
+        rightNodes = addNodesToLayer(3, rightLayer)
+
+        self.addInLayerEdge(rightNodes[0], rightNodes[2], PortSide.WEST)
         eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
         eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
-        
+
         return graph
-    
 
-    """
-     * <pre>
-     * *----*
-     *  \\
-     *   \--*
-     *    --*
-     * *---/
-     *  \---*
-     * </pre>
-     *
-     * .
-     *
-     * @return Graph of the form above.
-     """
     def getSwitchedProblemGraph(self):
-        LNode[] leftNodes = addNodesToLayer(2, makeLayer(graph))
-        LNode[] rightNodes = addNodesToLayer(4, makeLayer(graph))
+        """
+         * <pre>
+         * *----*
+         *  \\
+         *   \--*
+         *    --*
+         * *---/
+         *  \---*
+         * </pre>
+         *
+         * .
+         *
+         * @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodesToLayer = self.addNodesToLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
+        leftNodes = addNodesToLayer(2, makeLayer(graph))
+        rightNodes = addNodesToLayer(4, makeLayer(graph))
 
         eastWestEdgeFromTo(leftNodes[1], rightNodes[2])
         eastWestEdgeFromTo(leftNodes[1], rightNodes[3])
@@ -763,110 +830,124 @@ class TestGraphCreator():
         eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
         eastWestEdgeFromTo(leftNodes[0], rightNodes[2])
 
-        
         return graph
-    
 
-    """
-     * <pre>
-     * *   *<- Into same port
-     *  \//
-     *  //\
-     * *   *
-     * </pre>
-     *
-     * .
-     *
-     * @return Graph of the form above.
-     """
     def twoEdgesIntoSamePort(self):
-        Layer leftLayer = makeLayer(graph)
-        Layer rightLayer = makeLayer(graph)
+        """
+         * <pre>
+         * *   *<- Into same port
+         *  \//
+         *  //\
+         * *   *
+         * </pre>
+         *
+         * .
+         *
+         * @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+        addNodeToLayer = self.addNodeToLayer
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
 
-        LNode topLeft = addNodeToLayer(leftLayer)
-        LNode bottomLeft = addNodeToLayer(leftLayer)
-        LNode topRight = addNodeToLayer(rightLayer)
-        LNode bottomRight = addNodeToLayer(rightLayer)
+        leftLayer = makeLayer(graph)
+        rightLayer = makeLayer(graph)
+
+        topLeft = addNodeToLayer(leftLayer)
+        bottomLeft = addNodeToLayer(leftLayer)
+        topRight = addNodeToLayer(rightLayer)
+        bottomRight = addNodeToLayer(rightLayer)
 
         eastWestEdgeFromTo(topLeft, bottomRight)
-        LPort bottomLeftFirstPort = addPortOnSide(bottomLeft, PortSide.EAST)
-        LPort bottomLeftSecondPort = addPortOnSide(bottomLeft, PortSide.EAST)
-        LPort topRightFirstPort = addPortOnSide(topRight, PortSide.WEST)
-        LPort topRightSecondPort = addPortOnSide(topRight, PortSide.WEST)
+        bottomLeftFirstPort = addPortOnSide(bottomLeft, PortSide.EAST)
+        bottomLeftSecondPort = addPortOnSide(bottomLeft, PortSide.EAST)
+        topRightFirstPort = addPortOnSide(topRight, PortSide.WEST)
+        topRightSecondPort = addPortOnSide(topRight, PortSide.WEST)
 
         addEdgeBetweenPorts(bottomLeftFirstPort, topRightFirstPort)
         addEdgeBetweenPorts(bottomLeftSecondPort, topRightSecondPort)
-        
+
         return graph
-    
 
-    """
-     * <pre>
-     * *---* <- Into same port
-     *   /
-     *  /
-     * *---*
-     * </pre>
-     *
-     * .
-     *
-     * @return Graph of the form above.
-     """
     def twoEdgesIntoSamePortCrossesWhenSwitched(self):
-        Layer leftLayer = makeLayer(graph)
-        Layer rightLayer = makeLayer(graph)
+        """
+         * <pre>
+         * *---* <- Into same port
+         *   /
+         *  /
+         * *---*
+         * </pre>
+         *
+         * .
+         *
+         * @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+        addNodeToLayer = self.addNodeToLayer
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
 
-        LNode topLeft = addNodeToLayer(leftLayer)
-        LNode bottomLeft = addNodeToLayer(leftLayer)
-        LNode topRight = addNodeToLayer(rightLayer)
-        LNode bottomRight = addNodeToLayer(rightLayer)
+        leftLayer = makeLayer(graph)
+        rightLayer = makeLayer(graph)
 
-        LPort topRightPort = addPortOnSide(topRight, PortSide.WEST)
-        LPort bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST)
+        topLeft = addNodeToLayer(leftLayer)
+        bottomLeft = addNodeToLayer(leftLayer)
+        topRight = addNodeToLayer(rightLayer)
+        bottomRight = addNodeToLayer(rightLayer)
+
+        topRightPort = addPortOnSide(topRight, PortSide.WEST)
+        bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST)
         addEdgeBetweenPorts(bottomLeftPort, topRightPort)
 
-        LPort topLeftPort = addPortOnSide(topLeft, PortSide.EAST)
+        topLeftPort = addPortOnSide(topLeft, PortSide.EAST)
         addEdgeBetweenPorts(topLeftPort, topRightPort)
 
         eastWestEdgeFromTo(bottomLeft, bottomRight)
 
-        
         return graph
-    
 
-    """
-     * <pre>
-     * *  *
-     *  \/
-     *  /\
-     * *--*<- Into same port
-     * </pre>
-     *
-     * .
-     *
-     * @return Graph of the form above.
-     """
     def twoEdgesIntoSamePortResolvesCrossingWhenSwitched(self):
-        Layer leftLayer = makeLayer(graph)
-        Layer rightLayer = makeLayer(graph)
+        """
+         * <pre>
+         * *  *
+         *  \/
+         *  /\
+         * *--*<- Into same port
+         * </pre>
+         *
+         * .
+         *
+         * @return Graph of the form above.
+        """
+        graph = self.graph
+        makeLayer = self.makeLayer
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+        addNodeToLayer = self.addNodeToLayer
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
 
-        LNode topLeft = addNodeToLayer(leftLayer)
-        LNode bottomLeft = addNodeToLayer(leftLayer)
-        LNode topRight = addNodeToLayer(rightLayer)
-        LNode bottomRight = addNodeToLayer(rightLayer)
+        leftLayer = makeLayer(graph)
+        rightLayer = makeLayer(graph)
 
-        LPort topLeftPort = addPortOnSide(topLeft, PortSide.EAST)
-        LPort bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST)
-        LPort bottomRightPort = addPortOnSide(bottomRight, PortSide.WEST)
+        topLeft = addNodeToLayer(leftLayer)
+        bottomLeft = addNodeToLayer(leftLayer)
+        topRight = addNodeToLayer(rightLayer)
+        bottomRight = addNodeToLayer(rightLayer)
+
+        topLeftPort = addPortOnSide(topLeft, PortSide.EAST)
+        bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST)
+        bottomRightPort = addPortOnSide(bottomRight, PortSide.WEST)
 
         addEdgeBetweenPorts(topLeftPort, bottomRightPort)
         addEdgeBetweenPorts(bottomLeftPort, bottomRightPort)
 
         eastWestEdgeFromTo(bottomLeft, topRight)
 
-        
         return graph
-    
 
     """
      * <pre>
@@ -882,191 +963,118 @@ class TestGraphCreator():
      * @return Graph of the form above.
      """
     def twoEdgesIntoSamePortFromEastWithFixedPortOrder(self):
-        Layer leftLayer = makeLayer(graph)
-        Layer rightLayer = makeLayer(graph)
+        graph = self.graph
+        makeLayer = self.makeLayer
+        addNodeToLayer = self.addNodeToLayer
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
+        setFixedOrderConstraint = self.setFixedOrderConstraint
 
-        LNode topLeft = addNodeToLayer(leftLayer)
-        LNode bottomLeft = addNodeToLayer(leftLayer)
-        LNode topRight = addNodeToLayer(rightLayer)
-        LNode bottomRight = addNodeToLayer(rightLayer)
+        leftLayer = makeLayer(graph)
+        rightLayer = makeLayer(graph)
+
+        topLeft = addNodeToLayer(leftLayer)
+        bottomLeft = addNodeToLayer(leftLayer)
+        topRight = addNodeToLayer(rightLayer)
+        bottomRight = addNodeToLayer(rightLayer)
 
         setFixedOrderConstraint(bottomLeft)
         setFixedOrderConstraint(topRight)
 
-        LPort topLeftPort = addPortOnSide(topLeft, PortSide.EAST)
-        LPort bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST)
-        LPort topRightPort = addPortOnSide(topRight, PortSide.WEST)
-        LPort bottomRightPort = addPortOnSide(bottomRight, PortSide.WEST)
+        topLeftPort = addPortOnSide(topLeft, PortSide.EAST)
+        bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST)
+        topRightPort = addPortOnSide(topRight, PortSide.WEST)
+        bottomRightPort = addPortOnSide(bottomRight, PortSide.WEST)
 
         addEdgeBetweenPorts(bottomLeftPort, bottomRightPort)
         addEdgeBetweenPorts(bottomLeftPort, topRightPort)
         addEdgeBetweenPorts(topLeftPort, topRightPort)
 
-        
         return graph
-    
 
     """
      * Return nodes as 2d array.
      * @param g
      * @return
      """
-    public LNode[][] getCurrentOrder(final LGraph g):
-        LNode[][] nodeOrder = new LNode[g.getLayers().size()][]
-        List<Layer> layers = g.getLayers()
-        for (int i = 0 i < layers.size() i++):
-            Layer layer = layers.get(i)
-            List<LNode> nodes = layer.getNodes()
-            nodeOrder[i] = new LNode[nodes.size()]
-            for (int j = 0 j < nodes.size() j++):
-                nodeOrder[i][j] = nodes.get(j)
-            
-        
+    def getCurrentOrder(self, g: Layout):
+        nodeOrder = []
+        for nodes in g.layers:
+            nodeOrder.append(nodes[:])
+
         return nodeOrder
-    
 
-    // CHECKSTYLEOFF Javadoc
+    def addNorthSouthEdge(self, side: PortSide,
+                          nodeWithNSPorts: LNode,
+                          northSouthDummy: LNode,
+                          nodeWithEastWestPorts: LNode,
+                          nodeWithEastWestPortsIsOrigin: bool):
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
+        normalNodeEastOfNsPortNode = nodeWithEastWestPorts.layerIndex < nodeWithNSPorts.layerIndex
+        direction = PortSide.WEST if normalNodeEastOfNsPortNode else PortSide.EAST
 
-    def setAsNorthSouthNode(node: LNode):
-        node.setType(NodeType.NORTH_SOUTH_PORT)
-    
+        targetNodePortSide = direction.opposed()
+        normalNodePort = addPortOnSide(nodeWithEastWestPorts, targetNodePortSide)
 
-    def addNorthSouthEdge(final PortSide side, node: LNodeWithNSPorts, final LNode northSouthDummy,
-            node: LNodeWithEastWestPorts, final boolean nodeWithEastWestPortsIsOrigin):
-        boolean normalNodeEastOfNsPortNode = nodeWithEastWestPorts.getLayer().getIndex() < nodeWithNSPorts.getLayer()
-                .getIndex()
-        PortSide direction = normalNodeEastOfNsPortNode ? PortSide.WEST : PortSide.EAST
+        dummyNodePort = addPortOnSide(northSouthDummy, direction)
 
-        PortSide targetNodePortSide = direction.opposed()
-        LPort normalNodePort = addPortOnSide(nodeWithEastWestPorts, targetNodePortSide)
-
-        LPort dummyNodePort = addPortOnSide(northSouthDummy, direction)
-
-        if (nodeWithEastWestPortsIsOrigin):
+        if nodeWithEastWestPortsIsOrigin:
             addEdgeBetweenPorts(normalNodePort, dummyNodePort)
-         else {
+        else:
             addEdgeBetweenPorts(dummyNodePort, normalNodePort)
-        
 
         northSouthDummy.setProperty(InternalProperties.IN_LAYER_LAYOUT_UNIT, nodeWithNSPorts)
         northSouthDummy.setProperty(InternalProperties.ORIGIN, nodeWithNSPorts)
 
-        setAsNorthSouthNode(northSouthDummy)
+        self.setAsNorthSouthNode(northSouthDummy)
 
-        LPort originPort = addPortOnSide(nodeWithNSPorts, side)
+        originPort = addPortOnSide(nodeWithNSPorts, side)
         dummyNodePort.setProperty(InternalProperties.ORIGIN, originPort)
         originPort.setProperty(InternalProperties.PORT_DUMMY, northSouthDummy)
 
-        List<LNode> baryAssoc = Lists.newArrayList(northSouthDummy)
+        baryAssoc = northSouthDummy[:]
 
-        List<LNode> otherBaryAssocs = nodeWithNSPorts.getProperty(InternalProperties.BARYCENTER_ASSOCIATES)
-        if (otherBaryAssocs is None):
+        otherBaryAssocs = nodeWithNSPorts.getProperty(InternalProperties.BARYCENTER_ASSOCIATES)
+        if otherBaryAssocs is None:
             nodeWithNSPorts.setProperty(InternalProperties.BARYCENTER_ASSOCIATES, baryAssoc)
-         else {
-            otherBaryAssocs.addAll(baryAssoc)
-        
+        else:
+            otherBaryAssocs.extend(baryAssoc)
 
-        if (side == PortSide.NORTH):
+        if side == PortSide.NORTH:
             northSouthDummy.getProperty(InternalProperties.IN_LAYER_SUCCESSOR_CONSTRAINTS).add(nodeWithNSPorts)
-         else {
+        else:
             nodeWithNSPorts.getProperty(InternalProperties.IN_LAYER_SUCCESSOR_CONSTRAINTS).add(northSouthDummy)
-        
-    
 
-    def setInLayerOrderConstraint(final LNode thisNode, final LNode beforeThisNode):
-        List<LNode> scndNodeAsList = Lists.newArrayList(beforeThisNode)
-        thisNode.setProperty(InternalProperties.IN_LAYER_SUCCESSOR_CONSTRAINTS, scndNodeAsList)
+    def makeLayers(self, amount: int):
+        return self.makeLayersInGraph(amount, self.graph)
     
+    def makeLayer(self):
+        return self.makeLayerInGraph(self.graph)
 
-    def setAsLongEdgeDummy(node: LNode):
-        node.setType(NodeType.LONG_EDGE)
-        node.setProperty(InternalProperties.IN_LAYER_LAYOUT_UNIT, null)
-    
-
-    def setPortOrderFixed(node: LNode):
-        node.setProperty(LayeredOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_ORDER)
-        node.getGraph().getProperty(InternalProperties.GRAPH_PROPERTIES).add(GraphProperties.NON_FREE_PORTS)
-    
-
-    public Layer[] makeLayers(final int amount):
-        return makeLayers(amount, graph)
-    
-
-    public Layer[] makeLayers(final int amount, final LGraph g):
-        Layer[] layers = new Layer[amount]
-        for (int i = 0 i < layers.length i++):
-            layers[i] = makeLayer(g)
-        
-        return layers
-    
-
-    public MapPropertyHolder setFixedOrderConstraint(node: LNode):
-        return node.setProperty(LayeredOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_ORDER)
-    
-
-    def setFixedOrderConstraint(final LNode[] nodes):
-        for (LNode n : nodes):
-            setFixedOrderConstraint(n)
-        
-    
-
-    def addInLayerEdge(node: LNodeOne, node: LNodeTwo, final PortSide portSide):
-        LPort portOne = addPortOnSide(nodeOne, portSide)
-        LPort portTwo = addPortOnSide(nodeTwo, portSide)
-        addEdgeBetweenPorts(portOne, portTwo)
-    
-
-    def addInLayerEdge(node: LNodeOne, final LPort portTwo, final PortSide portSide):
-        LPort portOne = addPortOnSide(nodeOne, portSide)
-        addEdgeBetweenPorts(portOne, portTwo)
-    
-
-    def addInLayerEdge(final LPort portOne, node: LNodeTwo):
-        PortSide portSide = portOne.getSide()
-        LPort portTwo = addPortOnSide(nodeTwo, portSide)
-        addEdgeBetweenPorts(portOne, portTwo)
-    
-
-    public LNode[] addNodesToLayer(final int amountOfNodes, final Layer leftLayer):
-        LNode[] nodes = new LNode[amountOfNodes]
-        for (int j = 0 j < amountOfNodes j++):
-            nodes[j] = addNodeToLayer(leftLayer)
-        
-        return nodes
-    
-
-    protected Layer makeLayer(self):
-        return makeLayer(graph)
-    
-
-    public Layer makeLayer(final LGraph g):
-        List<Layer> layers = g.getLayers()
-        Layer layer = new Layer(g)
-        layers.add(layer)
+    @staticmethod
+    def makeLayerForGraph(g: Layout):
+        layers = g.getLayers()
+        layer = LNodeLayer(g)
+        layers.append(layer)
         return layer
-    
 
-    public LNode addNodeToLayer(final Layer layer):
-        LNode node = new LNode(layer.getGraph())
+    def addNodeToLayer(self, layer) -> LNode:
+        node = LNode(layer.getGraph())
         node.setType(NodeType.NORMAL)
         node.setProperty(InternalProperties.IN_LAYER_LAYOUT_UNIT, node)
         node.setLayer(layer)
-        node.id = nodeId++
         return node
-    
 
-    def eastWestEdgeFromTo(final LNode left, final LNode right):
-        LPort leftPort = addPortOnSide(left, PortSide.EAST)
-        LPort rightPort = addPortOnSide(right, PortSide.WEST)
-        addEdgeBetweenPorts(leftPort, rightPort)
-    
+    def eastWestEdgeFromTo(self, self, left: LNode, right: LNode):
+        leftPort = self.addPortOnSide(left, PortSide.EAST)
+        rightPort = self.addPortOnSide(right, PortSide.WEST)
+        self.addEdgeBetweenPorts(leftPort, rightPort)
 
-    def addEdgeBetweenPorts(final LPort from, final LPort to):
-        LEdge edge = new LEdge()
-        edge.setSource(from)
-        edge.setTarget(to)
-        edge.id = edgeId++
-    
+    @staticmethod
+    def addEdgeBetweenPorts(from_: LPort, to: LPort):
+        edge = LEdge()
+        edge.setSrcDst(from_, to)
 
     """
      * Sets port constraints to fixed!
@@ -1075,222 +1083,237 @@ class TestGraphCreator():
      * @param portSide
      * @return
      """
-    public LPort addPortOnSide(node: LNode, final PortSide portSide):
-        LPort port = addPortTo(node)
+    def addPortOnSide(self, node: LNode, portSide: PortSide) -> LPort:
+        port = self.addPortTo(node)
         port.setSide(portSide)
-        if (!node.getProperty(LayeredOptions.PORT_CONSTRAINTS).isSideFixed()):
+        if not node.getProperty(LayeredOptions.PORT_CONSTRAINTS).isSideFixed():
             node.setProperty(LayeredOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
-        
+
         return port
-    
 
-    public LPort[] addPortsOnSide(final int n, node: LNode, final PortSide portSide):
-        LPort[] ps = new LPort[n]
-        for (int i = 0 i < ps.length i++):
-            ps[i] = addPortOnSide(node, portSide)
-        
-        return ps
-    
+    def addPortsOnSide(self, n: int, node: LNode, portSide: PortSide) -> List[LPort]:
+        return [self.addPortOnSide(node, portSide) for _ in range(n)]
 
-    private LPort addPortTo(node: LNode):
-        LPort port = new LPort()
-        port.setNode(node)
-        port.id = portId++
-        return port
-    
+    @staticmethod
+    def addPortTo(node: LNode) -> LPort:
+        return LPort(None, node, )
 
-    """
-     * <pre>
-     *     ____
-     *     |  |
-     * ----0  | <--- two edges into one port
-     * | / |  |
-     * | +-0  |
-     * |/| |__|
-     * ||\
-     * ||  *
-     * | \
-     * ----*
-     * </pre>
-     *
-     * Port order not fixed.
-     *
-     * @return Graph of the form above.
-     """
     def multipleEdgesIntoOnePortAndFreePortOrder(self):
-        LNode[] nodes = addNodesToLayer(3, makeLayer(graph))
+        """
+        * <pre>
+        *     ____
+        *     |  |
+        * ----0  | <--- two edges into one port
+        * | / |  |
+        * | +-0  |
+        * |/| |__|
+        * ||\
+        * ||  *
+        * | \
+        * ----*
+        * </pre>
+        *
+        * Port order not fixed.
+        *
+        * @return Graph of the form above.
+        """
+        addNodesToLayer = self.addNodesToLayer
+        makeLayer = self.makeLayer
+        addInLayerEdge = self.addInLayerEdge
+        addPortOnSide = self.addPortOnSide
+        addEdgeBetweenPorts = self.addEdgeBetweenPorts
+
+        nodes = addNodesToLayer(3, makeLayer(self.graph))
         addInLayerEdge(nodes[0], nodes[2], PortSide.WEST)
-        LPort portUpperNode = addPortOnSide(nodes[0], PortSide.WEST)
+        portUpperNode = addPortOnSide(nodes[0], PortSide.WEST)
         addEdgeBetweenPorts(portUpperNode, addPortOnSide(nodes[2], PortSide.WEST))
         addEdgeBetweenPorts(portUpperNode, addPortOnSide(nodes[1], PortSide.WEST))
-        
-        return graph
-    
 
-    """
-     * <pre>
-     * ___
-     * | |\    *
-     * | |\\  /
-     * |_|-++-+*
-     *     || \
-     *     ====*
-     * </pre>
-     *
-     * left Node has fixed Port Order.
-     *
-     * @return Graph of the form above.
-     """
+        return self.graph
+
     def getOnlyCorrectlyImprovedByBestOfForwardAndBackwardSweepsInSingleLayer(self):
-        LNode leftNode = addNodeToLayer(makeLayer(graph))
-        setFixedOrderConstraint(leftNode)
-        LNode[] rightNodes = addNodesToLayer(3, makeLayer(graph))
+        """
+         * <pre>
+         * ___
+         * | |\    *
+         * | |\\  /
+         * |_|-++-+*
+         *     || \
+         *     ====*
+         * </pre>
+         *
+         * left Node has fixed Port Order.
+         *
+         * @return Graph of the form above.
+         """
+        graph = self.graph
+        eastWestEdgeFromTo = self.eastWestEdgeFromTo
+
+        leftNode = self.addNodeToLayer(self.makeLayer(graph))
+        self.setFixedOrderConstraint(leftNode)
+        rightNodes = self.addNodesToLayer(3, self.makeLayer(graph))
         eastWestEdgeFromTo(leftNode, rightNodes[2])
         eastWestEdgeFromTo(leftNode, rightNodes[2])
         eastWestEdgeFromTo(leftNode, rightNodes[1])
-        addInLayerEdge(rightNodes[0], rightNodes[2], PortSide.WEST)
-        
+        self.addInLayerEdge(rightNodes[0], rightNodes[2], PortSide.WEST)
+
         return graph
-    
 
-    protected <T> List<T> getListCopyInIndexOrder(final List<T> li, final int... is):
-        List<T> list = new ArrayList<>()
-        for (int i : is):
-            list.add(li.get(i))
-        
-        return list
-    
-
-    protected <T> T[] getArrayInIndexOrder(final T[] arr, final int... is):
-        T[] copy = Arrays.copyOf(arr, arr.length)
-        int j = 0
-        for (int i : is):
-            copy[j++] = arr[i]
-        
-        return copy
-    
-
-    protected <T> List<T> copyOfListSwitchingOrder(final int i, final int j, final List<T> list):
-        List<T> listCopy = new ArrayList<T>(list)
-        T first = listCopy.get(i)
-        T second = listCopy.get(j)
-        listCopy.set(i, second)
-        listCopy.set(j, first)
-        return listCopy
-    
-
-    def switchOrderInArray(final int i, final int j, final T[] arr):
-        T[] copy = Arrays.copyOf(arr, arr.length)
-        T first = arr[i]
-        T snd = arr[j]
-        copy[j] = first
-        copy[i] = snd
-        return copy
-    
-
-    def addExternalPortDummyNodeToLayer(final Layer layer, final LPort port):
-        LNode node = addNodeToLayer(layer)
+    def addExternalPortDummyNodeToLayer(self, layer, port: LPort):
+        node = self.addNodeToLayer(layer)
         node.setProperty(InternalProperties.ORIGIN, port)
         node.setType(NodeType.EXTERNAL_PORT)
         node.setProperty(InternalProperties.EXT_PORT_SIDE, port.getSide())
         port.setProperty(InternalProperties.PORT_DUMMY, node)
         port.setProperty(InternalProperties.INSIDE_CONNECTIONS, True)
-        Set<GraphProperties> ps = node.getGraph().getProperty(InternalProperties.GRAPH_PROPERTIES)
+        ps = node.getGraph().getProperty(InternalProperties.GRAPH_PROPERTIES)
         ps.add(GraphProperties.EXTERNAL_PORTS)
         return node
-    
 
-    def addExternalPortDummiesToLayer(final Layer layer, final LPort[] ports):
-        nodes = new LNode[ports.length]
-        PortSide side = ports[0].getSide()
-        for (int i = 0 i < ports.length i++):
-            int portIndex = side == PortSide.EAST ? i : ports.length - 1 - i
-            nodes[i] = addExternalPortDummyNodeToLayer(layer, ports[portIndex])
-        
+    def addExternalPortDummiesToLayer(self, layer, ports: List[LPort]):
+        nodes = []
+        side = ports[0].side
+        for i in range(len(ports)):
+            portIndex = i if side == PortSide.EAST else ports.length - 1 - i
+            obj = self.addExternalPortDummyNodeToLayer(layer, ports[portIndex])
+            nodes.append(obj)
+
         return nodes
-    
 
-    def nestedGraph(node: LNode):
+    def nestedGraph(self, node: LNode):
         node.setProperty(InternalProperties.COMPOUND_NODE, True)
-        LGraph nestedGraph = node.getProperty(InternalProperties.NESTED_LGRAPH)
+        nestedGraph = node.getProperty(InternalProperties.NESTED_LGRAPH)
         if (nestedGraph is None):
-            nestedGraph = new LGraph()
-            setUpGraph(nestedGraph)
+            nestedGraph = Layout()
+            self.setUpGraph(nestedGraph)
             node.setProperty(InternalProperties.NESTED_LGRAPH, nestedGraph)
             nestedGraph.setProperty(InternalProperties.PARENT_LNODE, node)
-        
+
         return nestedGraph
-    
 
-    def switchOrderOfNodesInLayer(final int nodeOne, final int nodeTwo, final Layer layer):
-        List<LNode> nodes = layer.getNodes()
-        LNode firstNode = nodes.get(nodeOne)
-        LNode secondNode = nodes.get(nodeTwo)
-        List<LNode> switchedList = new ArrayList<LNode>(nodes)
-        switchedList.set(nodeOne, secondNode)
-        switchedList.set(nodeTwo, firstNode)
+    def switchOrderOfNodesInLayer(self, nodeOne: int, nodeTwo: int, layer):
+        nodes = layer.getNodes()
+        firstNode = nodes.get(nodeOne)
+        secondNode = nodes.get(nodeTwo)
+        switchedList = list(nodes)
+        switchedList[nodeOne] = secondNode
+        switchedList[nodeTwo] = firstNode
         return switchedList
-    
 
-    protected List<LNode> copyOfNodesInLayer(final int layerIndex):
-        return new ArrayList<LNode>(graph.getLayers().get(layerIndex).getNodes())
-    
+    def copyOfNodesInLayer(self, layerIndex: int):
+        return self.graph.layers[layerIndex][:]
 
-    protected List<LNode> copyOfSwitchOrderOfNodesInLayer(final int nodeOne, final int nodeTwo, final int layerIndex):
-        List<LNode> layer = copyOfNodesInLayer(layerIndex)
-        return getCopyWithSwitchedOrder(nodeOne, nodeTwo, layer)
-    
+    def copyOfSwitchOrderOfNodesInLayer(self, nodeOne: int, nodeTwo: int, layerIndex: int):
+        layer = self.copyOfNodesInLayer(layerIndex)
+        return self.getCopyWithSwitchedOrder(nodeOne, nodeTwo, layer)
 
-    protected List<LNode> getCopyWithSwitchedOrder(final int nodeOne, final int nodeTwo, final List<LNode> layer):
-        LNode firstNode = layer.get(nodeOne)
-        LNode secondNode = layer.get(nodeTwo)
-        List<LNode> switchedList = new ArrayList<LNode>(layer)
-        switchedList.set(nodeOne, secondNode)
-        switchedList.set(nodeTwo, firstNode)
-        return switchedList
-    
+    def eastWestEdgesFromTo(self, final int numberOfNodes, left: LNode, right: LNode):
+        for _ in range(numberOfNodes):
+            self.eastWestEdgeFromTo(left, right)
 
-    protected void eastWestEdgesFromTo(final int numberOfNodes, final LNode left, final LNode right):
-        for (int i = 0 i < numberOfNodes i++):
-            eastWestEdgeFromTo(left, right)
-        
-    
+    def eastWestEdgeFromTo(self, leftPort: LPort, rightNode: LNode):
+        self.addEdgeBetweenPorts(leftPort, addPortOnSide(rightNode, PortSide.WEST))
 
-    protected void eastWestEdgeFromTo(final LPort leftPort, final LNode rightNode):
-        addEdgeBetweenPorts(leftPort, addPortOnSide(rightNode, PortSide.WEST))
-    
+    def eastWestEdgeFromTo(self, left: LNode, right: LPort):
+        self.addEdgeBetweenPorts(self.addPortOnSide(left, PortSide.EAST), right)
 
     def copyPortsInIndexOrder(node: LNode, *indices):
-        res = Lists.newArrayList()
+        res = []
         for i in indices:
-            res.add(node.getPorts().get(i))
-        
+            res.append(node.getPorts().get(i))
+
         return res
-    
 
-    protected void eastWestEdgeFromTo(final LNode left, final LPort right):
-        addEdgeBetweenPorts(addPortOnSide(left, PortSide.EAST), right)
-    
+    def setRandom(self, random: MockRandom):
+        self.random = random
 
-    public MockRandom getRandom(self):
-        return random
-    
+    @staticmethod
+    def setFixedOrderConstraint(node: LNode):
+        return node.setProperty(LayeredOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_ORDER)
 
-    def setRandom(final MockRandom random):
-        this.random = random
-    
+    def setFixedOrderConstraint_many(self, nodes):
+        for n in nodes:
+            self.setFixedOrderConstraint(n)
 
-    protected <T> void setOnAllGraphs(final IProperty<T> prop, final T val, final LGraph graph):
-        graph.setProperty(prop, val)
-        for (LNode node : Iterables.concat(graph)):
-            LGraph nestedGraph = node.getProperty(InternalProperties.NESTED_LGRAPH)
-            if (nestedGraph is not None):
-                setOnAllGraphs(prop, val, nestedGraph)
-            
-        
-    
+    @staticmethod
+    def getListCopyInIndexOrder(li: list, *_is):
+        list_ = []
+        for i in _is:
+            list_.add(li[i])
 
-    
-    
-    
-    
+        return list
+
+    @staticmethod
+    def getArrayInIndexOrder(arr, _is):
+        copy_ = arr[:]
+        j = 0
+        for i in _is:
+            copy_[j] = arr[i]
+
+        return copy_
+
+    @staticmethod
+    def copyOfListSwitchingOrder(i: int, j: int, list_: list):
+        listCopy = list_[:]
+        first = listCopy[i]
+        second = listCopy[j]
+        listCopy[i] = second
+        listCopy[j] = first
+        return listCopy
+
+    @staticmethod
+    def switchOrderInArray(i: int, j: int, arr: list):
+        copy_ = arr[:]
+        first = arr[i]
+        snd = arr[j]
+        copy_[j] = first
+        copy_[i] = snd
+        return copy_
+
+    @staticmethod
+    def getCopyWithSwitchedOrder(nodeOne: int, nodeTwo: int, layer):
+        firstNode = layer[nodeOne]
+        secondNode = layer[nodeTwo]
+        switchedList = layer[:]
+        switchedList[nodeOne] = secondNode
+        switchedList[nodeTwo] = firstNode
+        return switchedList
+
+    @staticmethod
+    def setAsNorthSouthNode(node: LNode):
+        node.type = NodeType.NORTH_SOUTH_PORT
+
+    @staticmethod
+    def setInLayerOrderConstraint(thisNode: LNode, beforeThisNode: LNode):
+        scndNodeAsList = beforeThisNode[:]
+        thisNode.setProperty(InternalProperties.IN_LAYER_SUCCESSOR_CONSTRAINTS, scndNodeAsList)
+
+    @staticmethod
+    def setAsLongEdgeDummy(node: LNode):
+        node.type = NodeType.LONG_EDGE
+        node.setProperty(InternalProperties.IN_LAYER_LAYOUT_UNIT, null)
+
+    @staticmethod
+    def setPortOrderFixed(node: LNode):
+        node.setProperty(LayeredOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_ORDER)
+        node.getGraph().getProperty(InternalProperties.GRAPH_PROPERTIES).add(GraphProperties.NON_FREE_PORTS)
+
+    def makeLayersInGraph(self, amount: int, g: Layout):
+        return [self.makeLayerInGraph(g) for _ in range(amount)]
+
+    def addInLayerEdge(self, nodeOne: LNode, nodeTwo: LNode, portSide: PortSide):
+        portOne = self.addPortOnSide(nodeOne, portSide)
+        portTwo = self.addPortOnSide(nodeTwo, portSide)
+        self.addEdgeBetweenPorts(portOne, portTwo)
+
+    def addInLayerEdge(self, nodeOne: LNode, portTwo: LPort, portSide: PortSide):
+        portOne = self.addPortOnSide(nodeOne, portSide)
+        self.addEdgeBetweenPorts(portOne, portTwo)
+
+    def addInLayerEdge(self, portOne: LPort, nodeTwo: LNode):
+        portSide = portOne.side
+        portTwo = self.addPortOnSide(nodeTwo, portSide)
+        self.addEdgeBetweenPorts(portOne, portTwo)
+
+    def addNodesToLayer(self, amountOfNodes: int, leftLayer: LNodeLayer):
+        return [self.addNodeToLayer(leftLayer) for _ in range(amountOfNodes)]

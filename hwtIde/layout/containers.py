@@ -270,9 +270,8 @@ class LayoutExternalPort(LNode):
 
 
 class LNodeLayer(list):
-    def __init__(self, parent: "Layout"):
+    def __init__(self, parent: "Layout" = None):
         self.parent = parent
-        parent.layers.append(self)
 
     def append(self, v):
         v.layer = self
