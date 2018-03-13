@@ -32,7 +32,11 @@ class AllCrossingsCounter():
             if (edge.srcNode.layerIndex == edge.dstNode.layerIndex):
                 inLayerEdgeCounts[l] += 1
 
-        portPos = {n: 0 for n in graph.nodes}
+        portPos = {}
+        for n in graph.nodes:
+            for p in n.iterPorts():
+                portPos[p] = 0
+
         self.hyperedgeCrossingsCounter = HyperedgeCrossingsCounter(
             inLayerEdgeCounts,
             hasNorthSouthPorts,

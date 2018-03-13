@@ -139,8 +139,10 @@ class LayerSweepCrossingMinimizer():
         constraintResolver = ForsterConstraintResolver(graph.nodes)
 
         for g in graphsToSweepOn:
-            for name in ["crossMinimizer", "currentNodeOrder", "portDistributor", "crossCounter"]:
+            for name in ["crossMinimizer", "currentNodeOrder", "portDistributor",
+                         "crossCounter", "currentlyBestNodeAndPortOrder"]:
                 assert not hasattr(g, name)
+            g.currentlyBestNodeAndPortOrder = None
             g.portDistributor = DummyPortDistributor()
             g.crossMinimizer = BarycenterHeuristic(
                 constraintResolver, self.random, g.portDistributor)
@@ -161,6 +163,7 @@ class LayerSweepCrossingMinimizer():
             del g.crossMinimizer
             del g.currentNodeOrder
             del g.portDistributor
+            del g.currentlyBestNodeAndPortOrder
             for n in g.nodes:
                 del n.inLayerSuccessorConstraint
                 del n.barycenterAssociates
@@ -263,8 +266,8 @@ class LayerSweepCrossingMinimizer():
 
     def setCurrentlyBestNodeOrders(self):
         for graph in self.graphsWhoseNodeOrderChanged:
-            graph.setCurrentlyBestNodeAndPortOrder(
-                SweepCopy(graph.currentNodeOrder))
+            graph.currentlyBestNodeAndPortOrder = SweepCopy(
+                graph.currentNodeOrder)
 
     def sweepReducingCrossings(self, graph, forward: bool, firstSweep: bool):
         nodes = graph.currentNodeOrder

@@ -111,6 +111,23 @@ def reverseForTopDown(seq, topDown: bool):
         return seq
     else:
         return reversed(seq)
+
+
+def inNorthSouthEastWestOrder(node: LNode, side: PortSide):
+    """
+    Iterate over ports in north to south and east to west order.
+
+    @param node: whose ports are being considered.
+    @param side: of the node we are interested in
+    @return Iterable for ports on given node and side in given order.
+    """
+    if side == PortSide.EAST or side == PortSide.NORTH:
+            return node.getPortSideView(side)
+    elif side == PortSide.SOUTH or side == PortSide.WEST:
+            return reversed(node.getPortSideView(side))
+    raise ValueError(side)
+
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                                  CONVENIENCE
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -171,12 +188,11 @@ class CrossingsCounter():
         self.indexTree = None
         self.ends = deque()
 
-        self.nodeCardinalities = []
+        self.nodeCardinalities = {}
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PUBLIC API
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
     def countCrossingsBetweenLayers(self, leftLayerNodes, rightLayerNodes):
         """
         Count in-layer and between-layer crossings between the two given layers.
@@ -290,7 +306,7 @@ class CrossingsCounter():
             leftLayerNodes, rightLayerNodes)
         self.indexTree = BinaryIndexedTree(len(ports))
 
-    def initPortPositionsForInLayerCrossings(self, nodes, side):
+    def initPortPositionsForInLayerCrossings(self, nodes: List[LNode], side: PortSide):
         """
         Initializes the counter for counting in-layer crossings on a specific
         side of a single layer. Use this method if only if you do not need
@@ -331,11 +347,11 @@ class CrossingsCounter():
         """
         poss = self.portPositions
         nodeCardinalities = self.nodeCardinalities
-        ports = CrossMinUtil.inNorthSouthEastWestOrder(wasUpperNode, side)
+        ports = inNorthSouthEastWestOrder(wasUpperNode, side)
         for port in ports:
             poss[port] = poss[port] + nodeCardinalities[wasLowerNode]
 
-        ports = CrossMinUtil.inNorthSouthEastWestOrder(wasLowerNode, side)
+        ports = inNorthSouthEastWestOrder(wasLowerNode, side)
         for port in ports:
             poss[port] = poss[port] - nodeCardinalities[wasUpperNode]
 
@@ -350,7 +366,7 @@ class CrossingsCounter():
         # positionOf(b)))
         ports = set()
         for node in (upperNode, lowerNode):
-            for port in CrossMinUtil.inNorthSouthEastWestOrder(node, side):
+            for port in inNorthSouthEastWestOrder(node, side):
                 for edge in port.getConnectedEdges():
                     if not edge.isSelfLoop():
                         ports.add(port)
@@ -469,11 +485,11 @@ class CrossingsCounter():
                       ) -> None:
         numPorts = len(ports)
         if getCardinalities:
-            nodeCardinalities = {n: 0 for n in nodes}
+            nodeCardinalities = self.nodeCardinalities = {n: 0 for n in nodes}
         poss = self.portPositions
 
         for node in reverseForTopDown(nodes, topDown):
-            nodePorts = getPorts(node, side, topDown)
+            nodePorts = list(getPorts(node, side, topDown))
             if getCardinalities:
                 nodeCardinalities[node] = sum(1 for _ in nodePorts)
 
@@ -502,7 +518,7 @@ class CrossingsCounter():
         for current in nodes:
             if isLayoutUnitChanged(lastLayoutUnit, current):
                 # work the stack (filled with southern dummies)
-                index = emptyStack(stack, ports, STACK_SIDE, index)
+                index = emptyStack(stack, ports, self.STACK_SIDE, index)
 
             if current.inLayerLayoutUnit:
                 lastLayoutUnit = current.inLayerLayoutUnit
@@ -514,16 +530,16 @@ class CrossingsCounter():
                 for p in getNorthSouthPortsWithIncidentEdges(current, PortSide.NORTH):
                     poss[p] = index
                     index += 1
-                    ports.add(p)
+                    ports.append(p)
 
                 # work the stack (filled with northern dummies)
-                index = emptyStack(stack, ports, STACK_SIDE, index)
+                index = emptyStack(stack, ports, self.STACK_SIDE, index)
 
                 # index the southern ports in regular clock-wise order
                 for p in getNorthSouthPortsWithIncidentEdges(current, PortSide.SOUTH):
                     poss[p] = index
                     index += 1
-                    ports.add(p)
+                    ports.append(p)
 
             elif t == NodeType.NORTH_SOUTH_PORT:
                 if arr_any(current.getPortSideView(self.INDEXING_SIDE), lambda x: True):
@@ -531,16 +547,16 @@ class CrossingsCounter():
                     p = current.getPortSideView(self.INDEXING_SIDE)[0]
                     poss[p] = index
                     index += 1
-                    ports.add(p)
+                    ports.append(p)
 
-                if not current.getPortSideView(STACK_SIDE).isEmpty():
+                if not current.getPortSideView(self.STACK_SIDE).isEmpty():
                     stack.append(current)
 
             elif t == NodeType.LONG_EDGE:
                 for p in current.getPortSideView(PortSide.WEST):
                     poss[p] = index
                     index += 1
-                    ports.add(p)
+                    ports.append(p)
 
                 for p in current.getPortSideView(PortSide.EAST):
                     stack.append(current)
@@ -550,7 +566,7 @@ class CrossingsCounter():
                 pass
 
         # are there any southern dummy nodes left on the stack?
-        emptyStack(stack, ports, STACK_SIDE, index)
+        emptyStack(stack, ports, self.STACK_SIDE, index)
 
         return ports
 
@@ -564,7 +580,7 @@ class CrossingsCounter():
             # both of which have only a single port on the west and/or east
             # side
             p = dummy.getPortSideView(side)[0]
-            poss[p.id] = index
+            poss[p] = index
             index += 1
             ports.add(p)
 

@@ -127,7 +127,7 @@ class BarycenterHeuristic():
         if preOrdered:
             lastValue = -1
 
-            for i, node in enumerate(node):
+            for i, node in enumerate(nodes):
                 st = states[node]
                 value = st.barycenter
 

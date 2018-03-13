@@ -153,6 +153,7 @@ class LNode():
 
         # {PortItem: LPort}
         self._port_obj_map = objMap
+        self.childGraphs = []
 
         # used by cycle breaker
         self.indeg = 0
@@ -228,8 +229,9 @@ class LNode():
 
     def getPortSideView(self, side) -> List["LPort"]:
         """
-        Returns a sublist view for all ports of given side. WARNING: Use this only after port sides are fixed! This is
-        currently the case after running the {@link org.eclipse.elk.alg.layered.intermediate.PortListSorter}.
+        Returns a sublist view for all ports of given side.
+        :attention: Use this only after port sides are fixed!
+        This is currently the case after running the {@link org.eclipse.elk.alg.layered.intermediate.PortListSorter}.
         Non-structural changes to this list are reflected in the original list. A structural modification is any
         operation that adds or deletes one or more elements; merely setting the value of an element is not a structural
         modification. Sublist indices can be cached using {@link LNode#cachePortSides()}.
@@ -322,6 +324,8 @@ class Layout():
 
         # node to layout node
         self._node2lnode = {}
+        self.childGraphs = []
+        self.parent = None
 
     def getLayerlessNodes(self):
         """
