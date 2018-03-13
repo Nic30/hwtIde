@@ -2,7 +2,7 @@ from math import inf
 from typing import List, Dict
 
 from hwtIde.layout.crossing.barycenterState import BarycenterState
-from hwtIde.layout.containers import LayoutNode, NodeType
+from hwtIde.layout.containers import LNode, NodeType
 
 
 class ConstraintGroup():
@@ -22,7 +22,7 @@ class ConstraintGroup():
     :ivar incomingConstraintsCount: The number of incoming constraints.
     """
 
-    def __init__(self, states: Dict[LayoutNode, BarycenterState]):
+    def __init__(self, states: Dict[LNode, BarycenterState]):
         """
         :param node: the node the vertex should contain
         """
@@ -34,7 +34,7 @@ class ConstraintGroup():
         self.states = states
 
     @classmethod
-    def from_node(cls, states: Dict[LayoutNode, BarycenterState], node: LayoutNode):
+    def from_node(cls, states: Dict[LNode, BarycenterState], node: LNode):
         """
         :return: new instance of ConstraintGroup
         """
@@ -167,7 +167,7 @@ class ConstraintGroup():
         """
         return self.incomingConstraints is not None and len(self.incomingConstraints) > 0
 
-    def getNode(self) -> LayoutNode:
+    def getNode(self) -> LNode:
         """
         Returns the contained node. This may only be used for node groups with exactly one node.
 
@@ -187,7 +187,7 @@ class ForsterConstraintResolver():
 
     :cvar BARYCENTER_EQUALITY_DELTA: Delta that two barycenters can differ by to still
         be considered equal.
-    :ivar states: dict {LayoutNode: BarycenterState}
+    :ivar states: dict {LNode: BarycenterState}
     """
     BARYCENTER_EQUALITY_DELTA = 0.0001
 
@@ -199,7 +199,7 @@ class ForsterConstraintResolver():
         self.layoutUnits = {n: [n, ]
                             for n in nodes}
 
-    def processConstraints(self, nodes: List[LayoutNode]):
+    def processConstraints(self, nodes: List[LNode]):
         """
         :attention: nodes can be modified
         """

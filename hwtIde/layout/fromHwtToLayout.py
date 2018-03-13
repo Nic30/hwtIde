@@ -6,8 +6,8 @@ from hwt.hdl.portItem import PortItem
 from hwt.pyUtils.arrayQuery import where
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.unit import Unit
-from layout.containers import Layout, LayoutPort, LayoutExternalPort, LayoutNode,\
-    LayoutEdge
+from layout.containers import Layout, LPort, LayoutExternalPort, LNode,\
+    LEdge
 
 
 def origin_obj_of_port(intf):
@@ -27,17 +27,17 @@ def origin_obj_of_port(intf):
     return origin
 
 
-def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface,
+def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
               reverseDirection=False):
     """
-    add port to LayoutPort for interface
+    add port to LPort for interface
     """
     origin = origin_obj_of_port(intf)
     d = intf._direction
     if reverseDirection:
         d = INTF_DIRECTION.opposite(d)
 
-    new_lp = LayoutPort(origin, lp, intf._name, d, lp.side)
+    new_lp = LPort(origin, lp, intf._name, d, lp.side)
     if intf._interfaces:
         for child_intf in intf:
             _add_port(new_lp, child_intf, reverseDirection=reverseDirection)
@@ -49,7 +49,7 @@ def _add_port(lep: LayoutExternalPort, lp: LayoutPort, intf: Interface,
     return new_lp
 
 
-def add_port_to_unit(ln: LayoutNode, intf: Interface, reverseDirection=False):
+def add_port_to_unit(ln: LNode, intf: Interface, reverseDirection=False):
     origin = origin_obj_of_port(intf)
 
     d = intf._direction
@@ -78,7 +78,7 @@ def add_port(la: Layout, intf: Interface):
     return ext_p
 
 
-def get_single_edge(ports) -> LayoutEdge:
+def get_single_edge(ports) -> LEdge:
     assert len(ports) == 1
     ce = ports[0].connectedEdges
     assert len(ce) == 1
@@ -110,7 +110,7 @@ def reduce_useless_assignments(la: Layout):
         la.nodes = list(nodes)
 
 
-def get_connected_node(port: LayoutPort):
+def get_connected_node(port: LPort):
     assert len(port.connectedEdges) == 1
     e = port.connectedEdges[0]
     raise NotImplementedError()
@@ -120,7 +120,7 @@ def get_connected_node(port: LayoutPort):
         assert e.dst is port
 
 
-def count_directly_connected(port: LayoutPort, result: dict) -> int:
+def count_directly_connected(port: LPort, result: dict) -> int:
     """
     Count how many ports are directly connected to other nodes
 
@@ -147,7 +147,7 @@ def count_directly_connected(port: LayoutPort, result: dict) -> int:
             assert e.dst is port
             p = e.src.parent
 
-        if not isinstance(p, LayoutNode):
+        if not isinstance(p, LNode):
             cons = result.get(p, [])
             cons.append((port, e))
             result[p] = cons
@@ -156,8 +156,8 @@ def count_directly_connected(port: LayoutPort, result: dict) -> int:
 
 
 def port_try_reduce(la: Layout,
-                    port: LayoutPort,
-                    edges_to_remove: Set[LayoutNode]):
+                    port: LPort,
+                    edges_to_remove: Set[LNode]):
     """
     Check if majority of children is connected to same port
     if it is the case reduce children and connect this port instead children
@@ -213,7 +213,7 @@ def port_try_reduce(la: Layout,
         raise NotImplementedError(port.direction)
 
 
-def flatten_port(port: LayoutPort):
+def flatten_port(port: LPort):
     yield port
     if port.children:
         for ch in port.children:

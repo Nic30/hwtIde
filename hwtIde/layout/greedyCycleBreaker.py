@@ -1,4 +1,4 @@
-from layout.containers import LayoutExternalPort, LayoutNode
+from layout.containers import LayoutExternalPort, LNode
 from hwt.hdl.constants import INTF_DIRECTION
 
 
@@ -81,7 +81,7 @@ class GreedyCycleBreaker():
                         if node.mark > edge.dstNode.mark:
                             edge.reverse()
 
-    def updateNeighbors(self, node: LayoutNode):
+    def updateNeighbors(self, node: LNode):
         """
         Updates indegree and outdegree values of the neighbors of the given node,
         simulating its removal from the graph. the sources and sinks lists are

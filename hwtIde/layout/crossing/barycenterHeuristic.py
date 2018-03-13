@@ -2,7 +2,7 @@ from itertools import islice
 from random import Random
 from typing import List
 
-from hwtIde.layout.containers import LayoutNode, PortType, NodeType
+from hwtIde.layout.containers import LNode, PortType, NodeType
 from hwtIde.layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
 
 
@@ -14,7 +14,7 @@ def portTypeFor(direction: bool):
     return PortType.OUTPUT if direction else PortType.INPUT
 
 
-def isExternalPortDummy(firstNode: LayoutNode):
+def isExternalPortDummy(firstNode: LNode):
     return firstNode.type == NodeType.EXTERNAL_PORT
 
 
@@ -25,7 +25,7 @@ def startIndex(dir_: bool, size: int) -> int:
         return max(0, size - 1)
 
 
-def isFirstLayer(nodeOrder: List[List[LayoutNode]], currentIndex: int,
+def isFirstLayer(nodeOrder: List[List[LNode]], currentIndex: int,
                  forwardSweep: bool) -> bool:
     return currentIndex == startIndex(forwardSweep, len(nodeOrder))
 
@@ -34,7 +34,7 @@ class BarycenterHeuristic():
     RANDOM_AMOUNT = 0.07
     """
     :note: Ported from ELK.
-    :ivar states: dict {LayoutNode: BarycenterState}
+    :ivar states: dict {LNode: BarycenterState}
     """
 
     def __init__(self, constraintResolver: ForsterConstraintResolver, random: Random, portDistributor):
@@ -55,7 +55,7 @@ class BarycenterHeuristic():
 
     # the barycenter values of every node in the graph, indexed by layer.id
     # and node.id.
-    def minimizeCrossingsInLayer(self, layer: List[LayoutNode], preOrdered: bool,
+    def minimizeCrossingsInLayer(self, layer: List[LNode], preOrdered: bool,
                                  randomize: bool, forward: bool):
         if randomize:
             # Randomize barycenters (we don't need to update the edge count in this case
@@ -76,7 +76,7 @@ class BarycenterHeuristic():
             # Resolve ordering constraints
             self.constraintResolver.processConstraints(layer)
 
-    def minimizeCrossings(self, order: List[List[LayoutNode]], freeLayerIndex: int,
+    def minimizeCrossings(self, order: List[List[LNode]], freeLayerIndex: int,
                           forwardSweep: bool, isFirstSweep: bool) -> bool:
         if (not isFirstLayer(order, freeLayerIndex, forwardSweep)):
             fixedLayer = order[freeLayerIndex - changeIndex(forwardSweep)]
@@ -107,7 +107,7 @@ class BarycenterHeuristic():
             st.summedWeight = st.barycenter = random()
             st.degree = 1
 
-    def setFirstLayerOrder(self, order: List[List[LayoutNode]], isForwardSweep: bool):
+    def setFirstLayerOrder(self, order: List[List[LNode]], isForwardSweep: bool):
         _startIndex = startIndex(isForwardSweep, len(order))
         nodes = list(order[_startIndex])
         self.minimizeCrossingsInLayer(nodes, False, True, isForwardSweep)
@@ -165,7 +165,7 @@ class BarycenterHeuristic():
                     st.summedWeight = value
                     st.degree = 1
 
-    def calculateBarycenters(self, nodes: List[LayoutNode], forward: bool):
+    def calculateBarycenters(self, nodes: List[LNode], forward: bool):
         """
         Calculate the barycenters of the given node groups.
 
@@ -221,7 +221,7 @@ class BarycenterHeuristic():
                 # calculation instead
                 fixedNode = fixedPort.getNode()
 
-                if fixedNode.layoutIndex == node.layoutIndex:
+                if fixedNode.layerIndex == node.layerIndex:
                     # Self-loops are ignored
                     if fixedNode is not node:
                         # Find the fixed node's node group and calculate its
@@ -241,7 +241,7 @@ class BarycenterHeuristic():
         if barycenterAssociates is not None:
             for associate in barycenterAssociates:
                 # Make sure the associate is in the same layer as this node
-                if node.layoutIndex == associate.layoutIndex:
+                if node.layerIndex == associate.layerIndex:
                     # Find the associate's node group and calculate its
                     # barycenter
                     calculateBarycenter(associate, forward)

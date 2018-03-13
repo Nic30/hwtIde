@@ -1,5 +1,5 @@
 from hwt.pyUtils.arrayQuery import flatten
-from layout.containers import Layout, LayoutNode, NodeType
+from layout.containers import Layout, LNode, NodeType
 
 
 class SweepCopy():
@@ -64,7 +64,7 @@ class SweepCopy():
         #    Collections.sort(node.getPorts(), PortListSorter.DEFAULT_SORT_COMPARATOR)
         #    node.cachePortSides()
 
-    # def assertCorrectPortSides(self, dummy: LayoutNode) -> LayoutNode:
+    # def assertCorrectPortSides(self, dummy: LNode) -> LNode:
     #    """
     #    Corrects the {@link PortSide} of dummy's origin.
     #

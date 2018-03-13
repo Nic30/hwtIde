@@ -1,5 +1,5 @@
-from layout.containers import LayoutPort, LayoutNode, Layout,\
-    LayoutExternalPort, LayoutEdge, LayoutIdCtx, UNIT_HEADER_OFFSET, PORT_HEIGHT
+from layout.containers import LPort, LNode, Layout,\
+    LayoutExternalPort, LEdge, LayoutIdCtx, UNIT_HEADER_OFFSET, PORT_HEIGHT
 from layout.geometry import GeometryRect
 import xml.etree.ElementTree as etree
 
@@ -13,14 +13,14 @@ class ToMxGraph():
         self.id_ctx = LayoutIdCtx()
 
         self._toMxGraph = {
-            LayoutNode: self.LayoutNode_toMxGraph,
-            LayoutEdge: self.LayoutEdge_toMxGraph,
+            LNode: self.LNode_toMxGraph,
+            LEdge: self.LEdge_toMxGraph,
             LayoutExternalPort: self.LayoutExternalPort_toMxGraph,
             Layout: self.Layout_toMxGraph,
             GeometryRect: self.GeometryRect_toMxGraph
         }
 
-    def LayoutPort_coordinates(self, lp):
+    def LPort_coordinates(self, lp):
         p = lp.getNode().geometry
         g = lp.geometry
         x_rel = (g.x - p.x) / p.width
@@ -34,7 +34,7 @@ class ToMxGraph():
     def getMxGraphId(self, obj):
         return str(self.id_ctx[obj] + 2)
 
-    def LayoutNode_toMxGraph(self, lu: LayoutNode):
+    def LNode_toMxGraph(self, lu: LNode):
         _id = self.getMxGraphId(lu)
         c = mxCell(
             value="",
@@ -58,9 +58,9 @@ class ToMxGraph():
         yield label
 
         for lp in lu.iterPorts():
-            yield from self.LayoutPort_toMxGraph(lp, _id, g)
+            yield from self.LPort_toMxGraph(lp, _id, g)
 
-    def LayoutPort_toMxGraph(self, lp: LayoutPort, parentId, parentGeom):
+    def LPort_toMxGraph(self, lp: LPort, parentId, parentGeom):
         p = mxCell(
             value=lp.name,
             id=self.getMxGraphId(lp),
@@ -83,9 +83,9 @@ class ToMxGraph():
 
             yield c
         else:
-            yield from self.LayoutNode_toMxGraph(lep)
+            yield from self.LNode_toMxGraph(lep)
 
-    def LayoutEdge_toMxGraph(self, e: LayoutEdge):
+    def LEdge_toMxGraph(self, e: LEdge):
         if e.reversed:
             _src = e.dst
             _dst = e.src
@@ -94,9 +94,9 @@ class ToMxGraph():
             _dst = e.dst
 
         srcId = self.getMxGraphId(_src.getNode())
-        srcX, srcY = self.LayoutPort_coordinates(_src)
+        srcX, srcY = self.LPort_coordinates(_src)
         dstId = self.getMxGraphId(_dst.getNode())
-        dstX, dstY = self.LayoutPort_coordinates(_dst)
+        dstX, dstY = self.LPort_coordinates(_dst)
 
         c = mxCell(
             id=self.getMxGraphId(e),

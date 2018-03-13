@@ -1,7 +1,7 @@
 from math import inf
 from typing import Optional
 
-from layout.containers import LayoutNode, LayoutNodeLayer
+from layout.containers import LNode, LNodeLayer
 from hwt.hdl.constants import INTF_DIRECTION
 
 
@@ -114,7 +114,7 @@ class MinWidthLayerer():
         # Finally, add the winning layering to the Klay layered data
         # structures.
         for layerList in candidateLayering:
-            currentLayer = LayoutNodeLayer(graph)
+            currentLayer = LNodeLayer(graph)
             currentLayer.extend(layerList)
 
         # The algorithm constructs the layering bottom up, but ElkLayered expects the list of
@@ -247,7 +247,7 @@ class MinWidthLayerer():
 
         return maxWidth, layers
 
-    def selectNode(self, nodes, targets) -> Optional[LayoutNode]:
+    def selectNode(self, nodes, targets) -> Optional[LNode]:
         """
         Returns the first node in the given Set, whose outgoing edges end only
         in nodes of the Set targets. Self-loops are ignored.
