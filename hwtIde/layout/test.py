@@ -11,7 +11,7 @@ from layout.containers import Layout
 from layout.examples import LinearDualSubunit
 from layout.fromHwtToLayout import Unit_to_Layout
 from layout.greedyCycleBreaker import GreedyCycleBreaker
-from layout.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
+from layout.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layout.minWidthLayerer import MinWidthLayerer
 from layout.toMxGraph import ToMxGraph
 from layout.toSvg import ToSvg

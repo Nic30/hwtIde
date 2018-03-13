@@ -2,8 +2,8 @@ from itertools import islice
 from random import Random
 from typing import List
 
-from layout.containers import LayoutNode, PortType, NodeType
-from layout.forsterConstraintResolver import ForsterConstraintResolver
+from hwtIde.layout.containers import LayoutNode, PortType, NodeType
+from hwtIde.layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
 
 
 def changeIndex(dir_: bool):

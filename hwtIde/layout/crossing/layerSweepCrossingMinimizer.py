@@ -1,21 +1,14 @@
-from enum import Enum
+from collections import deque
+from random import Random
 from typing import List
 
 from hwt.pyUtils.arrayQuery import arr_all
 from hwtIde.layout.containers import Layout
-from layout.containers import LayoutNode, PortType
-from layout.sweepCopy import SweepCopy
-from layout.barycenterHeuristic import BarycenterHeuristic
-from layout.forsterConstraintResolver import ForsterConstraintResolver
-from random import Random
-from _collections import deque
-
-
-class PortSide(Enum):
-    EAST = 0
-    WEST = 1
-    SOUTH = 2
-    NORTH = 3
+from hwtIde.layout.containers import LayoutNode, PortType, PortSide
+from hwtIde.layout.crossing.allCrossingsCounter import AllCrossingsCounter
+from hwtIde.layout.crossing.barycenterHeuristic import BarycenterHeuristic
+from hwtIde.layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
+from hwtIde.layout.crossing.sweepCopy import SweepCopy
 
 
 def firstFree(isForwardSweep, length):
@@ -146,13 +139,14 @@ class LayerSweepCrossingMinimizer():
         constraintResolver = ForsterConstraintResolver(graph.nodes)
 
         for g in graphsToSweepOn:
-            for name in ["crossMinimizer", "currentNodeOrder", "portDistributor"]:
+            for name in ["crossMinimizer", "currentNodeOrder", "portDistributor", "crossCounter"]:
                 assert not hasattr(g, name)
             g.portDistributor = DummyPortDistributor()
             g.crossMinimizer = BarycenterHeuristic(
                 constraintResolver, self.random, g.portDistributor)
             g.currentNodeOrder = [list(layer) for layer in g.layers]
             g.inLayerSuccessorConstraint = []
+            g.crossCounter = AllCrossingsCounter(g)
             for n in g.nodes:
                 assert not hasattr(n, "inLayerSuccessorConstraint")
                 assert not hasattr(n, "barycenterAssociates")
@@ -181,7 +175,8 @@ class LayerSweepCrossingMinimizer():
         countCrossingsIn.append(currentGraph)
         while countCrossingsIn:
             gD = countCrossingsIn.pop()
-            totalCrossings += gD.crossCounter.countAllCrossings(gD.currentNodeOrder())
+            totalCrossings += gD.crossCounter.countAllCrossings(
+                gD.currentNodeOrder())
             for child in gD.childGraphs:
                 if child.dontSweepInto():
                     totalCrossings += self.countCurrentNumberOfCrossings(child)

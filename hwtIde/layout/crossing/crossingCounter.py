@@ -102,6 +102,7 @@ from collections import deque
 from typing import List, Tuple
 from layout.containers import LayoutNode
 
+
 class CrossingsCounter():
     """
     :note: ported from ELK
@@ -110,7 +111,7 @@ class CrossingsCounter():
     def __init__(self, portPositions: List[int]):
         """
         Create crossings counter.
-        
+
         @param portPositions
                    port position array passed to prevent frequent large array construction.
         """
@@ -120,14 +121,14 @@ class CrossingsCounter():
 
         self.nodeCardinalities = []
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PUBLIC API
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def countCrossingsBetweenLayers(self, leftLayerNodes, rightLayerNodes):
         """
         Count in-layer and between-layer crossings between the two given layers.
-        
+
         @param leftLayerNodes
                    left layer
         @param rightLayerNodes
@@ -135,13 +136,13 @@ class CrossingsCounter():
         @return number of crossings.
         """
         ports = self.initPortPositionsCounterClockwise(leftLayerNodes, rightLayerNodes)
-        indexTree = BinaryIndexedTree(len(ports))
+        self.indexTree = BinaryIndexedTree(len(ports))
         return self.countCrossingsOnPorts(ports)
 
     def countInLayerCrossingsOnSide(self, nodes, side):
         """
         Only count in-layer crossings on the given side.
-        
+
         @param nodes
                    order of nodes in layer in question.
         @param side
@@ -150,13 +151,12 @@ class CrossingsCounter():
         """
         ports = self.initPortPositionsForInLayerCrossings(nodes, side)
         return self.countInLayerCrossingsOnPorts(ports)
-    
-    
+
     def countNorthSouthPortCrossingsInLayer(self, layer: List[LayoutNode]):
         """
-        Count crossings between edges connected to north/south ports of the passed layer's nodes. Also counts crossings
-        of these edges with long edges spanning the passed layer.
-        
+        Count crossings between edges connected to north/south ports of the passed layer's nodes.
+        Also counts crossings of these edges with long edges spanning the passed layer.
+
         @param layer
                    a layer of the layering
         @return number of crossings.
@@ -165,14 +165,13 @@ class CrossingsCounter():
         self.indexTree = BinaryIndexedTree(len(ports))
         return self.countNorthSouthCrossingsOnPorts(ports)
 
-    
     def countCrossingsBetweenPortsInBothOrders(self, upperPort, lowerPort) -> Tuple[int, int]:
         """
         Count crossings caused between edges incident to upperPort and lowerPort and when the order of these two is
         switched. Initialize before use with {@link #initForCountingBetween(LNode[], LNode[])} when not on either end of
         a graph. If you do want to use this to the left of the leftmost or to the right of the rightmost layer, use
         {@link #initPortPositionsForInLayerCrossings(LNode[], PortSide)}.
-        
+
         @param upperPort
                    the upper port
         @param lowerPort
@@ -186,8 +185,8 @@ class CrossingsCounter():
         # the index tree.
         self.indexTree.clear()
         self.switchPorts(upperPort, lowerPort)
-        Collections.sort(ports, (a, b) -> Integer.compare(positionOf(a), positionOf(b)))
-        int lowerUpperCrossings = countCrossingsOnPorts(ports)
+        ports.sort(key=lambda p: positionOf[p])
+        lowerUpperCrossings = countCrossingsOnPorts(ports)
         indexTree.clear()
         switchPorts(lowerPort, upperPort)
         return (upperLowerCrossings, lowerUpperCrossings)
@@ -196,7 +195,7 @@ class CrossingsCounter():
         """
         Count crossings caused between edges incident to upperNode and lowerNode and when the order of these two is
         switched. Initialize before use with {@link #initPortPositionsForInLayerCrossings(LNode[], PortSide)}.
-        
+
         @param upperNode
                    the upper node
         @param lowerNode
@@ -212,18 +211,17 @@ class CrossingsCounter():
         # Since we might add endpositions of ports which are not in the ports list, we need to explicitly clear
         # the index tree.
         self.indexTree.clear()
-        Collections.sort(ports, (a, b) -> Integer.compare(positionOf(a), positionOf(b)))
-        int lowerUpperCrossings = countInLayerCrossingsOnPorts(ports)
+        ports.sort(key=lambda p: positionOf[p])
+        lowerUpperCrossings = countInLayerCrossingsOnPorts(ports)
         switchNodes(lowerNode, upperNode, side)
         indexTree.clear()
         return (upperLowerCrossings, lowerUpperCrossings)
-
 
     def initForCountingBetween(self, leftLayerNodes, rightLayerNodes):
         """
         Initializes the counter for counting crosses on a specific side of two layers. Use this method if only if you do
         not need to count all crossings, such as with {@link #countCrossingsBetweenPortsInBothOrders(LPort, LPort)}.
-        
+
         @param leftLayerNodes
                    Nodes in western layer.
         @param rightLayerNodes
@@ -231,8 +229,6 @@ class CrossingsCounter():
         """
         ports = self.initPortPositionsCounterClockwise(leftLayerNodes, rightLayerNodes)
         self.indexTree = BinaryIndexedTree(len(ports))
-
-
 
     def initPortPositionsForInLayerCrossings(self, nodes, side):
         """

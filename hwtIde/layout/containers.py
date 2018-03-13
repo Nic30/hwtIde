@@ -50,6 +50,13 @@ class PortType(Enum):
     OUTPUT = 1
 
 
+class PortSide(Enum):
+    EAST = 0
+    WEST = 1
+    SOUTH = 2
+    NORTH = 3
+
+
 class LayoutPort():
     """
     Port for component in component diagram
