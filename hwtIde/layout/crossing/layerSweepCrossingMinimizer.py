@@ -4,7 +4,7 @@ from typing import List
 
 from hwt.pyUtils.arrayQuery import arr_all
 from hwtIde.layout.containers import Layout
-from hwtIde.layout.containers import LayoutNode, PortType, PortSide
+from hwtIde.layout.containers import LNode, PortType, PortSide
 from hwtIde.layout.crossing.allCrossingsCounter import AllCrossingsCounter
 from hwtIde.layout.crossing.barycenterHeuristic import BarycenterHeuristic
 from hwtIde.layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
@@ -44,7 +44,7 @@ def next_step(isForwardSweep: bool):
 
 class DummyPortDistributor():
 
-    def distributePortsWhileSweeping(self, order: List[List[LayoutNode]],
+    def distributePortsWhileSweeping(self, order: List[List[LNode]],
                                      freeLayerIndex: int, isForwardSweep: bool):
         """
         Distribute ports in one layer. To be used in the context of layer sweep.
@@ -55,7 +55,7 @@ class DummyPortDistributor():
         """
         return False
 
-    def calculatePortRanks(self, layer: List[LayoutNode], portType: PortType):
+    def calculatePortRanks(self, layer: List[LNode], portType: PortType):
         """
         Determine ranks for all ports of specific type in the given layer.
         The ranks are written to the {@link #getPortRanks()} array.
@@ -139,8 +139,10 @@ class LayerSweepCrossingMinimizer():
         constraintResolver = ForsterConstraintResolver(graph.nodes)
 
         for g in graphsToSweepOn:
-            for name in ["crossMinimizer", "currentNodeOrder", "portDistributor", "crossCounter"]:
+            for name in ["crossMinimizer", "currentNodeOrder", "portDistributor",
+                         "crossCounter", "currentlyBestNodeAndPortOrder"]:
                 assert not hasattr(g, name)
+            g.currentlyBestNodeAndPortOrder = None
             g.portDistributor = DummyPortDistributor()
             g.crossMinimizer = BarycenterHeuristic(
                 constraintResolver, self.random, g.portDistributor)
@@ -161,6 +163,7 @@ class LayerSweepCrossingMinimizer():
             del g.crossMinimizer
             del g.currentNodeOrder
             del g.portDistributor
+            del g.currentlyBestNodeAndPortOrder
             for n in g.nodes:
                 del n.inLayerSuccessorConstraint
                 del n.barycenterAssociates
@@ -176,7 +179,7 @@ class LayerSweepCrossingMinimizer():
         while countCrossingsIn:
             gD = countCrossingsIn.pop()
             totalCrossings += gD.crossCounter.countAllCrossings(
-                gD.currentNodeOrder())
+                gD.currentNodeOrder)
             for child in gD.childGraphs:
                 if child.dontSweepInto():
                     totalCrossings += self.countCurrentNumberOfCrossings(child)
@@ -224,7 +227,7 @@ class LayerSweepCrossingMinimizer():
             #gData.parent().setProperty(LayeredOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_ORDER)
 
     def sortPortsByDummyPositionsInLastLayer(self,
-                                             nodeOrder: List[List[LayoutNode]],
+                                             nodeOrder: List[List[LNode]],
                                              parent, onRightMostLayer: bool):
         _endIndex = endIndex(onRightMostLayer, nodeOrder.length)
         lastLayer = nodeOrder[_endIndex]
@@ -263,8 +266,8 @@ class LayerSweepCrossingMinimizer():
 
     def setCurrentlyBestNodeOrders(self):
         for graph in self.graphsWhoseNodeOrderChanged:
-            graph.setCurrentlyBestNodeAndPortOrder(
-                SweepCopy(graph.currentNodeOrder))
+            graph.currentlyBestNodeAndPortOrder = SweepCopy(
+                graph.currentNodeOrder)
 
     def sweepReducingCrossings(self, graph, forward: bool, firstSweep: bool):
         nodes = graph.currentNodeOrder

@@ -40,9 +40,20 @@ class LayoutIdCtx(dict):
 
 
 class NodeType(Enum):
+    # a normal node is created from a node of the original graph.
     NORMAL = 0
-    NORTH_SOUTH_PORT = 1
+    # a dummy node created to split a long edge.
+    LONG_EDGE = 1
+    # a node representing an external port.
     EXTERNAL_PORT = 2
+    # a dummy node created to cope with ports at the northern or southern side.
+    NORTH_SOUTH_PORT = 3
+    # a dummy node to represent a mid-label on an edge.
+    LABEL = 4
+    # a dummy node originating from a node spanning multiple layers.
+    BIG_NODE = 5
+    # a dummy node representing a breaking point used to 'wrap' graphs.
+    BREAKING_POINT = 6
 
 
 class PortType(Enum):
@@ -57,7 +68,7 @@ class PortSide(Enum):
     NORTH = 3
 
 
-class LayoutPort():
+class LPort():
     """
     Port for component in component diagram
 
@@ -67,10 +78,10 @@ class LayoutPort():
     :ivar direction: direction of this port
     :ivar geometry: absolute geometry in layout
     :ivar children: list of children ports, before interface connecting phase
-            (when routing this list is empty and childrens are directly on parent LayoutNode)
+            (when routing this list is empty and childrens are directly on parent LNode)
     """
 
-    def __init__(self, portItem: PortItem, parent: "LayoutNode", name: str, direction, side):
+    def __init__(self, portItem: PortItem, parent: "LNode", name: str, direction, side):
         self.portItem = portItem
         self.parent = parent
         self.name = name
@@ -84,7 +95,7 @@ class LayoutPort():
         p = self
         while True:
             p = p.parent
-            if isinstance(p, LayoutNode):
+            if isinstance(p, LNode):
                 return p
 
     def initDim(self, width, x=0, y=0):
@@ -121,15 +132,15 @@ class LayoutPort():
             self.__class__.__name__, ".".join(self._getDebugName()))
 
 
-class LayoutNode():
+class LNode():
     """
     Component for component diagram
 
     :ivar origin: original object which this node represents
     :ivar name: name of this unit
     :ivar class_name: name of class of this unit
-    :ivar right: list of LayoutPort for on right border of this node
-    :ivar left: list of LayoutPort for on left border of this node
+    :ivar right: list of LPort for on right border of this node
+    :ivar left: list of LPort for on left border of this node
     """
 
     def __init__(self, origin: Unit, name: str, objMap):
@@ -140,8 +151,9 @@ class LayoutNode():
         self.geometry = None
         self.parent = None
 
-        # {PortItem: LayoutPort}
+        # {PortItem: LPort}
         self._port_obj_map = objMap
+        self.childGraphs = []
 
         # used by cycle breaker
         self.indeg = 0
@@ -152,7 +164,7 @@ class LayoutNode():
         self.nestedGraph = None
         self.type = NodeType.NORMAL
 
-        self.layoutIndex = None
+        self.layerIndex = None
 
     def iterPorts(self):
         return chain(self.left, self.right)
@@ -210,23 +222,54 @@ class LayoutNode():
         else:
             raise ValueError()
 
-        p = LayoutPort(origin, self, name, direction, side)
+        p = LPort(origin, self, name, direction, side)
         portArr.append(p)
         self._port_obj_map[origin] = p
         return p
+
+    def getPortSideView(self, side) -> List["LPort"]:
+        """
+        Returns a sublist view for all ports of given side.
+        :attention: Use this only after port sides are fixed!
+        This is currently the case after running the {@link org.eclipse.elk.alg.layered.intermediate.PortListSorter}.
+        Non-structural changes to this list are reflected in the original list. A structural modification is any
+        operation that adds or deletes one or more elements; merely setting the value of an element is not a structural
+        modification. Sublist indices can be cached using {@link LNode#cachePortSides()}.
+
+        :param side: a port side
+        :return: an iterable for the ports of given side
+        """
+        if side == PortSide.WEST:
+            return self.left
+        elif side == PortSide.EAST:
+            return self.right
+        else:
+            return []
+        #if not self.portSidesCached:
+        #    # If not explicitly cached, this will be repeated each time.
+        #    # However, this has the same complexity as filtering by side.
+        #    self.findPortIndices()
+        #
+        #indices = self.portSideIndices[side]
+        #if indices is None:
+        #    return []
+        #else:
+        #    # We must create a new sublist each time,
+        #    # because the order of the ports on one side can change.
+        #    return self.ports[indices[0]:indices[1]]
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.name)
 
 
-class LayoutExternalPort(LayoutNode):
+class LayoutExternalPort(LNode):
     def __init__(self, origin, name, direction, objMap):
         super(LayoutExternalPort, self).__init__(
             origin, name, objMap)
         self.direction = direction
 
 
-class LayoutNodeLayer(list):
+class LNodeLayer(list):
     def __init__(self, parent: "Layout"):
         self.parent = parent
         parent.layers.append(self)
@@ -240,7 +283,7 @@ class LayoutNodeLayer(list):
             self.append(v)
 
 
-class LayoutEdge():
+class LEdge():
     def __init__(self, signal: RtlSignal, name: str):
         self.name = name
         self.signal = signal
@@ -250,7 +293,7 @@ class LayoutEdge():
         self.dstNode = None
         self.reversed = False
 
-    def setSrcDst(self, src: LayoutPort, dst: LayoutPort):
+    def setSrcDst(self, src: LPort, dst: LPort):
         self.src = src
         self.srcNode = src.getNode()
         self.dst = dst
@@ -281,6 +324,8 @@ class Layout():
 
         # node to layout node
         self._node2lnode = {}
+        self.childGraphs = []
+        self.parent = None
 
     def getLayerlessNodes(self):
         """
@@ -288,21 +333,23 @@ class Layout():
         """
         return self.nodes
 
-    def add_stm_as_unit(self, stm: HdlStatement) -> LayoutNode:
-        u = LayoutNode(stm, stm.__class__.__name__, self._node2lnode)
+    def add_stm_as_unit(self, stm: HdlStatement) -> LNode:
+        u = LNode(stm, stm.__class__.__name__, self._node2lnode)
         self._node2lnode[stm] = u
-        u.right.append(LayoutPort(None, u, "out", INTF_DIRECTION.MASTER, PortType.OUTPUT))
-        u.left.append(LayoutPort(None, u, "in", INTF_DIRECTION.SLAVE, PortType.INPUT))
+        u.right.append(
+            LPort(None, u, "out", INTF_DIRECTION.MASTER, PortType.OUTPUT))
+        u.left.append(
+            LPort(None, u, "in", INTF_DIRECTION.SLAVE, PortType.INPUT))
         self.nodes.append(u)
         return u
 
-    def add_node(self, origin: Unit, name: str) -> LayoutNode:
-        n = LayoutNode(origin, origin._name, self._node2lnode)
+    def add_node(self, origin: Unit, name: str) -> LNode:
+        n = LNode(origin, origin._name, self._node2lnode)
         self.nodes.append(n)
         return n
 
-    def add_edge(self, signal, name, src: LayoutPort, dst: LayoutPort):
-        e = LayoutEdge(signal, name)
+    def add_edge(self, signal, name, src: LPort, dst: LPort):
+        e = LEdge(signal, name)
         e.setSrcDst(src, dst)
         self.edges.append(e)
         return e

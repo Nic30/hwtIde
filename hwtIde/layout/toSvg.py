@@ -1,5 +1,5 @@
-from layout.containers import LayoutPort, LayoutNode, Layout,\
-    LayoutExternalPort, LayoutEdge, LayoutIdCtx, PORT_HEIGHT
+from layout.containers import LPort, LNode, Layout,\
+    LayoutExternalPort, LEdge, LayoutIdCtx, PORT_HEIGHT
 from layout.geometry import GeometryRect
 import xml.etree.ElementTree as etree
 
@@ -54,13 +54,13 @@ class ToSvg():
         self.id_ctx = LayoutIdCtx()
 
         self._toSvg = {
-            LayoutNode: self.LayoutNode_toSvg,
-            LayoutEdge: self.LayoutEdge_toSvg,
+            LNode: self.LNode_toSvg,
+            LEdge: self.LEdge_toSvg,
             LayoutExternalPort: self.LayoutExternalPort_toSvg,
             Layout: self.Layout_toSvg,
         }
 
-    def LayoutPort_coordinates(self, lp: LayoutPort):
+    def LPort_coordinates(self, lp: LPort):
         p = lp.getNode().geometry
         g = lp.geometry
         is_on_right = g.x >= p.x + p.width / 2
@@ -76,15 +76,15 @@ class ToSvg():
     def getSvgId(self, obj):
         return str(self.id_ctx[obj] + 2)
 
-    def LayoutNode_toSvg(self, lu: LayoutNode, fill=COMPONENT_FILL):
+    def LNode_toSvg(self, lu: LNode, fill=COMPONENT_FILL):
         n = svg_rect_from_geom(lu.geometry, label=lu.name, fill=fill)
 
         for lp in lu.iterPorts():
-            for obj in self.LayoutPort_toSvg(lp):
+            for obj in self.LPort_toSvg(lp):
                 n.append(obj)
         yield n
 
-    def LayoutPort_toSvg(self, lp: LayoutPort):
+    def LPort_toSvg(self, lp: LPort):
         yield svg_rect_from_geom(lp.geometry, label=lp.name)
 
     def LayoutExternalPort_toSvg(self, lep: LayoutExternalPort):
@@ -93,9 +93,9 @@ class ToSvg():
                                      label=lep.name,
                                      fill=EXTERNAL_PORT_FILL)
         else:
-            yield from self.LayoutNode_toSvg(lep, fill=EXTERNAL_PORT_FILL)
+            yield from self.LNode_toSvg(lep, fill=EXTERNAL_PORT_FILL)
 
-    def LayoutEdge_toSvg(self, ln: LayoutNode):
+    def LEdge_toSvg(self, ln: LNode):
         if ln.reversed:
             _src = ln.dst
             _dst = ln.src
@@ -105,8 +105,8 @@ class ToSvg():
             _dst = ln.dst
             stroke = "black"
 
-        srcX, srcY = self.LayoutPort_coordinates(_src)
-        dstX, dstY = self.LayoutPort_coordinates(_dst)
+        srcX, srcY = self.LPort_coordinates(_src)
+        dstX, dstY = self.LPort_coordinates(_dst)
         points = [(srcX, srcY), (dstX, dstY)]
 
         yield svg_line(points, stroke=stroke)

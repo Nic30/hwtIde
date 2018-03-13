@@ -2,12 +2,12 @@ from hwt.hdl.constants import DIRECTION_to_str, DIRECTION, INTF_DIRECTION
 
 
 class ToJson():
-    def LayoutPort_toJson(self, lp):
+    def LPort_toJson(self, lp):
         return {"id": lp.id,
                 "geometry": self.toJson(lp.geometry),
                 "name": lp.name}
 
-    def LayoutNode_toJson(self, lu):
+    def LNode_toJson(self, lu):
         toJson = self.toJson
         return {"name": lu.name,
                 "id": lu.id,
@@ -20,7 +20,7 @@ class ToJson():
                 }
 
     def LayoutExternalPort_toJson(self, lep):
-        j = self.LayoutNode_toJson(lep)
+        j = self.LNode_toJson(lep)
         j["direction"] = DIRECTION_to_str[DIRECTION.opposite(
             INTF_DIRECTION.asDirection(lep.direction))]
         j["isExternalPort"] = True
