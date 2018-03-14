@@ -44,8 +44,8 @@ class TestGraphCreator():
         self.nodeId = 0
         self.edgeId = 0
         self.random = MockRandom()
-        graph = Layout()
-        self.setUpGraph(graph)
+        self.graph = Layout()
+        self.setUpGraph(self.graph)
 
     def getGraph(self, graph):
         self.setUpGraph(graph)
@@ -1056,15 +1056,15 @@ class TestGraphCreator():
         return self.makeLayerInGraph(self.graph)
 
     @staticmethod
-    def makeLayerForGraph(g: Layout):
-        layers = g.getLayers()
+    def makeLayerInGraph(g: Layout):
+        layers = g.layers
         layer = LNodeLayer(g)
         layers.append(layer)
         return layer
 
     def addNodeToLayer(self, layer) -> LNode:
-        node = LNode(layer.getGraph())
-        node.setType(NodeType.NORMAL)
+        node = LNode(layer.graph)
+        node.type = NodeType.NORMAL
         node.inLayerLayoutUnit = node
         node.setLayer(layer)
         return node
@@ -1079,15 +1079,14 @@ class TestGraphCreator():
         edge = LEdge()
         edge.setSrcDst(from_, to)
 
-    """
-     * Sets port constraints to fixed!
-     *
-     * @param node
-     * @param portSide
-     * @return
-     """
-
     def addPortOnSide(self, node: LNode, portSide: PortSide) -> LPort:
+        """
+        Sets port constraints to fixed!
+
+        :param node:
+        :param portSide:
+        :return: newly created port
+        """
         port = self.addPortTo(node)
         port.setSide(portSide)
         if not node.portConstraints.isSideFixed():
@@ -1097,10 +1096,6 @@ class TestGraphCreator():
 
     def addPortsOnSide(self, n: int, node: LNode, portSide: PortSide) -> List[LPort]:
         return [self.addPortOnSide(node, portSide) for _ in range(n)]
-
-    @staticmethod
-    def addPortTo(node: LNode) -> LPort:
-        return LPort(None, node, )
 
     def multipleEdgesIntoOnePortAndFreePortOrder(self):
         """

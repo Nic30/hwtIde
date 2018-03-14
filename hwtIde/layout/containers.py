@@ -205,23 +205,33 @@ class LNode():
     """
     Component for component diagram
 
-    :ivar origin: original object which this node represents
+    :ivar originObj: original object which this node represents
     :ivar name: name of this unit
     :ivar class_name: name of class of this unit
-    :ivar right: list of LPort for on right border of this node
-    :ivar left: list of LPort for on left border of this node
+
+    :ivar NORTH: list of LPort for on  top side.
+    :ivar EAST: list of LPort for on right side.
+    :ivar SOUTH: list of LPort for on bottom side.
+    :ivar WEST: list of LPort for on left side.
     """
 
-    def __init__(self, originObj: Unit, name: str, objMap):
-        self.originObj = originObj
+    def setOriginObj(self, obj):
+        self.originObj = obj
+
+    def __init__(self, graph: "Layout", name: str= None):
+        self.originObj = None
         self.name = name
-        self.left = []
-        self.right = []
+
+        self.west = []
+        self.east = []
+        self.north = []
+        self.south = []
+
         self.geometry = None
         self.parent = None
 
         # {PortItem: LPort}
-        self._port_obj_map = objMap
+        self.graph = graph
         self.childGraphs = []
 
         # used by cycle breaker
@@ -233,10 +243,10 @@ class LNode():
         self.nestedGraph = None
         self.type = NodeType.NORMAL
 
-        self.layerIndex = None
+        self.layer = None
         self.inLayerSuccessorConstraints = None
         self.portConstraints = PortConstraints.UNDEFINED
-        self.inLayerLayoutUnit = None
+        self.inLayerLayoutUnit = self
         self.nestedLgraph = None
         self.compoundNode = False
         self.origin = None
@@ -244,7 +254,7 @@ class LNode():
         self.barycenterAssociates = None
 
     def iterPorts(self):
-        return chain(self.left, self.right)
+        return chain(self.north, self.east, self.south, self.west)
 
     def initPortDegrees(self):
         indeg = 0
@@ -273,13 +283,16 @@ class LNode():
             max(len(self.left), len(self.right)) * PORT_HEIGHT
         self.geometry = GeometryRect(x, y, width, height)
 
+        if self.south or self.north:
+            raise NotImplementedError()
+
         port_width = width / 2
         _y = y + UNIT_HEADER_OFFSET
-        for i in self.left:
+        for i in self.east:
             _y = i.initDim(port_width, x=x, y=_y)
 
         _y = y + UNIT_HEADER_OFFSET
-        for o in self.right:
+        for o in self.west:
             _y = o.initDim(port_width, x=x + port_width, y=_y)
 
     def translate(self, x, y):
@@ -288,8 +301,7 @@ class LNode():
         for p in self.iterPorts():
             p.translate(x, y)
 
-    def add_port(self, origin: Union[Interface, PortItem], direction,
-                 name: str):
+    def addPortFromHdl(self, origin: Union[Interface, PortItem], direction, name: str):
         if direction == INTF_DIRECTION.MASTER:
             portArr = self.right
             side = PortType.OUTPUT
@@ -317,11 +329,16 @@ class LNode():
         :return: an iterable for the ports of given side
         """
         if side == PortSide.WEST:
-            return self.left
+            return self.west
         elif side == PortSide.EAST:
-            return self.right
+            return self.east
+        elif side == PortSide.NORTH:
+            return self.north
+        elif side == PortSide.SOUTH:
+            return self.south
         else:
-            return []
+            raise ValueError(side)
+
         # if not self.portSidesCached:
         #    # If not explicitly cached, this will be repeated each time.
         #    # However, this has the same complexity as filtering by side.
@@ -335,20 +352,22 @@ class LNode():
         #    # because the order of the ports on one side can change.
         #    return self.ports[indices[0]:indices[1]]
 
+    def setLayer(self, layer):
+        self.layer = layer
+
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.name)
 
 
 class LayoutExternalPort(LNode):
-    def __init__(self, origin, name, direction, objMap):
-        super(LayoutExternalPort, self).__init__(
-            origin, name, objMap)
+    def __init__(self, graph: "Layout", originObj=None, name=None, direction=None):
+        super(LayoutExternalPort, self).__init__(graph, originObj, name)
         self.direction = direction
 
 
 class LNodeLayer(list):
-    def __init__(self, parent: "Layout" = None):
-        self.parent = parent
+    def __init__(self, graph: "Layout" = None):
+        self.graph = graph
 
     def append(self, v):
         v.layer = self
@@ -435,7 +454,8 @@ class Layout():
         return self.nodes
 
     def add_stm_as_unit(self, stm: HdlStatement) -> LNode:
-        u = LNode(stm, stm.__class__.__name__, self._node2lnode)
+        u = LNode(self, name=stm.__class__.__name__)
+        u.setOriginObj(stm)
         self._node2lnode[stm] = u
         u.right.append(
             LPort(None, u, "out", INTF_DIRECTION.MASTER, PortType.OUTPUT))

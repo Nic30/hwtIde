@@ -1,338 +1,344 @@
+import unittest
+from layout.crossing.crossingCounter import CrossingsCounter
+from random import Random
+from layout.containers import PortSide
 
 
-class CrossingsCounterTC extends InLayerEdgeTestGraphCreator {
-    private CrossingsCounter counter;
+class CrossingsCounterTC(unittest.TestCase):
+    def setUp(self):
+        self.gb = InLayerEdgeTestGraphCreator()
+        self.counter = CrossingsCounter()
 
-
-    /**
-     * <pre>
-     * ___  ___
-     * | |\/| |
-     * |_|/\|_|
-     * </pre>
-     */
-    @Test
-    public void countCrossingsBetweenLayers_fixedPortOrderCrossingOnTwoNodes() {
-        LNode left = addNodeToLayer(makeLayer(getGraph()));
-        LNode right = addNodeToLayer(makeLayer(getGraph()));
-        eastWestEdgeFromTo(left, right);
-        eastWestEdgeFromTo(left, right);
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(1));
-    }
-
-    /**
-     * <pre>
-     * *
-     *  \
-     *  /
-     * *
-     *  \
-     * *+--
-     *  | |
-     * * /
-     * *
-     * </pre>
-     * 
-     * @throws Exception
-     */
-    @Test
-    public void longInLayerCrossings() throws Exception {
-        LNode[] nodes = addNodesToLayer(5, makeLayer());
-        addInLayerEdge(nodes[0], nodes[1], PortSide.EAST);
-        addInLayerEdge(nodes[1], nodes[3], PortSide.EAST);
-        addInLayerEdge(nodes[2], nodes[4], PortSide.EAST);
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countInLayerCrossingsOnSide(order()[0], PortSide.EAST), is(1));
-    }
-
-    @Test
-    public void countCrossingsBetweenLayers_crossFormed() {
-        getCrossFormedGraph();
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(1));
-    }
-
-    private LNode[][] order() {
-        return getGraph().toNodeArray();
-    }
-
-    /**
-     * Constructs a cross formed graph with two edges between the corners
-     *
-     * <pre>
-     * *    *
-     *  \\//
-     *  //\\
-     * *    *
-     * .
-     * </pre>
-     */
-    @Test
-    public void countCrossingsBetweenLayers_crossFormedMultipleEdgesBetweenSameNodes() {
-        Layer leftLayer = makeLayer(graph);
-        Layer rightLayer = makeLayer(graph);
-
-        LNode topLeft = addNodeToLayer(leftLayer);
-        LNode bottomLeft = addNodeToLayer(leftLayer);
-        LNode topRight = addNodeToLayer(rightLayer);
-        LNode bottomRight = addNodeToLayer(rightLayer);
-
-        LPort topLeftTopPort = addPortOnSide(topLeft, PortSide.EAST);
-        LPort topLeftBottomPort = addPortOnSide(topLeft, PortSide.EAST);
-        LPort bottomRightBottomPort = addPortOnSide(bottomRight, PortSide.WEST);
-        LPort bottomRightTopPort = addPortOnSide(bottomRight, PortSide.WEST);
-        addEdgeBetweenPorts(topLeftTopPort, bottomRightTopPort);
-        addEdgeBetweenPorts(topLeftBottomPort, bottomRightBottomPort);
-
-        LPort bottomLeftTopPort = addPortOnSide(bottomLeft, PortSide.EAST);
-        LPort bottomLeftBottomPort = addPortOnSide(bottomLeft, PortSide.EAST);
-        LPort topRightBottomPort = addPortOnSide(topRight, PortSide.WEST);
-        LPort topRightTopPort = addPortOnSide(topRight, PortSide.WEST);
-        addEdgeBetweenPorts(bottomLeftTopPort, topRightTopPort);
-        addEdgeBetweenPorts(bottomLeftBottomPort, topRightBottomPort);
-
-        GraphInfoHolder gd = new GraphInfoHolder(graph, CrossMinType.BARYCENTER, null);
-        gd.portDistributor().distributePortsWhileSweeping(order(), 1, true);
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(4));
-    }
-
-    @Test
-    public void countCrossingsBetweenLayers_crossWithExtraEdgeInBetween() {
-        getCrossWithExtraEdgeInBetweenGraph();
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(3));
-    }
-
-    @Test
-    public void countCrossingsBetweenLayers_ignoreSelfLoops() {
-        getCrossWithManySelfLoopsGraph();
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(1));
-    }
-
-    @Test
-    public void countCrossingsBetweenLayers_moreComplexThreeLayerGraph() {
-        getMoreComplexThreeLayerGraph();
-        GraphInfoHolder gd = new GraphInfoHolder(graph, CrossMinType.BARYCENTER, null);
-        gd.portDistributor().distributePortsWhileSweeping(order(), 1, true);
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(1));
-    }
-
-    @Test
-    public void countCrossingsBetweenLayers_fixedPortOrder() {
-        getFixedPortOrderGraph();
-
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(1));
-    }
-
-    /**
-     * <pre>
-     * *   *<- Into same port
-     *  \//
-     *  //\
-     * *   *
-     * </pre>
-     */
-    @Test
-    public void countCrossingsBetweenLayers_intoSamePort() {
-        Layer leftLayer = makeLayer(graph);
-        Layer rightLayer = makeLayer(graph);
+    def getInitPortOrder(self):
+        # [TODO] has to be dict
+        portOrder = [0 for _ in range(self.gb.getNumPorts(self.order()))]
+        return portOrder
         
-        LNode topLeft = addNodeToLayer(leftLayer);
-        LNode bottomLeft = addNodeToLayer(leftLayer);
-        LNode topRight = addNodeToLayer(rightLayer);
-        LNode bottomRight = addNodeToLayer(rightLayer);
+    def test_countCrossingsBetweenLayers_fixedPortOrderCrossingOnTwoNodes(self):
+        """
+         * <pre>
+         * ___  ___
+         * | |\/| |
+         * |_|/\|_|
+         * </pre>
+        """
+        gb = self.gb
+
+        left = gb.addNodeToLayer(gb.makeLayer(gb.graph))
+        right = gb.addNodeToLayer(gb.makeLayer(gb.graph))
+        gb.eastWestEdgeFromTo(left, right)
+        gb.eastWestEdgeFromTo(left, right)
         
-        eastWestEdgeFromTo(topLeft, bottomRight);
-        LPort bottomLeftFirstPort = addPortOnSide(bottomLeft, PortSide.EAST);
-        LPort bottomLeftSecondPort = addPortOnSide(bottomLeft, PortSide.EAST);
-        LPort topRightFirstPort = addPortOnSide(topRight, PortSide.WEST);
+        counter = CrossingsCounter(self.getInitPortOrder())
+
+        order = self.order
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 1)
+    
+
+    def test_longInLayerCrossings(self):
+        """
+         * <pre>
+         * *
+         *  \
+         *  /
+         * *
+         *  \
+         * *+--
+         *  | |
+         * * /
+         * *
+         * </pre>
+         * 
+         * @throws Exception
+        """
+        gb = self.gb
+        order = self.order
+
+        nodes = gb.addNodesToLayer(5, gb.makeLayer())
+        gb.addInLayerEdge(nodes[0], nodes[1], PortSide.EAST)
+        gb.addInLayerEdge(nodes[1], nodes[3], PortSide.EAST)
+        gb.addInLayerEdge(nodes[2], nodes[4], PortSide.EAST)
+
+        counter = CrossingsCounter(self.getInitPortOrder())
+
+        self.assertEqual(counter.countInLayerCrossingsOnSide(order()[0], PortSide.EAST), 1)
+    
+    def test_countCrossingsBetweenLayers_crossFormed(self):
+        gb = self.gb
+        gb.getCrossFormedGraph()
+
+        counter = CrossingsCounter(self.getInitPortOrder())
+
+        order = self.order
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 1)
+    
+    def order(self):
+        return self.gb.graph.layers
+
+    def test_countCrossingsBetweenLayers_crossFormedMultipleEdgesBetweenSameNodes(self):
+        """
+         * Constructs a cross formed graph with two edges between the corners
+         *
+         * <pre>
+         * *    *
+         *  \\//
+         *  //\\
+         * *    *
+         * .
+         * </pre>
+        """
+        gb = self.gb
+        order = self.order
+
+        leftLayer = gb.makeLayer(gb.graph)
+        rightLayer = gb.makeLayer(gb.graph)
+
+        topLeft = gb.addNodeToLayer(leftLayer)
+        bottomLeft = gb.addNodeToLayer(leftLayer)
+        topRight = gb.addNodeToLayer(rightLayer)
+        bottomRight = gb.addNodeToLayer(rightLayer)
+
+        topLeftTopPort = gb.addPortOnSide(topLeft, PortSide.EAST)
+        topLeftBottomPort = gb.addPortOnSide(topLeft, PortSide.EAST)
+        bottomRightBottomPort = gb.addPortOnSide(bottomRight, PortSide.WEST)
+        bottomRightTopPort = gb.addPortOnSide(bottomRight, PortSide.WEST)
+        gb.addEdgeBetweenPorts(topLeftTopPort, bottomRightTopPort)
+        gb.addEdgeBetweenPorts(topLeftBottomPort, bottomRightBottomPort)
+
+        bottomLeftTopPort = gb.addPortOnSide(bottomLeft, PortSide.EAST)
+        bottomLeftBottomPort = gb.addPortOnSide(bottomLeft, PortSide.EAST)
+        topRightBottomPort = gb.addPortOnSide(topRight, PortSide.WEST)
+        topRightTopPort = gb.addPortOnSide(topRight, PortSide.WEST)
+        gb.addEdgeBetweenPorts(bottomLeftTopPort, topRightTopPort)
+        gb.addEdgeBetweenPorts(bottomLeftBottomPort, topRightBottomPort)
+
+        gd = GraphInfoHolder(gb.graph, CrossMinType.BARYCENTER, None)
+        gd.portDistributor().distributePortsWhileSweeping(order(), 1, True)
+        counter = CrossingsCounter(self.getInitPortOrder())
+
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 4)
+    
+    def test_countCrossingsBetweenLayers_crossWithExtraEdgeInBetween(self):
+        gb = self.gb
+        gb.getCrossWithExtraEdgeInBetweenGraph()
+        counter = CrossingsCounter(self.getInitPortOrder())
+        order = self.order
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 3)
+
+    def test_countCrossingsBetweenLayers_ignoreSelfLoops(self):
+        gb = self.gb
+        order = self.order
+
+        gb.getCrossWithManySelfLoopsGraph()
+        counter = CrossingsCounter(self.getInitPortOrder())
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 1)
+    
+    def test_countCrossingsBetweenLayers_moreComplexThreeLayerGraph(self):
+        gb = self.gb
+        order = self.order
+
+        gb.getMoreComplexThreeLayerGraph()
+        gd = GraphInfoHolder(gb.graph, CrossMinType.BARYCENTER, None)
+        gd.portDistributor().distributePortsWhileSweeping(order(), 1, True)
+        counter = CrossingsCounter(self.getInitPortOrder())
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 1)
+    
+    def test_countCrossingsBetweenLayers_fixedPortOrder(self):
+        order = self.order
         
-        addEdgeBetweenPorts(bottomLeftFirstPort, topRightFirstPort);
-        addEdgeBetweenPorts(bottomLeftSecondPort, topRightFirstPort);
-        ;
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
+        self.gb.getFixedPortOrderGraph()
+        counter = CrossingsCounter(self.getInitPortOrder())
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 1)
+    
 
-        assertThat(counter.countCrossingsBetweenLayers(order()[0], order()[1]), is(2));
-    }
+    def test_countCrossingsBetweenLayers_intoSamePort(self):
+        """
+         * <pre>
+         * *   *<- Into same port
+         *  \//
+         *  //\
+         * *   *
+         * </pre>
+        """
+        gb = self.gb
+        order = self.order
 
-    /**
-     * <pre>
-     * *   /*
-     * |  /
-     * \ /____
-     *  x/|  |
-     * |/\|  |
-     * *  |__|
-     * </pre>
-     */
-    @Test
-    public void countCrossingsBetweenPorts_givenWesternCrossings_OnlyCountsForGivenPorts() {
-        LNode[] leftNodes = addNodesToLayer(2, makeLayer(getGraph()));
-        LNode[] rightNodes = addNodesToLayer(2, makeLayer(getGraph()));
-        eastWestEdgeFromTo(leftNodes[0], rightNodes[1]);
-        eastWestEdgeFromTo(leftNodes[1], rightNodes[1]);
-        eastWestEdgeFromTo(leftNodes[1], rightNodes[0]);
+        leftLayer = gb.makeLayer(gb.graph)
+        rightLayer = gb.makeLayer(gb.graph)
+        
+        topLeft = gb.addNodeToLayer(leftLayer)
+        bottomLeft = gb.addNodeToLayer(leftLayer)
+        topRight = gb.addNodeToLayer(rightLayer)
+        bottomRight = gb.addNodeToLayer(rightLayer)
+        
+        gb.eastWestEdgeFromTo(topLeft, bottomRight)
+        bottomLeftFirstPort = gb.addPortOnSide(bottomLeft, PortSide.EAST)
+        bottomLeftSecondPort = gb.addEdgeBetweenPorts(bottomLeft, PortSide.EAST)
+        topRightFirstPort = gb.addPortOnSide(topRight, PortSide.WEST)
+        
+        gb.addEdgeBetweenPorts(bottomLeftFirstPort, topRightFirstPort)
+        gb.addEdgeBetweenPorts(bottomLeftSecondPort, topRightFirstPort)
+        
+        counter = CrossingsCounter(self.getInitPortOrder())
 
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-        counter.initForCountingBetween(leftNodes, rightNodes);
-        assertThat(counter.countCrossingsBetweenPortsInBothOrders(rightNodes[1].getPorts().get(1),
-                rightNodes[1].getPorts().get(0)).getFirst(), is(1));
-    }
+        self.assertEqual(counter.countCrossingsBetweenLayers(order()[0], order()[1]), 2)
+    
 
-    /**
-     * <pre>
-     * ___
-     * | |\/*
-     * |_|/\*
-     * </pre>
-     */
-    @Test
-    public void countCrossingsBetweenPorts_GivenCrossingsOnEasternSide_() throws Exception {
-        LNode[] leftNodes = addNodesToLayer(1, makeLayer());
-        LNode[] rightNodes = addNodesToLayer(2, makeLayer());
-        eastWestEdgeFromTo(leftNodes[0], rightNodes[1]);
-        eastWestEdgeFromTo(leftNodes[0], rightNodes[0]);
+    def test_countCrossingsBetweenPorts_givenWesternCrossings_OnlyCountsForGivenPorts(self):
+        """
+         * <pre>
+         * *   /*
+         * |  /
+         * \ /____
+         *  x/|  |
+         * |/\|  |
+         * *  |__|
+         * </pre>
+        """
+        gb = self.gb
+        leftNodes = gb.addNodesToLayer(2, gb.makeLayer(gb.graph))
+        rightNodes = gb.addNodesToLayer(2, gb.makeLayer(gb.graph))
+        gb.eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
+        gb.eastWestEdgeFromTo(leftNodes[1], rightNodes[1])
+        gb.eastWestEdgeFromTo(leftNodes[1], rightNodes[0])
 
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-        counter.initForCountingBetween(leftNodes, rightNodes);
-        assertThat(counter
+        counter = CrossingsCounter(self.getInitPortOrder())
+        counter.initForCountingBetween(leftNodes, rightNodes)
+        self.assertEqual(counter.countCrossingsBetweenPortsInBothOrders(rightNodes[1].getPorts().get(1),
+                rightNodes[1].getPorts().get(0)).getFirst(), 1)
+    
+    def test_countCrossingsBetweenPorts_GivenCrossingsOnEasternSide_(self):
+        """
+         * <pre>
+         * ___
+         * | |\/*
+         * |_|/\*
+         * </pre>
+        """
+        gb = self.gb
+        leftNodes = gb.addNodesToLayer(1, gb.makeLayer())
+        rightNodes = gb.addNodesToLayer(2, gb.makeLayer())
+        gb.eastWestEdgeFromTo(leftNodes[0], rightNodes[1])
+        gb.eastWestEdgeFromTo(leftNodes[0], rightNodes[0])
+
+        counter = CrossingsCounter(self.getInitPortOrder())
+        counter.initForCountingBetween(leftNodes, rightNodes)
+        self.assertEqual(counter
                 .countCrossingsBetweenPortsInBothOrders(leftNodes[0].getPorts().get(0), leftNodes[0].getPorts().get(1))
-                .getFirst(), is(1));
-    }
+                .getFirst(), 1)
+    
 
-    /**
-     * <pre>
-     * *---         *---
-     * ___ \       ___  \
-     * | |\/* and: | |--* 
-     * | |/\*      | |--*
-     * |_|         |_|
-     * </pre>
-     */
-    @Test
-    public void countingTwoDifferentGraphs_DoesNotInterfereWithEachOther() throws Exception {
-        LNode[] leftNodes = addNodesToLayer(3, makeLayer());
-        LNode[] rightNodes = addNodesToLayer(3, makeLayer());
-        LNode leftNode = leftNodes[1];
-        LPort[] leftPorts = addPortsOnSide(2, leftNode, PortSide.EAST);
-        eastWestEdgeFromTo(leftNodes[2], rightNodes[1]);
-        eastWestEdgeFromTo(leftPorts[0], rightNodes[1]);
-        eastWestEdgeFromTo(leftPorts[1], rightNodes[0]);
-        eastWestEdgeFromTo(leftNodes[0], rightNodes[0]);
+    def test_countingTwoDifferentGraphs_DoesNotInterfereWithEachOther(self):
+        """
+         * <pre>
+         * *---         *---
+         * ___ \       ___  \
+         * | |\/* and: | |--* 
+         * | |/\*      | |--*
+         * |_|         |_|
+         * </pre>
+        """
+        gb = self.gb
+        leftNodes = gb.addNodesToLayer(3, gb.makeLayer())
+        rightNodes = gb.addNodesToLayer(3, gb.makeLayer())
+        leftNode = leftNodes[1]
+        leftPorts = gb.addPortsOnSide(2, leftNode, PortSide.EAST)
+        gb.eastWestEdgeFromTo(leftNodes[2], rightNodes[1])
+        gb.eastWestEdgeFromTo(leftPorts[0], rightNodes[1])
+        gb.eastWestEdgeFromTo(leftPorts[1], rightNodes[0])
+        gb.eastWestEdgeFromTo(leftNodes[0], rightNodes[0])
 
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-        counter.initForCountingBetween(leftNodes, rightNodes);
-        assertThat(counter
+        counter = CrossingsCounter(self.getInitPortOrder())
+        counter.initForCountingBetween(leftNodes, rightNodes)
+        self.assertEqual(counter
                 .countCrossingsBetweenPortsInBothOrders(leftNode.getPorts().get(0), leftNode.getPorts().get(1))
-                .getFirst(), is(1));
+                .getFirst(), 1)
 
-        counter.switchPorts(leftPorts[0], leftPorts[1]);
-        leftNode.getPorts().set(0, leftPorts[1]);
-        leftNode.getPorts().set(1, leftPorts[0]);
-        assertThat(counter
+        counter.switchPorts(leftPorts[0], leftPorts[1])
+        leftNode.getPorts().set(0, leftPorts[1])
+        leftNode.getPorts().set(1, leftPorts[0])
+        self.assertEqual(counter
                 .countCrossingsBetweenPortsInBothOrders(leftNode.getPorts().get(0), leftNode.getPorts().get(1))
-                .getFirst(), is(0));
+                .getFirst(), 0)
 
-    }
+    def test_countCrossingsBetweenPorts_twoEdgesIntoSamePort(self):
+        """
+         * <pre>
+         * *   *
+         *  \//
+         *  //\
+         * *   *
+         * ^Into same port
+         * </pre>
+        """
+        gb = self.gb
+        order = self.order
 
-    /**
-     * <pre>
-     * *   *
-     *  \//
-     *  //\
-     * *   *
-     * ^Into same port
-     * </pre>
-     */
-    @Test
-    public void countCrossingsBetweenPorts_twoEdgesIntoSamePort() {
-        Layer leftLayer = makeLayer();
-        Layer rightLayer = makeLayer();
+        leftLayer = gb.makeLayer()
+        rightLayer = gb.makeLayer()
         
-        LNode topLeft = addNodeToLayer(leftLayer);
-        LNode bottomLeft = addNodeToLayer(leftLayer);
-        LNode topRight = addNodeToLayer(rightLayer);
-        LNode bottomRight = addNodeToLayer(rightLayer);
+        topLeft = gb.addNodeToLayer(leftLayer)
+        bottomLeft = gb.addNodeToLayer(leftLayer)
+        topRight = gb.addNodeToLayer(rightLayer)
+        bottomRight = gb.addNodeToLayer(rightLayer)
         
-        eastWestEdgeFromTo(topLeft, bottomRight);
-        LPort bottomLeftPort = addPortOnSide(bottomLeft, PortSide.EAST);
-        LPort topRightPort = addPortOnSide(topRight, PortSide.WEST);
+        gb.eastWestEdgeFromTo(topLeft, bottomRight)
+        bottomLeftPort = gb.addPortOnSide(bottomLeft, PortSide.EAST)
+        topRightPort = gb.addPortOnSide(topRight, PortSide.WEST)
         
-        addEdgeBetweenPorts(bottomLeftPort, topRightPort);
-        addEdgeBetweenPorts(bottomLeftPort, topRightPort);
-        ;
+        gb.addEdgeBetweenPorts(bottomLeftPort, topRightPort)
+        gb.addEdgeBetweenPorts(bottomLeftPort, topRightPort)
         
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-        counter.initForCountingBetween(order()[0], order()[1]);
         
-        assertThat(counter.countCrossingsBetweenPortsInBothOrders(bottomLeftPort, topLeft.getPorts().get(0)).getFirst(),
-                is(2));
-    }
+        counter = CrossingsCounter(self.getInitPortOrder())
+        counter.initForCountingBetween(order()[0], order()[1])
+        
+        self.assertEqual(counter.countCrossingsBetweenPortsInBothOrders(bottomLeftPort, topLeft.getPorts().get(0)).getFirst(),
+                2)
+    
 
-    @Ignore
-    // @Test
-    public void benchmark() {
-        makeTwoLayerRandomGraphWithNodesPerLayer(6000, 6);
+    #@Ignore
+    #def benchmark():
+    #    makeTwoLayerRandomGraphWithNodesPerLayer(6000, 6)
+    #
+    #    counter = CrossingsCounter(self.getInitPortOrder())
+    #    System.out.println("Starting")
+    #    length = 400
+    #    times = new long[length]
+    #    for (int i = 0 i < length i++):
+    #        long tick = new Date().getTime()
+    #        counter.countCrossingsBetweenLayers(order()[0], order()[1])
+    #        times[i] = new Date().getTime() - tick
+    #    
+    #    System.out.println(Arrays.stream(times).min())
+    #
 
-        counter = new CrossingsCounter(new int[getNumPorts(order())]);
-        System.out.println("Starting");
-        int length = 400;
-        long[] times = new long[length];
-        for (int i = 0; i < length; i++) {
-            long tick = new Date().getTime();
-            counter.countCrossingsBetweenLayers(order()[0], order()[1]);
-            times[i] = new Date().getTime() - tick;
-        }
-        System.out.println(Arrays.stream(times).min());
-    }
+    def makeTwoLayerRandomGraphWithNodesPerLayer(self, numNodes: int, edgesPerNode: int):
+        gb = self.gb
+        leftNodes = gb.addNodesToLayer(numNodes, gb.makeLayer())
+        rightNodes = gb.addNodesToLayer(numNodes, gb.makeLayer())
+        random = Random(0)
+        for i in range(edgesPerNode * numNodes):
+            if random.randbits(1):
+                left = leftNodes[random.nextInt(numNodes)]
+                right = rightNodes[random.nextInt(numNodes)]
+                gb.eastWestEdgeFromTo(left, right)
+            else:
+                gb.addInLayerEdge(leftNodes[random.nextInt(numNodes)],
+                                  leftNodes[random.nextInt(numNodes)],
+                                  PortSide.EAST)
 
-    private void makeTwoLayerRandomGraphWithNodesPerLayer(final int numNodes, final int edgesPerNode) {
-        LNode[] leftNodes = addNodesToLayer(numNodes, makeLayer());
-        LNode[] rightNodes = addNodesToLayer(numNodes, makeLayer());
-        Random random = new Random(0);
-        for (int i = 0; i < edgesPerNode * numNodes; i++) {
-            if (random.nextBoolean()) {
-                LNode left = leftNodes[random.nextInt(numNodes)];
-                LNode right = rightNodes[random.nextInt(numNodes)];
-                eastWestEdgeFromTo(left, right);
-            } else {
-                addInLayerEdge(leftNodes[random.nextInt(numNodes)], leftNodes[random.nextInt(numNodes)], PortSide.EAST);
-            }
-        }
-        for (LNode node : rightNodes) {
-            node.cachePortSides();
-        }
-        for (LNode node : leftNodes) {
-            node.cachePortSides();
-        }
-    }
+        for node in rightNodes:
+            node.cachePortSides()
+        
+        for node in leftNodes:
+            node.cachePortSides()
+        
+    @staticmethod
+    def getNumPorts(currentOrder):
+        numPorts = 0
+        for lNodes in currentOrder:
+            for node in lNodes:
+                numPorts += len(node.getPorts())
+        return numPorts
 
-    private int getNumPorts(final LNode[][] currentOrder) {
-        int numPorts = 0;
-        for (LNode[] lNodes : currentOrder) {
-            for (LNode node : lNodes) {
-                numPorts += node.getPorts().size();
-            }
-        }
-        return numPorts;
-    }
-
-}
