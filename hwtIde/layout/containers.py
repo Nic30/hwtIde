@@ -68,6 +68,72 @@ class PortSide(Enum):
     NORTH = 3
 
 
+class PortConstraints(Enum):
+    # Undefined constraints.
+    UNDEFINED = 0
+    # All ports are free.
+    FREE = 1
+    # The side is fixed for each port.
+    FIXED_SIDE = 2
+    # The side is fixed for each port, and the order of ports is fixed for
+    # each side.
+    FIXED_ORDER = 3
+    # The side is fixed for each port, the order or ports is fixed for each side and
+    # the relative position of each port must be preserved. That means if the node is
+    # resized by factor x, the port's position must also be scaled by x.
+    FIXED_RATIO = 4
+    # The exact position is fixed for each port.
+    FIXED_POS = 5
+
+    def isPosFixed(self):
+        """
+        Returns whether the position of the ports is fixed. Note that this is not true
+        if port ratios are fixed.
+
+        @return true if the position is fixed
+        """
+        return self == PortConstraints.FIXED_POS
+
+    def isRatioFixed(self):
+        """
+        Returns whether the ratio of port positions is fixed. Note that this is not true
+        if the port positions are fixed.
+
+        @return true if the ratio is fixed
+        """
+        return self == PortConstraints.FIXED_RATIO
+
+    def isOrderFixed(self):
+        """
+        Returns whether the order of ports is fixed.
+
+        @return true if the order of ports is fixed
+        """
+        return (self == PortConstraints.FIXED_ORDER
+                or self == PortConstraints.FIXED_RATIO
+                or self == PortConstraints.FIXED_POS)
+
+    def isSideFixed(self):
+        """
+        Returns whether the sides of ports are fixed.
+
+        @see PortSide
+        @return true if the port sides are fixed
+        """
+        return self == PortConstraints.FREE and self != PortConstraints.UNDEFINED
+
+
+class EdgeRouting(Enum):
+    # undefined edge routing.
+    UNDEFINED = 0
+    # polyline edge routing.
+    POLYLINE = 1
+    # orthogonal edge routing.
+    ORTHOGONAL = 2
+    # splines edge routing.
+    SPLINES = 4
+
+
 class LPort():
     """
     Port for component in component diagram
@@ -90,6 +156,9 @@ class LPort():
         self.connectedEdges = []
         self.children = []
         self.side = side
+
+        self.portDummy = None 
+        self.insideConnections = False
 
     def getNode(self):
         p = self
@@ -143,8 +212,8 @@ class LNode():
     :ivar left: list of LPort for on left border of this node
     """
 
-    def __init__(self, origin: Unit, name: str, objMap):
-        self.origin = origin
+    def __init__(self, originObj: Unit, name: str, objMap):
+        self.originObj = originObj
         self.name = name
         self.left = []
         self.right = []
@@ -165,6 +234,14 @@ class LNode():
         self.type = NodeType.NORMAL
 
         self.layerIndex = None
+        self.inLayerSuccessorConstraints = None
+        self.portConstraints = PortConstraints.UNDEFINED
+        self.inLayerLayoutUnit = None
+        self.nestedLgraph = None
+        self.compoundNode = False
+        self.origin = None
+        self.extPortSide = None
+        self.barycenterAssociates = None
 
     def iterPorts(self):
         return chain(self.left, self.right)
@@ -245,15 +322,15 @@ class LNode():
             return self.right
         else:
             return []
-        #if not self.portSidesCached:
+        # if not self.portSidesCached:
         #    # If not explicitly cached, this will be repeated each time.
         #    # However, this has the same complexity as filtering by side.
         #    self.findPortIndices()
         #
         #indices = self.portSideIndices[side]
-        #if indices is None:
+        # if indices is None:
         #    return []
-        #else:
+        # else:
         #    # We must create a new sublist each time,
         #    # because the order of the ports on one side can change.
         #    return self.ports[indices[0]:indices[1]]
@@ -325,6 +402,31 @@ class Layout():
         self._node2lnode = {}
         self.childGraphs = []
         self.parent = None
+        self.parentLnode = None
+        self.graphProperties = set()
+        self.edgeRouting = None
+        self.random = None
+
+        # The graph contains comment boxes.
+        self.p_comments = False
+        # The graph contains dummy nodes representing external ports.
+        self.p_externalPorts = False
+        # The graph contains hyperedges.
+        self.p_hyperedges = False
+        # The graph contains hypernodes (nodes that are marked as such).
+        self.p_hypernodes = False
+        # The graph contains ports that are not free for positioning.
+        self.p_nonFreePorts = False
+        # The graph contains ports on the northern or southern side.
+        self.p_northSouthPorts = False
+        # The graph contains self-loops.
+        self.p_selfLoops = False
+        # The graph contains node labels.
+        self.p_centerLabels = False
+        # The graph contains head or tail edge labels.
+        self.p_endLabels = False
+        # The graph's nodes are partitioned.
+        self.p_partitions = False
 
     def getLayerlessNodes(self):
         """
