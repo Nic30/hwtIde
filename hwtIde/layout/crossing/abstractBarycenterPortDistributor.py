@@ -13,7 +13,7 @@ Must be initialized using {@link IInitializable#init(List, LNode[][]).
 """
 from math import inf
 
-from layout.containers import PortType, LNode, PortSide, LPort
+from layout.containers import PortType, LNode, PortSide, LPort, LNodeLayer
 
 
 def hasNestedGraph(node):
@@ -39,13 +39,15 @@ class AbstractBarycenterPortDistributor():
     """
 
     def __init__(self, graph):
-        self.portRanks = {}
+        r = self.portRanks = {}
         self.minBarycenter = inf
         self.maxBarycenter = 0.0
         np = self.nodePositions = {}
         for i, la in enumerate(graph.layers):
             for node in la:
                 np[node] = i
+                for p in node.iterPorts():
+                    r[p] = 0
 
         self.portBarycenter = {}
         self.inLayerPorts = {}
@@ -79,7 +81,7 @@ class AbstractBarycenterPortDistributor():
         # which do not need to count.
         return False
 
-    def calculatePortRanks_many(self, layer, portType: PortType):
+    def calculatePortRanks_many(self, layer: LNodeLayer, portType: PortType):
         """
          * Determine ranks for all ports of specific type in the given layer.
          * The ranks are written to the {@link #getPortRanks() array.
@@ -91,10 +93,11 @@ class AbstractBarycenterPortDistributor():
         """
         calculatePortRanks = self.calculatePortRanks
         consumedRank = 0
-        for layer_ in layer:
-            consumedRank += calculatePortRanks(layer_, consumedRank, portType)
+        assert isinstance(layer, LNodeLayer), layer
+        for node in layer:
+            consumedRank += calculatePortRanks(node, consumedRank, portType)
 
-    def calculatePortRanks(self, node, rankSum, type: PortType):
+    def calculatePortRanks(self, node: LNode, rankSum: float, type: PortType):
         """
          * Assign port ranks for the input or output ports of the given node. If the node's port
          * constraints imply a fixed order, the ports are assumed to be pre-ordered in the usual way,

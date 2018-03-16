@@ -4,6 +4,7 @@ from typing import List
 
 from hwtIde.layout.containers import LNode, PortType, NodeType
 from hwtIde.layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
+from layout.containers import LNodeLayer
 
 
 def changeIndex(dir_: bool):
@@ -37,7 +38,8 @@ class BarycenterHeuristic():
     :ivar states: dict {LNode: BarycenterState}
     """
 
-    def __init__(self, constraintResolver: ForsterConstraintResolver, random: Random, portDistributor):
+    def __init__(self, constraintResolver: ForsterConstraintResolver,
+                 random: Random, portDistributor, layers):
         """
         Barycenter heuristic for crossing minimization.
 
@@ -52,6 +54,7 @@ class BarycenterHeuristic():
         # The Barycenter PortDistributor is used to ask for the port ranks.*/
         self.portDistributor = portDistributor
         self.states = constraintResolver.states
+        self.portRanks = portDistributor.portRanks
 
     # the barycenter values of every node in the graph, indexed by layer.id
     # and node.id.
@@ -76,11 +79,11 @@ class BarycenterHeuristic():
             # Resolve ordering constraints
             self.constraintResolver.processConstraints(layer)
 
-    def minimizeCrossings(self, order: List[List[LNode]], freeLayerIndex: int,
+    def minimizeCrossings(self, order: List[LNodeLayer], freeLayerIndex: int,
                           forwardSweep: bool, isFirstSweep: bool) -> bool:
         if (not isFirstLayer(order, freeLayerIndex, forwardSweep)):
             fixedLayer = order[freeLayerIndex - changeIndex(forwardSweep)]
-            self.portDistributor.calculatePortRanks(
+            self.portDistributor.calculatePortRanks_many(
                 fixedLayer, portTypeFor(forwardSweep))
 
         firstNodeInLayer = order[freeLayerIndex][0]
@@ -207,6 +210,7 @@ class BarycenterHeuristic():
         st.summedWeight = 0.0
         st.barycenter = None
         states = self.states
+        portRanks = self.portRanks
         calculateBarycenter = self.calculateBarycenter
 
         for freePort in node.iterPorts():
@@ -221,7 +225,7 @@ class BarycenterHeuristic():
                 # calculation instead
                 fixedNode = fixedPort.getNode()
 
-                if fixedNode.layerIndex == node.layerIndex:
+                if fixedNode.layer == node.layer:
                     # Self-loops are ignored
                     if fixedNode is not node:
                         # Find the fixed node's node group and calculate its
@@ -233,7 +237,7 @@ class BarycenterHeuristic():
                         st.degree += fst.degree
                         st.summedWeight += fst.summedWeight
                 else:
-                    st.summedWeight += fixedPort.rank
+                    st.summedWeight += portRanks[fixedPort]
                     st.degree += 1
 
         # Iterate over the node's barycenter associates
@@ -241,7 +245,7 @@ class BarycenterHeuristic():
         if barycenterAssociates is not None:
             for associate in barycenterAssociates:
                 # Make sure the associate is in the same layer as this node
-                if node.layerIndex == associate.layerIndex:
+                if node.layer == associate.layer:
                     # Find the associate's node group and calculate its
                     # barycenter
                     calculateBarycenter(associate, forward)

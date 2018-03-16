@@ -57,8 +57,8 @@ class NodeType(Enum):
 
 
 class PortType(Enum):
-    INPUT = 0
-    OUTPUT = 1
+    INPUT = INTF_DIRECTION.SLAVE
+    OUTPUT = INTF_DIRECTION.MASTER
 
 
 class PortSide(Enum):
@@ -66,6 +66,14 @@ class PortSide(Enum):
     WEST = 1
     SOUTH = 2
     NORTH = 3
+
+    @staticmethod
+    def opposite(side):
+        d = {PortSide.EAST: PortSide.WEST,
+             PortSide.WEST: PortSide.EAST,
+             PortSide.SOUTH: PortSide.NORTH,
+             PortSide.NORTH: PortSide.SOUTH}
+        return d[side]
 
 
 class PortConstraints(Enum):
@@ -138,7 +146,7 @@ class LPort():
     """
     Port for component in component diagram
 
-    :ivar portItem: original object which this node represents
+    :ivar originObj: original object which this node represents
     :ivar parent: parent unit of this port
     :ivar name: name of this port
     :ivar direction: direction of this port
@@ -147,17 +155,18 @@ class LPort():
             (when routing this list is empty and childrens are directly on parent LNode)
     """
 
-    def __init__(self, portItem: PortItem, parent: "LNode", name: str, direction, side):
-        self.portItem = portItem
+    def __init__(self, parent: "LNode", name: str, direction, side):
+        self.originObj = None
         self.parent = parent
         self.name = name
         self.direction = direction
         self.geometry = None
-        self.connectedEdges = []
+        self.outgoingEdges = []
+        self.incomingEdges = []
         self.children = []
         self.side = side
 
-        self.portDummy = None 
+        self.portDummy = None
         self.insideConnections = False
 
     def getNode(self):
@@ -187,14 +196,12 @@ class LPort():
         return list(reversed(names))
 
     def getPredecessorPorts(self):
-        for e in self.connectedEdges:
-            if e.dst is self:
-                yield e.src
+        for e in self.incomingEdges:
+            yield e.src
 
     def getSuccessorPorts(self):
-        for e in self.connectedEdges:
-            if e.src is self:
-                yield e.dst
+        for e in self.outgoingEdges:
+            yield e.dst
 
     def __repr__(self):
         return "<%s %s>" % (
@@ -214,9 +221,6 @@ class LNode():
     :ivar SOUTH: list of LPort for on bottom side.
     :ivar WEST: list of LPort for on left side.
     """
-
-    def setOriginObj(self, obj):
-        self.originObj = obj
 
     def __init__(self, graph: "Layout", name: str= None):
         self.originObj = None
@@ -244,7 +248,7 @@ class LNode():
         self.type = NodeType.NORMAL
 
         self.layer = None
-        self.inLayerSuccessorConstraints = None
+        self.inLayerSuccessorConstraint = []
         self.portConstraints = PortConstraints.UNDEFINED
         self.inLayerLayoutUnit = self
         self.nestedLgraph = None
@@ -253,8 +257,16 @@ class LNode():
         self.extPortSide = None
         self.barycenterAssociates = None
 
+    def setOriginObj(self, obj):
+        self.originObj = obj
+
     def iterPorts(self):
         return chain(self.north, self.east, self.south, self.west)
+
+    def getPorts(self, direction):
+        for p in self.iterPorts():
+            if p.direction == direction:
+                yield p
 
     def initPortDegrees(self):
         indeg = 0
@@ -301,20 +313,25 @@ class LNode():
         for p in self.iterPorts():
             p.translate(x, y)
 
-    def addPortFromHdl(self, origin: Union[Interface, PortItem], direction, name: str):
+    def addPortFromHdl(self, origin: Union[Interface, PortItem],
+                       direction: INTF_DIRECTION,
+                       name: str):
         if direction == INTF_DIRECTION.MASTER:
-            portArr = self.right
-            side = PortType.OUTPUT
+            side = PortSide.WEST
         elif direction == INTF_DIRECTION.SLAVE:
-            portArr = self.left
-            side = PortType.INPUT
+            side = PortSide.EAST
         else:
             raise ValueError()
 
-        p = LPort(origin, self, name, direction, side)
-        portArr.append(p)
-        self._port_obj_map[origin] = p
+        p = self.addPort(name, direction, side)
+        p.originObj = origin
+        self.graph._node2lnode[origin] = p
         return p
+
+    def addPort(self, name, direction: INTF_DIRECTION, side: PortSide):
+        port = LPort(self, name, direction, side)
+        self.getPortSideView(side).append(port)
+        return port
 
     def getPortSideView(self, side) -> List["LPort"]:
         """
@@ -360,14 +377,15 @@ class LNode():
 
 
 class LayoutExternalPort(LNode):
-    def __init__(self, graph: "Layout", originObj=None, name=None, direction=None):
-        super(LayoutExternalPort, self).__init__(graph, originObj, name)
+    def __init__(self, graph: "Layout", name: str=None, direction=None):
+        super(LayoutExternalPort, self).__init__(graph, name)
         self.direction = direction
 
 
 class LNodeLayer(list):
     def __init__(self, graph: "Layout" = None):
         self.graph = graph
+        self.inGraphIndex = len(graph.layers)
 
     def append(self, v):
         v.layer = self
@@ -393,8 +411,8 @@ class LEdge():
         self.srcNode = src.getNode()
         self.dst = dst
         self.dstNode = dst.getNode()
-        src.connectedEdges.append(self)
-        dst.connectedEdges.append(self)
+        src.outgoingEdges.append(self)
+        dst.incomingEdges.append(self)
 
     def reverse(self):
         self.src, self.dst = self.dst, self.src
@@ -457,15 +475,15 @@ class Layout():
         u = LNode(self, name=stm.__class__.__name__)
         u.setOriginObj(stm)
         self._node2lnode[stm] = u
-        u.right.append(
-            LPort(None, u, "out", INTF_DIRECTION.MASTER, PortType.OUTPUT))
-        u.left.append(
-            LPort(None, u, "in", INTF_DIRECTION.SLAVE, PortType.INPUT))
+        u.addPort("out", INTF_DIRECTION.MASTER, PortSide.WEST)
+        u.addPort("in",  INTF_DIRECTION.SLAVE,  PortSide.EAST)
         self.nodes.append(u)
         return u
 
     def add_node(self, origin: Unit, name: str) -> LNode:
-        n = LNode(origin, origin._name, self._node2lnode)
+        n = LNode(self, origin._name)
+        n.originObj = origin
+
         self.nodes.append(n)
         return n
 
