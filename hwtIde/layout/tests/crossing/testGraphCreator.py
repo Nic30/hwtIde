@@ -36,7 +36,7 @@ class TestGraphCreator():
         ordered in a clockwise manner. You must think about this yourself when
         constructing a test graph. This means that the methods for creating edges
         cannot be used in every case.
-    TODO consider moving all downward into base
+    [TODO] consider moving all downward into base
     """
 
     def __init__(self):
