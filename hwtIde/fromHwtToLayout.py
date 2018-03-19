@@ -1,20 +1,38 @@
-from typing import Set, List
+from typing import Set, List, Union
 
 from hwt.hdl.assignment import Assignment
 from hwt.hdl.portItem import PortItem
 from hwt.pyUtils.arrayQuery import where
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.unit import Unit
-from layout.containers.lNode import LayoutExternalPort, LNode
-from layout.containers.lPort import LPort
-from layout.containers.lGraph import Layout
-from layout.containers.lEdge import LEdge
-from layout.containers.constants import PortType
+from layeredGraphLayouter.containers.lNode import LayoutExternalPort, LNode
+from layeredGraphLayouter.containers.lPort import LPort
+from layeredGraphLayouter.containers.lGraph import Layout
+from layeredGraphLayouter.containers.lEdge import LEdge
+from layeredGraphLayouter.containers.constants import PortType, PortSide
+from hwt.hdl.constants import INTF_DIRECTION
+from hwt.hdl.statements import HdlStatement
+
+
+def getParentUnit(intf):
+    while isinstance(intf._parent, Interface):
+        intf = intf._parent
+
+    return intf._parent
+
+
+def PortType_from_dir(direction):
+    if direction == INTF_DIRECTION.SLAVE:
+        return PortType.INPUT
+    elif direction == INTF_DIRECTION.MASTER:
+        return PortType.OUTPUT
+    else:
+        raise ValueError(direction)
 
 
 def origin_obj_of_port(intf):
     d = intf._direction
-    d = PortType.from_dir(d)
+    d = PortType_from_dir(d)
 
     if intf._interfaces:
         origin = intf
@@ -38,7 +56,7 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     """
     origin = origin_obj_of_port(intf)
     d = intf._direction
-    d = PortType.from_dir(d)
+    d = PortType_from_dir(d)
 
     if reverseDirection:
         d = PortType.opposite(d)
@@ -60,13 +78,13 @@ def add_port_to_unit(ln: LNode, intf: Interface, reverseDirection=False):
     origin = origin_obj_of_port(intf)
 
     d = intf._direction
-    d = PortType.from_dir(d)
+    d = PortType_from_dir(d)
     if reverseDirection:
         d = PortType.opposite(d)
 
-    p = ln.addPortFromHdl(origin,
-                          d,
-                          intf._name)
+    p = LNode_addPortFromHdl(ln, origin,
+                             d,
+                             intf._name)
     for _intf in intf._interfaces:
         _add_port(ln, p, _intf, reverseDirection=reverseDirection)
 
@@ -75,9 +93,10 @@ def add_port(la: Layout, intf: Interface):
     """
     Add LayoutExternalPort for interface
     """
+    d = PortType_from_dir(intf._direction)
     ext_p = LayoutExternalPort(
         la, intf._name,
-        PortType.opposite(PortType.from_dir(intf._direction)))
+        PortType.opposite(d))
     ext_p.originObj = origin_obj_of_port(intf)
     la.nodes.append(ext_p)
     add_port_to_unit(ext_p, intf, reverseDirection=True)
@@ -157,7 +176,8 @@ def count_directly_connected(port: LPort, result: dict) -> int:
         print("Warning", port, "not connected")
         return 0
     else:
-        assert len(inEdges) + len(outEdges) == 1, (port, len(inEdges), len(outEdges))
+        assert len(inEdges) + len(outEdges) == 1, (port,
+                                                   len(inEdges), len(outEdges))
         if inEdges:
             e = inEdges[0]
         else:
@@ -295,6 +315,29 @@ def resolve_shared_connections(la: Layout):
         la.edges.remove(e)
 
 
+def add_stm_as_unit(la: Layout, stm: HdlStatement) -> LNode:
+    u = la.add_node(originObj=stm, name=stm.__class__.__name__)
+    u.addPort("out", PortType.OUTPUT, PortSide.WEST)
+    u.addPort("in",  PortType.INPUT,  PortSide.EAST)
+    return u
+
+
+def LNode_addPortFromHdl(node, origin: Union[Interface, PortItem],
+                         direction: PortType,
+                         name: str):
+    if direction == PortType.OUTPUT:
+        side = PortSide.WEST
+    elif direction == PortType.INPUT:
+        side = PortSide.EAST
+    else:
+        raise ValueError(direction)
+
+    p = node.addPort(name, direction, side)
+    p.originObj = origin
+    node.graph._node2lnode[origin] = p
+    return p
+
+
 def Unit_to_Layout(u: Unit) -> Layout:
     """
     Build Layout instance from Unit instance
@@ -312,7 +355,7 @@ def Unit_to_Layout(u: Unit) -> Layout:
 
     # create subunits from statements
     for stm in u._ctx.statements:
-        n = la.add_stm_as_unit(stm)
+        n = add_stm_as_unit(la, stm)
 
     # create ports
     for intf in u._interfaces:

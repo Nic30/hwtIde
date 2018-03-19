@@ -6,6 +6,7 @@
 		<project>hwt</project>
 		<project>hwtHls</project>
 		<project>hwtLib</project>
+		<project>layeredGraphLayouter</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
