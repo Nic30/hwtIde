@@ -1,24 +1,28 @@
-from typing import Set
+from typing import Set, List
 
 from hwt.hdl.assignment import Assignment
-from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.portItem import PortItem
 from hwt.pyUtils.arrayQuery import where
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.unit import Unit
-from layout.containers import Layout, LPort, LayoutExternalPort, LNode,\
-    LEdge
+from layout.containers.lNode import LayoutExternalPort, LNode
+from layout.containers.lPort import LPort
+from layout.containers.lGraph import Layout
+from layout.containers.lEdge import LEdge
+from layout.containers.constants import PortType
 
 
 def origin_obj_of_port(intf):
     d = intf._direction
+    d = PortType.from_dir(d)
+
     if intf._interfaces:
         origin = intf
-    elif d == INTF_DIRECTION.MASTER:
+    elif d == PortType.OUTPUT:
         # has hierarchy
         origin = intf._sigInside.endpoints[0]
         assert isinstance(origin, PortItem), (intf, origin)
-    elif d == INTF_DIRECTION.SLAVE:
+    elif d == PortType.INPUT:
         origin = intf._sigInside.drivers[0]
         assert isinstance(origin, PortItem), (intf, origin)
     else:
@@ -34,17 +38,20 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     """
     origin = origin_obj_of_port(intf)
     d = intf._direction
-    if reverseDirection:
-        d = INTF_DIRECTION.opposite(d)
+    d = PortType.from_dir(d)
 
-    new_lp = LPort(origin, lp, intf._name, d, lp.side)
+    if reverseDirection:
+        d = PortType.opposite(d)
+
+    new_lp = LPort(lp, intf._name, d, lp.side)
+    new_lp.originObj = origin
     if intf._interfaces:
         for child_intf in intf:
             _add_port(new_lp, child_intf, reverseDirection=reverseDirection)
 
     lp.children.append(new_lp)
     new_lp.parent = lp
-    lep._port_obj_map[origin] = new_lp
+    lep.graph._node2lnode[origin] = new_lp
 
     return new_lp
 
@@ -53,12 +60,13 @@ def add_port_to_unit(ln: LNode, intf: Interface, reverseDirection=False):
     origin = origin_obj_of_port(intf)
 
     d = intf._direction
+    d = PortType.from_dir(d)
     if reverseDirection:
-        d = INTF_DIRECTION.opposite(d)
+        d = PortType.opposite(d)
 
-    p = ln.add_port(origin,
-                    d,
-                    intf._name)
+    p = ln.addPortFromHdl(origin,
+                          d,
+                          intf._name)
     for _intf in intf._interfaces:
         _add_port(ln, p, _intf, reverseDirection=reverseDirection)
 
@@ -67,11 +75,10 @@ def add_port(la: Layout, intf: Interface):
     """
     Add LayoutExternalPort for interface
     """
-    origin = origin_obj_of_port(intf)
     ext_p = LayoutExternalPort(
-        origin, intf._name,
-        INTF_DIRECTION.opposite(intf._direction),
-        la._node2lnode)
+        la, intf._name,
+        PortType.opposite(PortType.from_dir(intf._direction)))
+    ext_p.originObj = origin_obj_of_port(intf)
     la.nodes.append(ext_p)
     add_port_to_unit(ext_p, intf, reverseDirection=True)
 
@@ -80,30 +87,37 @@ def add_port(la: Layout, intf: Interface):
 
 def get_single_edge(ports) -> LEdge:
     assert len(ports) == 1
-    ce = ports[0].connectedEdges
+    p = ports[0]
+    ce = p.incomingEdges
+    if ce:
+        assert not p.outgoingEdges
+    else:
+        ce = p.outgoingEdges
+
     assert len(ce) == 1
+
     return ce[0]
 
 
 def reduce_useless_assignments(la: Layout):
     do_update = False
     for n in la.nodes:
-        if isinstance(n.origin, Assignment) and not n.origin.indexes:
+        if isinstance(n.originObj, Assignment) and not n.originObj.indexes:
             if not do_update:
                 edges = set(la.edges)
                 nodes = set(la.nodes)
                 do_update = True
 
             nodes.remove(n)
-            in_e = get_single_edge(n.left)
-            out_e = get_single_edge(n.right)
+            in_e = get_single_edge(n.east)
+            out_e = get_single_edge(n.west)
             edges.remove(out_e)
 
-            in_e.dst.connectedEdges.remove(in_e)
+            in_e.dst.incomingEdges.remove(in_e)
             in_e.dst = out_e.dst
             in_e.dstNode = out_e.dstNode
-            out_e.dst.connectedEdges.remove(out_e)
-            out_e.dst.connectedEdges.append(in_e)
+            out_e.dst.incomingEdges.remove(out_e)
+            out_e.dst.incomingEdges.append(in_e)
 
     if do_update:
         la.edges = list(edges)
@@ -126,20 +140,31 @@ def count_directly_connected(port: LPort, result: dict) -> int:
 
     :return: cumulative sum of port counts
     """
-    edges = port.connectedEdges
+    inEdges = port.incomingEdges
+    outEdges = port.outgoingEdges
+
     if port.children:
         ch_cnt = 0
-        assert not edges, (port, port.children, edges)
+        assert not inEdges, (port, port.children, inEdges)
+        assert not outEdges, (port, port.children, outEdges)
+
         for ch in port.children:
             ch_cnt += count_directly_connected(ch, result)
+
         return ch_cnt
-    elif not edges:
+
+    elif not inEdges and not outEdges:
         print("Warning", port, "not connected")
+        return 0
     else:
-        assert len(edges) == 1, (port, len(edges))
-        e = edges[0]
+        assert len(inEdges) + len(outEdges) == 1, (port, len(inEdges), len(outEdges))
+        if inEdges:
+            e = inEdges[0]
+        else:
+            e = outEdges[0]
+
         if e.src.name != e.dst.name:
-            return
+            return 0
 
         if e.src is port:
             p = e.dst.parent
@@ -184,10 +209,13 @@ def port_try_reduce(la: Layout,
     children_to_destroy = set()
     on_target_children_to_destroy = set()
     for child, edge in children_edge_to_destroy:
-        if child.direction == INTF_DIRECTION.MASTER:
+        if child.direction == PortType.OUTPUT:
             target_ch = edge.dst
-        else:
+        elif child.direction == PortType.INPUT:
             target_ch = edge.src
+        else:
+            raise ValueError(child.direction)
+
         assert target_ch.parent is new_target
 
         # disconnect selected children from this port and target
@@ -196,7 +224,18 @@ def port_try_reduce(la: Layout,
 
         edges_to_remove.add(edge)
         for p in (child, target_ch):
-            p.connectedEdges.remove(edge)
+            removed = False
+            try:
+                p.incomingEdges.remove(edge)
+                removed = True
+            except ValueError:
+                pass
+            try:
+                p.outgoingEdges.remove(edge)
+                removed = True
+            except ValueError:
+                pass
+            assert removed
 
     # destroy children of new target and this port if possible
     port.children = list(where(port.children,
@@ -205,9 +244,9 @@ def port_try_reduce(la: Layout,
                                      lambda ch: ch not in on_target_children_to_destroy))
 
     # connect this port to new target as it was connected by children before
-    if port.direction == INTF_DIRECTION.MASTER:
+    if port.direction == PortType.OUTPUT:
         la.add_edge(None, "[TODO] name of merged connection", port, new_target)
-    elif port.direction == INTF_DIRECTION.SLAVE:
+    elif port.direction == PortType.INPUT:
         la.add_edge(None, "[TODO] name of merged connection", new_target, port)
     else:
         raise NotImplementedError(port.direction)
@@ -221,6 +260,14 @@ def flatten_port(port: LPort):
         port.children.clear()
 
 
+def _flatten_ports_side(side: List[LNode]) -> List[LNode]:
+    new_side = []
+    for i in side:
+        for new_p in flatten_port(i):
+            new_side.append(new_p)
+    return new_side
+
+
 def flatten_ports(la: Layout):
     """
     Flatten ports to simplify layout generation
@@ -228,18 +275,10 @@ def flatten_ports(la: Layout):
     :attention: children property is destroyed, parent property stays same
     """
     for u in la.nodes:
-        new_inputs = []
-        new_outputs = []
-        for i in u.left:
-            for new_i in flatten_port(i):
-                new_inputs.append(new_i)
-
-        for o in u.right:
-            for new_o in flatten_port(o):
-                new_outputs.append(new_o)
-
-        u.left = new_inputs
-        u.right = new_outputs
+        u.west = _flatten_ports_side(u.west)
+        u.east = _flatten_ports_side(u.east)
+        u.north = _flatten_ports_side(u.north)
+        u.south = _flatten_ports_side(u.south)
 
 
 def resolve_shared_connections(la: Layout):
@@ -249,11 +288,8 @@ def resolve_shared_connections(la: Layout):
     """
     edges_to_remove = set()
     for u in la.nodes:
-        for i in u.left:
-            port_try_reduce(la, i, edges_to_remove)
-
-        for o in u.right:
-            port_try_reduce(la, o, edges_to_remove)
+        for p in u.iterPorts():
+            port_try_reduce(la, p, edges_to_remove)
 
     for e in edges_to_remove:
         la.edges.remove(e)
@@ -277,7 +313,6 @@ def Unit_to_Layout(u: Unit) -> Layout:
     # create subunits from statements
     for stm in u._ctx.statements:
         n = la.add_stm_as_unit(stm)
-        toL.update(n._port_obj_map)
 
     # create ports
     for intf in u._interfaces:
@@ -292,14 +327,14 @@ def Unit_to_Layout(u: Unit) -> Layout:
             if isinstance(stm, PortItem):
                 src = la_stm
             else:
-                src = la_stm.right[0]
+                src = la_stm.west[0]
 
             for stm in s.endpoints:
                 la_stm = toL[stm]
                 if isinstance(stm, PortItem):
                     dst = la_stm
                 else:
-                    dst = la_stm.left[0]
+                    dst = la_stm.east[0]
                 la.add_edge(s, s.name, src, dst)
 
     reduce_useless_assignments(la)

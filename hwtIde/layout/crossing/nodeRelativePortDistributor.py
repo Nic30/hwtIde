@@ -1,5 +1,6 @@
+from layout.containers.constants import PortType, PortSide
+from layout.containers.lNode import LNode
 from layout.crossing.abstractBarycenterPortDistributor import AbstractBarycenterPortDistributor
-from layout.containers import PortSide, PortType, LNode
 
 
 class NodeRelativePortDistributor(AbstractBarycenterPortDistributor):
@@ -11,8 +12,8 @@ class NodeRelativePortDistributor(AbstractBarycenterPortDistributor):
             # Count the number of input ports, and additionally the north-side input ports
             inputCount = 0
             northInputCount = 0
-            for port in node.getPorts():
-                if port.getIncomingEdges():
+            for port in node.iterPorts():
+                if port.incomingEdges:
                     inputCount += 1
                     if port.side == PortSide.NORTH:
                         northInputCount += 1
@@ -32,8 +33,8 @@ class NodeRelativePortDistributor(AbstractBarycenterPortDistributor):
         elif typ == PortType.OUTPUT:
             # Count the number of output ports
             outputCount = 0
-            for port in node.getPorts():
-                if port.getOutgoingEdges():
+            for port in node.iterPorts():
+                if port.outgoingEdges:
                     outputCount += 1
 
             # Iterate output ports in their natural order, that is north - east - south - west

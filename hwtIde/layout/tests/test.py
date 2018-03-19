@@ -3,18 +3,18 @@ Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 
 """
 
 from os.path import expanduser
-import xml.etree.ElementTree as etree
 
 from hwt.synthesizer.utils import toRtl
 from hwtLib.amba.axis import AxiStream
-from layout.containers import Layout
+from layout.containers.lGraph import Layout
+from layout.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layout.examples import LinearDualSubunit
 from layout.fromHwtToLayout import Unit_to_Layout
 from layout.greedyCycleBreaker import GreedyCycleBreaker
-from layout.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layout.minWidthLayerer import MinWidthLayerer
 from layout.toMxGraph import ToMxGraph
 from layout.toSvg import ToSvg
+import xml.etree.ElementTree as etree
 
 
 def renderer_temporal(g: Layout):

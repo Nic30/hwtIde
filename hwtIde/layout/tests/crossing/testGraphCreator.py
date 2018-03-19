@@ -1,8 +1,11 @@
 from random import Random
 from typing import List, Union
-
-from layout.containers import Layout, PortSide, LNodeLayer, LEdge, LPort, LNode,\
-    NodeType, PortConstraints, EdgeRouting
+from layout.containers.lGraph import Layout, LNodeLayer
+from layout.containers.constants import EdgeRouting, PortSide, PortConstraints,\
+    NodeType
+from layout.containers.lNode import LNode
+from layout.containers.lEdge import LEdge
+from layout.containers.lPort import LPort
 
 
 class MockRandom(Random):
@@ -1013,10 +1016,10 @@ class TestGraphCreator():
                           nodeWithEastWestPortsIsOrigin: bool):
         addPortOnSide = self.addPortOnSide
         addEdgeBetweenPorts = self.addEdgeBetweenPorts
-        normalNodeEastOfNsPortNode = nodeWithEastWestPorts.layerIndex < nodeWithNSPorts.layerIndex
+        normalNodeEastOfNsPortNode = nodeWithEastWestPorts.layer.inGraphIndex < nodeWithNSPorts.layer.inGraphIndex
         direction = PortSide.WEST if normalNodeEastOfNsPortNode else PortSide.EAST
 
-        targetNodePortSide = direction.opposed()
+        targetNodePortSide = PortSide.opposite(direction)
         normalNodePort = addPortOnSide(
             nodeWithEastWestPorts, targetNodePortSide)
 
@@ -1036,7 +1039,7 @@ class TestGraphCreator():
         dummyNodePort.origin = originPort
         originPort.portDummy = northSouthDummy
 
-        baryAssoc = northSouthDummy[:]
+        baryAssoc = [northSouthDummy, ]
 
         otherBaryAssocs = nodeWithNSPorts.barycenterAssociates
         if otherBaryAssocs is None:
@@ -1045,9 +1048,9 @@ class TestGraphCreator():
             otherBaryAssocs.extend(baryAssoc)
 
         if side == PortSide.NORTH:
-            northSouthDummy.inLayerSuccessorConstraints.add(nodeWithNSPorts)
+            northSouthDummy.inLayerSuccessorConstraint.append(nodeWithNSPorts)
         else:
-            nodeWithNSPorts.inLayerSuccessorConstraints.add(northSouthDummy)
+            nodeWithNSPorts.inLayerSuccessorConstraint.append(northSouthDummy)
 
     def makeLayers(self, amount: int):
         return self.makeLayersInGraph(amount, self.graph)
@@ -1057,16 +1060,16 @@ class TestGraphCreator():
 
     @staticmethod
     def makeLayerInGraph(g: Layout):
-        layers = g.layers
         layer = LNodeLayer(g)
-        layers.append(layer)
         return layer
 
     def addNodeToLayer(self, layer) -> LNode:
-        node = LNode(layer.graph)
+        node = LNode(layer.graph, "%d" % len(layer.graph.nodes))
         node.type = NodeType.NORMAL
         node.inLayerLayoutUnit = node
         node.setLayer(layer)
+        layer.append(node)
+        layer.graph.nodes.append(node)
         return node
 
     def eastWestEdgeFromTo(self, left: LNode, right: LNode):
@@ -1076,7 +1079,7 @@ class TestGraphCreator():
 
     @staticmethod
     def addEdgeBetweenPorts(from_: LPort, to: LPort):
-        edge = LEdge()
+        edge = LEdge(None, None)
         edge.setSrcDst(from_, to)
 
     def addPortOnSide(self, node: LNode, portSide: PortSide) -> LPort:
@@ -1087,8 +1090,18 @@ class TestGraphCreator():
         :param portSide:
         :return: newly created port
         """
-        port = self.addPortTo(node)
-        port.setSide(portSide)
+        port = LPort(node, "port", None, side=portSide)
+        if portSide == PortSide.EAST:
+            node.east.append(port)
+        elif portSide == PortSide.NORTH:
+            node.north.append(port)
+        elif portSide == PortSide.SOUTH:
+            node.south.append(port)
+        elif portSide == PortSide.WEST:
+            node.west.append(port)
+        else:
+            raise NotImplementedError(portSide)
+
         if not node.portConstraints.isSideFixed():
             node.portConstraints = PortConstraints.FIXED_SIDE
 
@@ -1258,7 +1271,7 @@ class TestGraphCreator():
         return list
 
     @staticmethod
-    def getArrayInIndexOrder(arr, _is):
+    def getArrayInIndexOrder(arr, *_is):
         copy_ = arr[:]
         j = 0
         for i in _is:
@@ -1300,7 +1313,7 @@ class TestGraphCreator():
     @staticmethod
     def setInLayerOrderConstraint(thisNode: LNode, beforeThisNode: LNode):
         scndNodeAsList = beforeThisNode[:]
-        thisNode.inLayerSuccessorConstraints = scndNodeAsList
+        thisNode.inLayerSuccessorConstraint = scndNodeAsList
 
     @staticmethod
     def setAsLongEdgeDummy(node: LNode):
@@ -1333,7 +1346,7 @@ class TestGraphCreator():
         if len(args) == 2:
             return self.addInLayerEdge_PortNode(*args)
         elif isinstance(args[1], LNode):
-            return self.self.addInLayerEdge_NodeNodeSide(*args)
+            return self.addInLayerEdge_NodeNodeSide(*args)
         else:
             return self.addInLayerEdge_NodePortSide(*args)
 

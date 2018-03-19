@@ -100,10 +100,13 @@ southern nsl dummies with eastern edges south-to-north
 """
 from collections import deque
 from typing import List, Tuple, Dict, Deque
-from layout.containers import LNode, LPort, PortSide, LEdge, NodeType
 from layout.crossing.binaryIndexedTree import BinaryIndexedTree
 from hwt.pyUtils.arrayQuery import where, arr_any
 from itertools import islice
+from layout.containers.constants import PortSide, NodeType
+from layout.containers.lNode import LNode
+from layout.containers.lEdge import LEdge
+from layout.containers.lPort import LPort
 
 
 def reverseForTopDown(seq, topDown: bool):
@@ -150,8 +153,8 @@ def getNorthSouthPortsWithIncidentEdges(node: LNode, side: PortSide):
 
 
 def isInLayer(edge: LEdge) -> bool:
-    sourceLayer = edge.srcNode.layerIndex
-    targetLayer = edge.dstNode.layerIndex
+    sourceLayer = edge.srcNode.layer.inGraphIndex
+    targetLayer = edge.dstNode.layer.inGraphIndex
     return sourceLayer == targetLayer
 
 
@@ -395,7 +398,7 @@ class CrossingsCounter():
         for port in ports:
             indexTree.removeAll(poss[port])
             # First get crossings for all edges.
-            for edge in port.connectedEdges:
+            for edge in port.iterEdges():
                 endPosition = poss[otherEndOf(edge, port)]
                 if endPosition > poss[port]:
                     crossings += indexTree.rank(endPosition)
@@ -417,7 +420,7 @@ class CrossingsCounter():
             indexTree.removeAll(poss[port])
             numBetweenLayerEdges = 0
             # First get crossings for all edges.
-            for edge in port.getConnectedEdges():
+            for edge in port.iterEdges():
                 if isInLayer(edge):
                     endPosition = poss[otherEndOf(edge, port)]
                     if endPosition > poss(port):
@@ -426,7 +429,7 @@ class CrossingsCounter():
                 else:
                     numBetweenLayerEdges += 1
 
-            crossings += indexTree.size() * numBetweenLayerEdges
+            crossings += indexTree.size * numBetweenLayerEdges
             # Then add end points.
             while ends:
                 indexTree.add(ends.pop())
@@ -463,7 +466,7 @@ class CrossingsCounter():
                     break
 
             elif t == NodeType.NORTH_SOUTH_PORT:
-                dummyPort = port.getProperty(InternalProperties.ORIGIN)
+                dummyPort = port.origin
                 targetsAndDegrees.add((dummyPort, port.getDegree()))
 
             # First get crossings for all edges.

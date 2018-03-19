@@ -1,7 +1,26 @@
-from layout.containers import LPort, LNode, Layout,\
-    LayoutExternalPort, LEdge, LayoutIdCtx, UNIT_HEADER_OFFSET, PORT_HEIGHT
-from layout.geometry import GeometryRect
+from layout.containers.geometry import GeometryRect
+from layout.containers.lEdge import LEdge
+from layout.containers.lGraph import Layout
+from layout.containers.lNode import LNode, LayoutExternalPort
+from layout.containers.lPort import LPort
+from layout.containers.sizeConfig import PORT_HEIGHT, UNIT_HEADER_OFFSET
 import xml.etree.ElementTree as etree
+
+
+class LayoutIdCtx(dict):
+    # {LayoutObj: int}
+    def __getitem__(self, obj):
+        try:
+            return dict.__getitem__(self, obj)
+        except KeyError:
+            pass
+
+        return self._register(obj)
+
+    def _register(self, obj) -> int:
+        i = len(self)
+        self[obj] = i
+        return i
 
 
 def mxCell(**kvargs):
@@ -73,7 +92,7 @@ class ToMxGraph():
         yield p
 
     def LayoutExternalPort_toMxGraph(self, lep):
-        if len(lep.left) + len(lep.right) == 1:
+        if len(lep.west) + len(lep.east) == 1:
             c = mxCell(id=self.getMxGraphId(lep),
                        value=lep.name,
                        style="rounded=0;whiteSpace=wrap;html=1;",

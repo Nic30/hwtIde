@@ -13,7 +13,10 @@ Must be initialized using {@link IInitializable#init(List, LNode[][]).
 """
 from math import inf
 
-from layout.containers import PortType, LNode, PortSide, LPort
+from layout.containers.constants import PortType, PortSide
+from layout.containers.lGraph import LNodeLayer
+from layout.containers.lNode import LNode
+from layout.containers.lPort import LPort
 
 
 def hasNestedGraph(node):
@@ -39,13 +42,15 @@ class AbstractBarycenterPortDistributor():
     """
 
     def __init__(self, graph):
-        self.portRanks = {}
+        r = self.portRanks = {}
         self.minBarycenter = inf
         self.maxBarycenter = 0.0
         np = self.nodePositions = {}
         for i, la in enumerate(graph.layers):
             for node in la:
                 np[node] = i
+                for p in node.iterPorts():
+                    r[p] = 0
 
         self.portBarycenter = {}
         self.inLayerPorts = {}
@@ -57,7 +62,7 @@ class AbstractBarycenterPortDistributor():
         self.updateNodePositions(nodeOrder, currentIndex)
         freeLayer = nodeOrder[currentIndex]
         side = PortSide.WEST if isForwardSweep else PortSide.EAST
-        distributePorts = self.distributePorts
+        distributePorts_side = self.distributePorts_side
 
         if isNotFirstLayer(len(nodeOrder), currentIndex, isForwardSweep):
 
@@ -65,21 +70,21 @@ class AbstractBarycenterPortDistributor():
                 1 if isForwardSweep else nodeOrder[currentIndex + 1]
             self.calculatePortRanks(fixedLayer, portTypeFor(isForwardSweep))
             for node in freeLayer:
-                distributePorts(node, side)
+                distributePorts_side(node, side)
 
             self.calculatePortRanks(freeLayer, portTypeFor(not isForwardSweep))
             for node in fixedLayer:
                 if not hasNestedGraph(node):
-                    distributePorts(node, side.opposed())
+                    distributePorts_side(node, PortSide.opposite(side))
         else:
             for node in freeLayer:
-                distributePorts(node, side)
+                distributePorts_side(node, side)
 
         # Barycenter port distributor can not be used with always improving crossing minimization heuristics
         # which do not need to count.
         return False
 
-    def calculatePortRanks_many(self, layer, portType: PortType):
+    def calculatePortRanks_many(self, layer: LNodeLayer, portType: PortType):
         """
          * Determine ranks for all ports of specific type in the given layer.
          * The ranks are written to the {@link #getPortRanks() array.
@@ -91,10 +96,11 @@ class AbstractBarycenterPortDistributor():
         """
         calculatePortRanks = self.calculatePortRanks
         consumedRank = 0
-        for layer_ in layer:
-            consumedRank += calculatePortRanks(layer_, consumedRank, portType)
+        assert isinstance(layer, LNodeLayer), layer
+        for node in layer:
+            consumedRank += calculatePortRanks(node, consumedRank, portType)
 
-    def calculatePortRanks(self, node, rankSum, type: PortType):
+    def calculatePortRanks(self, node: LNode, rankSum: float, type: PortType):
         """
          * Assign port ranks for the input or output ports of the given node. If the node's port
          * constraints imply a fixed order, the ports are assumed to be pre-ordered in the usual way,
@@ -147,7 +153,7 @@ class AbstractBarycenterPortDistributor():
 
         # a float value large enough to ensure that barycenters of south ports
         # work fine
-        absurdlyLargeFloat = 2 * len(node.getLayer()) + 1
+        absurdlyLargeFloat = 2 * len(node.layer) + 1
         # calculate barycenter values for the ports of the node
         dealWithNorthSouthPorts = self.dealWithNorthSouthPorts
         continueOnPortIteration = False
@@ -172,7 +178,7 @@ class AbstractBarycenterPortDistributor():
                 # add up all ranks of connected ports
                 for outgoingEdge in port.getOutgoingEdges():
                     connectedPort = outgoingEdge.getTarget()
-                    if connectedPort.getNode().getLayer() == node.getLayer():
+                    if connectedPort.getNode().layer == node.layer:
                         inLayerPorts.add(port)
                         continueOnPortIteration = True
                         break
@@ -304,7 +310,7 @@ class AbstractBarycenterPortDistributor():
         """
         Sort the ports of a node using the given relative position values.
         These values are interpreted as a hint for the clockwise order of ports.
- 
+
         @param node: a node
         """
         portBarycenter = self.portBarycenter

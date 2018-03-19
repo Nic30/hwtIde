@@ -2,7 +2,9 @@ from math import inf
 from typing import List, Dict
 
 from hwtIde.layout.crossing.barycenterState import BarycenterState
-from hwtIde.layout.containers import LNode, NodeType
+from layout.containers.lNode import LNode
+from layout.containers.lGraph import LNodeLayer
+from layout.containers.constants import NodeType
 
 
 class ConstraintGroup():
@@ -96,9 +98,9 @@ class ConstraintGroup():
 
     def __repr__(self):
         sb = []
-        bc = self.getBaryCenter()
         for n in self.nodes:
             sb.append(repr(n))
+            bc = self.getBarycenter(node=n)
             if bc is not None:
                 sb.append("<")
                 # [TODO] probably wrong, should be barycenter of selected node (now it is only of first)
@@ -111,11 +113,14 @@ class ConstraintGroup():
         for node in self.nodes:
             states[node].barycenter = barycenter
 
-    def getBarycenter(self):
+    def getBarycenter(self, node=None):
         """
         :return: barycenter of current constraint group.
         """
-        return self.states[self.nodes[0]].barycenter
+        if node is None:
+            node = self.nodes[0]
+
+        return self.states[node].barycenter
 
     def getOutgoingConstraints(self) -> List["ConstraintGroup"]:
         """
@@ -191,13 +196,15 @@ class ForsterConstraintResolver():
     """
     BARYCENTER_EQUALITY_DELTA = 0.0001
 
-    def __init__(self, nodes):
-        states = self.states = {n: BarycenterState(n)
-                                for n in nodes}
-        self.constraintGroups = {n: ConstraintGroup.from_node(states, n)
-                                 for n in nodes}
-        self.layoutUnits = {n: [n, ]
-                            for n in nodes}
+    def __init__(self, layers: List[LNodeLayer]):
+        states = self.states = {}
+        cGroups = self.constraintGroups = {}
+        units = self.layoutUnits = {}
+        for layer in layers:
+            for n in layer:
+                states[n] = BarycenterState(n)
+                cGroups[n] = ConstraintGroup.from_node(states, n)
+                units[n] = [n, ]
 
     def processConstraints(self, nodes: List[LNode]):
         """
@@ -216,8 +223,7 @@ class ForsterConstraintResolver():
             if violatedConstraint is None:
                 break
 
-            self.handleViolatedConstraint(violatedConstraint.getFirst(),
-                                          violatedConstraint.getSecond(),
+            self.handleViolatedConstraint(*violatedConstraint,
                                           groups)
 
         # Apply the determined order
@@ -252,7 +258,7 @@ class ForsterConstraintResolver():
             # Add the constraints given by the vertex's node
             for successor in node.inLayerSuccessorConstraint:
                 g = cgroups[successor]
-                group.getOutgoingConstraints().add(g)
+                group.getOutgoingConstraints().append(g)
                 g.incomingConstraintsCount += 1
 
             # Check if we're processing a a normal, none-dummy node
@@ -314,3 +320,64 @@ class ForsterConstraintResolver():
                         activeGroups.append(successor)
         # No violated constraints found
         return None
+
+    def handleViolatedConstraint(self, firstNodeGroup: ConstraintGroup,
+            secondNodeGroup: ConstraintGroup, nodeGroups: List[ConstraintGroup]):
+        """
+        Handles the case of a violated constraint. The node groups must be sorted by their
+        barycenter values. After this method has finished, the list of node groups is smaller
+        by one element, since two node groups have been unified, but the list is still correctly
+        sorted by barycenter values.
+
+        @param firstNodeGroup
+                   the node group with violated outgoing constraint
+        @param secondNodeGroup
+                   the node group with violated incoming constraint
+        @param nodeGroups
+                   the list of vertices
+        """
+
+        # Create a new vertex from the two constrain-violating vertices this also
+        # automatically calculates the new vertex's barycenter value
+        newNodeGroup = ConstraintGroup.from_merge(firstNodeGroup, secondNodeGroup)
+        assert (newNodeGroup.getBarycenter() + self.BARYCENTER_EQUALITY_DELTA 
+                    >= secondNodeGroup.getBarycenter())
+        assert (newNodeGroup.getBarycenter() - self.BARYCENTER_EQUALITY_DELTA 
+                    <= firstNodeGroup.getBarycenter())
+
+        # Iterate through the vertices. Remove the old vertices. Insert the new one
+        # according to the barycenter value, thereby keeping the list sorted. Along
+        # the way, constraint relationships will be updated
+        nodeGroupIterator = iter(nodeGroups)
+        alreadyInserted = False
+        while True:
+            nodeGroup = next(nodeGroupIterator)
+
+            if (nodeGroup == firstNodeGroup or nodeGroup == secondNodeGroup):
+                # Remove the two node groups with violated constraint from the list
+                nodeGroupIterator.remove()
+            elif (not alreadyInserted
+                  and nodeGroup.getBarycenter() > newNodeGroup.getBarycenter()):
+                # If we haven't inserted the new node group into the list already, do that now.
+                # Note: we're not calling next() again. This means that during the next iteration,
+                # we will again be looking at the current node group. But then, alreadyInserted will
+                # be true and we can look at that node group's outgoing constraints.
+                nodeGroupIterator.previous()
+                nodeGroupIterator.add(newNodeGroup)
+
+                alreadyInserted = True
+            elif nodeGroup.hasOutgoingConstraints():
+                # Check if the vertex has any constraints with the former two vertices
+                firstNodeGroupConstraint = nodeGroup.getOutgoingConstraints()\
+                        .remove(firstNodeGroup)
+                secondNodeGroupConstraint = nodeGroup.getOutgoingConstraints()\
+                        .remove(secondNodeGroup)
+
+                if firstNodeGroupConstraint or secondNodeGroupConstraint:
+                    nodeGroup.getOutgoingConstraints().add(newNodeGroup)
+                    newNodeGroup.incomingConstraintsCount += 1
+
+        # If we haven't inserted the new node group already, add it to the end
+        if not alreadyInserted:
+            nodeGroups.add(newNodeGroup)
+

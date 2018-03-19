@@ -1,6 +1,10 @@
-from layout.containers import LPort, LNode, Layout,\
-    LayoutExternalPort, LEdge, LayoutIdCtx, PORT_HEIGHT
-from layout.geometry import GeometryRect
+from layout.containers.geometry import GeometryRect
+from layout.containers.lEdge import LEdge
+from layout.containers.lGraph import Layout
+from layout.containers.lNode import LNode, LayoutExternalPort
+from layout.containers.lPort import LPort
+from layout.containers.sizeConfig import PORT_HEIGHT
+from layout.toMxGraph import LayoutIdCtx
 import xml.etree.ElementTree as etree
 
 
@@ -88,7 +92,7 @@ class ToSvg():
         yield svg_rect_from_geom(lp.geometry, label=lp.name)
 
     def LayoutExternalPort_toSvg(self, lep: LayoutExternalPort):
-        if len(lep.left) + len(lep.right) == 1:
+        if len(lep.west) + len(lep.east) == 1:
             yield svg_rect_from_geom(lep.geometry,
                                      label=lep.name,
                                      fill=EXTERNAL_PORT_FILL)
