@@ -264,10 +264,11 @@ def port_try_reduce(la: Layout,
                                      lambda ch: ch not in on_target_children_to_destroy))
 
     # connect this port to new target as it was connected by children before
+    # [TODO] names for new edges
     if port.direction == PortType.OUTPUT:
-        la.add_edge(None, "[TODO] name of merged connection", port, new_target)
+        la.add_edge(port, new_target)
     elif port.direction == PortType.INPUT:
-        la.add_edge(None, "[TODO] name of merged connection", new_target, port)
+        la.add_edge(new_target, port)
     else:
         raise NotImplementedError(port.direction)
 
@@ -349,7 +350,7 @@ def Unit_to_Layout(u: Unit) -> Layout:
     toL = la._node2lnode
     # create subunits
     for su in u._units:
-        n = la.add_node(su, su._name)
+        n = la.add_node(name=su._name, originObj=su)
         for intf in su._interfaces:
             add_port_to_unit(n, intf)
 
@@ -378,7 +379,7 @@ def Unit_to_Layout(u: Unit) -> Layout:
                     dst = la_stm
                 else:
                     dst = la_stm.east[0]
-                la.add_edge(s, s.name, src, dst)
+                la.add_edge(src, dst, name=s.name, originObj=s)
 
     reduce_useless_assignments(la)
     resolve_shared_connections(la)

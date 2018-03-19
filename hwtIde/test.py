@@ -6,15 +6,15 @@ from os.path import expanduser
 
 from hwt.synthesizer.utils import toRtl
 from hwtLib.amba.axis import AxiStream
-from layout.containers.lGraph import Layout
-from layout.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
-from layout.examples import LinearDualSubunit
-from layout.fromHwtToLayout import Unit_to_Layout
-from layout.greedyCycleBreaker import GreedyCycleBreaker
-from layout.minWidthLayerer import MinWidthLayerer
-from layout.toMxGraph import ToMxGraph
-from layout.toSvg import ToSvg
+from layeredGraphLayouter.containers.lGraph import Layout
+from layeredGraphLayouter.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
+from layeredGraphLayouter.greedyCycleBreaker import GreedyCycleBreaker
+from layeredGraphLayouter.minWidthLayerer import MinWidthLayerer
+from layeredGraphLayouter.toMxGraph import ToMxGraph
+from layeredGraphLayouter.toSvg import ToSvg
 import xml.etree.ElementTree as etree
+from hwtIde.examples import LinearDualSubunit
+from hwtIde.fromHwtToLayout import Unit_to_Layout
 
 
 def renderer_temporal(g: Layout):
