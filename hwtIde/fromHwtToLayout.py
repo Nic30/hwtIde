@@ -7,7 +7,7 @@ from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.unit import Unit
 from layeredGraphLayouter.containers.lNode import LayoutExternalPort, LNode
 from layeredGraphLayouter.containers.lPort import LPort
-from layeredGraphLayouter.containers.lGraph import Layout
+from layeredGraphLayouter.containers.lGraph import LGraph
 from layeredGraphLayouter.containers.lEdge import LEdge
 from layeredGraphLayouter.containers.constants import PortType, PortSide
 from hwt.hdl.constants import INTF_DIRECTION
@@ -89,7 +89,7 @@ def add_port_to_unit(ln: LNode, intf: Interface, reverseDirection=False):
         _add_port(ln, p, _intf, reverseDirection=reverseDirection)
 
 
-def add_port(la: Layout, intf: Interface):
+def add_port(la: LGraph, intf: Interface):
     """
     Add LayoutExternalPort for interface
     """
@@ -118,7 +118,7 @@ def get_single_edge(ports) -> LEdge:
     return ce[0]
 
 
-def reduce_useless_assignments(la: Layout):
+def reduce_useless_assignments(la: LGraph):
     do_update = False
     for n in la.nodes:
         if isinstance(n.originObj, Assignment) and not n.originObj.indexes:
@@ -200,8 +200,7 @@ def count_directly_connected(port: LPort, result: dict) -> int:
         return 1
 
 
-def port_try_reduce(la: Layout,
-                    port: LPort,
+def port_try_reduce(la: LGraph, port: LPort,
                     edges_to_remove: Set[LNode]):
     """
     Check if majority of children is connected to same port
@@ -289,7 +288,7 @@ def _flatten_ports_side(side: List[LNode]) -> List[LNode]:
     return new_side
 
 
-def flatten_ports(la: Layout):
+def flatten_ports(la: LGraph):
     """
     Flatten ports to simplify layout generation
 
@@ -302,7 +301,7 @@ def flatten_ports(la: Layout):
         u.south = _flatten_ports_side(u.south)
 
 
-def resolve_shared_connections(la: Layout):
+def resolve_shared_connections(la: LGraph):
     """
     Walk all ports on all nodes and group subinterface connections to only parent interface
     connection if it is possible
@@ -316,7 +315,7 @@ def resolve_shared_connections(la: Layout):
         la.edges.remove(e)
 
 
-def add_stm_as_unit(la: Layout, stm: HdlStatement) -> LNode:
+def add_stm_as_unit(la: LGraph, stm: HdlStatement) -> LNode:
     u = la.add_node(originObj=stm, name=stm.__class__.__name__)
     u.addPort("out", PortType.OUTPUT, PortSide.WEST)
     u.addPort("in",  PortType.INPUT,  PortSide.EAST)
@@ -339,14 +338,14 @@ def LNode_addPortFromHdl(node, origin: Union[Interface, PortItem],
     return p
 
 
-def Unit_to_Layout(u: Unit) -> Layout:
+def Unit_to_LGraph(u: Unit) -> LGraph:
     """
-    Build Layout instance from Unit instance
+    Build LGraph instance from Unit instance
 
     :attention: unit has to be synthesized
     """
 
-    la = Layout()
+    la = LGraph()
     toL = la._node2lnode
     # create subunits
     for su in u._units:

@@ -6,7 +6,7 @@ from os.path import expanduser
 
 from hwt.synthesizer.utils import toRtl
 from hwtLib.amba.axis import AxiStream
-from layeredGraphLayouter.containers.lGraph import Layout
+from layeredGraphLayouter.containers.lGraph import LGraph
 from layeredGraphLayouter.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layeredGraphLayouter.greedyCycleBreaker import GreedyCycleBreaker
 from layeredGraphLayouter.minWidthLayerer import MinWidthLayerer
@@ -14,10 +14,10 @@ from layeredGraphLayouter.toMxGraph import ToMxGraph
 from layeredGraphLayouter.toSvg import ToSvg
 import xml.etree.ElementTree as etree
 from hwtIde.examples import LinearDualSubunit
-from hwtIde.fromHwtToLayout import Unit_to_Layout
+from hwtIde.fromHwtToLayout import Unit_to_LGraph
 
 
-def renderer_temporal(g: Layout):
+def renderer_temporal(g: LGraph):
     if not g.layers:
         nodes = g.nodes
         nodes.sort(key=lambda n: n.mark)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     u = LinearDualSubunit(AxiStream)
     #u = DualSubunit(AxiStream)
     toRtl(u)
-    g = Unit_to_Layout(u)
+    g = Unit_to_LGraph(u)
     cycleBreaker = GreedyCycleBreaker()
     layerer = MinWidthLayerer()
     crossMin = LayerSweepCrossingMinimizer()
@@ -57,13 +57,13 @@ if __name__ == "__main__":
 
     def asSvg():
         with open(expanduser("~/test.svg"), "wb") as f:
-            root = ToSvg(reversed_edge_stroke="lightcoral").Layout_toSvg(g)
+            root = ToSvg(reversed_edge_stroke="lightcoral").LGraph_toSvg(g)
             s = etree.tostring(root)
             f.write(s)
 
     def asMxGraph():
         with open(expanduser("~/test.xml"), "wb") as f:
-            root = ToMxGraph().Layout_toMxGraph(g)
+            root = ToMxGraph().LGraph_toMxGraph(g)
             s = etree.tostring(root)
             f.write(s)
 

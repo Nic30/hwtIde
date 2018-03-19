@@ -7,7 +7,7 @@ import os
 import sys
 from fsEntry import FSEntry
 from json_resp import jsonResp
-from layoutContainers import Unit_to_Layout
+from hwtIde.fromHwtToLayout import Unit_to_LGraph
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -75,7 +75,7 @@ def connectionData(path):
     # u = SimpleSubunit()
     # for _ in u._toRtl():
     #    pass
-    data = Unit_to_Layout(u)
+    data = Unit_to_LGraph(u)
 
     # elif path.endswith(".json"):
     #    with open(path) as f:
