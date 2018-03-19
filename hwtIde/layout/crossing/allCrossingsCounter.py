@@ -1,7 +1,9 @@
-from layout.containers import NodeType, PortSide, Layout, LNode
+from typing import List
+
+from layout.containers.constants import PortSide, NodeType
+from layout.containers.lGraph import Layout, LNodeLayer
 from layout.crossing.crossingCounter import CrossingsCounter
 from layout.crossing.hyperedgeCrossingsCounter import HyperedgeCrossingsCounter
-from typing import List
 
 
 class AllCrossingsCounter():
@@ -22,14 +24,14 @@ class AllCrossingsCounter():
             for node in layer:
                 hasNorthSouthPorts[l] |= node.type == NodeType.NORTH_SOUTH_PORT
                 for port in node.iterPorts():
-                    if (len(port.connectedEdges) > 1):
+                    if len(port.incomingEdges) + len(port.outgoingEdges) > 1:
                         if port.side == PortSide.EAST:
                             hasHyperEdgesEastOfIndex[l] = True
                         elif (port.side == PortSide.WEST and l > 0):
                             hasHyperEdgesEastOfIndex[l - 1] = True
 
         for edge in graph.edges:
-            if (edge.srcNode.layerIndex == edge.dstNode.layerIndex):
+            if (edge.srcNode.layer.inGraphIndex == edge.dstNode.layer.inGraphIndex):
                 inLayerEdgeCounts[l] += 1
 
         portPos = {}
@@ -43,7 +45,7 @@ class AllCrossingsCounter():
             portPos)
         self.crossingCounter = CrossingsCounter(portPos)
 
-    def countAllCrossings(self, currentOrder: List[List[LNode]]):
+    def countAllCrossings(self, currentOrder: List[LNodeLayer]):
         """
         Count all crossings.
 
@@ -64,7 +66,7 @@ class AllCrossingsCounter():
 
         return crossings
 
-    def countCrossingsAt(self, layerIndex: int, currentOrder: List[List[LNode]]):
+    def countCrossingsAt(self, layerIndex: int, currentOrder: List[LNodeLayer]):
         totalCrossings = 0
         leftLayer = currentOrder[layerIndex]
         if layerIndex < len(currentOrder) - 1:

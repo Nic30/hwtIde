@@ -1,8 +1,8 @@
 from math import inf
 from typing import Optional
 
-from layout.containers import LNode, LNodeLayer
-from hwt.hdl.constants import INTF_DIRECTION
+from layout.containers.constants import PortType
+from layout.containers.lNode import LNode
 
 
 LAYERING_MIN_WIDTH_UPPER_BOUND_ON_WIDTH = 10
@@ -99,7 +99,8 @@ class MinWidthLayerer():
         # iterations resulting in one, two, four or eight different layerings.
         for ubw in range(ubwStart, ubwEnd + 1):
             for c in range(cStart, cEnd + 1):
-                newWidth, layering = self.computeMinWidthLayering(ubw, c, notInserted)
+                newWidth, layering = self.computeMinWidthLayering(
+                    ubw, c, notInserted)
 
                 # Important if more than one layering is computed: replace the current candidate
                 # layering with a newly computed one, if it is narrower or has the same maximum
@@ -113,13 +114,10 @@ class MinWidthLayerer():
 
         # Finally, add the winning layering to the Klay layered data
         # structures.
-        for layerList in candidateLayering:
-            currentLayer = LNodeLayer(graph)
-            currentLayer.extend(layerList)
-
         # The algorithm constructs the layering bottom up, but ElkLayered expects the list of
         # layers to be ordered top down.
-        graph.layers.reverse()
+        for layerList in reversed(candidateLayering):
+            graph.append_layer(layerList)
 
     def computeMinWidthLayering(self, upperBoundOnWidth, compensator, nodes):
         """"
@@ -188,7 +186,8 @@ class MinWidthLayerer():
             # will return {@code null} if such a node doesn't exist.
             currentNode = self.selectNode(unplacedNodes,
                                           alreadyPlacedInOtherLayers)
-            assert currentLayer or currentNode is not None, ("Cycle in graph", self.successors)
+            assert currentLayer or currentNode is not None, (
+                "Cycle in graph", self.successors)
 
             # If a node is found in the previous step:
             if currentNode is not None:
@@ -279,12 +278,10 @@ class MinWidthLayerer():
         for node in nodes:
             outNodes = set()
             for o in node.iterPorts():
-                for edge in o.connectedEdges:
-                    if edge.isSelfLoop():
-                        continue
+                for edge in o.iterEdges(filterSelfLoops=True):
                     d = o.direction
-                    if d == INTF_DIRECTION.MASTER and not edge.reversed \
-                            or d == INTF_DIRECTION.SLAVE and edge.reversed:
+                    if d == PortType.OUTPUT and not edge.reversed \
+                            or d == PortType.INPUT and edge.reversed:
                         outNodes.add(edge.dstNode)
 
             successors[node] = outNodes

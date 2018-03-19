@@ -1,5 +1,5 @@
-from layout.containers import LayoutExternalPort, LNode
 from hwt.hdl.constants import INTF_DIRECTION
+from layout.containers.lNode import LayoutExternalPort, LNode
 
 
 class GreedyCycleBreaker():
@@ -77,7 +77,7 @@ class GreedyCycleBreaker():
             # look at the node's outgoing edges
             for port in node.iterPorts():
                 if port.direction == INTF_DIRECTION.MASTER:
-                    for edge in port.connectedEdges:
+                    for edge in port.iterEdges():
                         if node.mark > edge.dstNode.mark:
                             edge.reverse()
 
@@ -91,13 +91,13 @@ class GreedyCycleBreaker():
         """
         for p in node.iterPorts():
             isOutput = p.direction == INTF_DIRECTION.MASTER
-            for e in p.connectedEdges:
-                if isOutput:
+            for e in p.iterEdges(filterSelfLoops=True):
+                if e.srcNode is node:
                     other = e.dstNode
                 else:
                     other = e.srcNode
 
-                if not e.isSelfLoop() and other.mark == 0:
+                if other.mark == 0:
                     if isOutput:
                         other.outdeg -= 1
                         if other.outdeg <= 0 and other.indeg > 0:

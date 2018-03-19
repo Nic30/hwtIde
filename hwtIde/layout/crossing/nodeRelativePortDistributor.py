@@ -1,5 +1,6 @@
+from layout.containers.constants import PortType, PortSide
+from layout.containers.lNode import LNode
 from layout.crossing.abstractBarycenterPortDistributor import AbstractBarycenterPortDistributor
-from layout.containers import PortSide, PortType, LNode
 
 
 class NodeRelativePortDistributor(AbstractBarycenterPortDistributor):

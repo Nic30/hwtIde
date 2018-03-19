@@ -2,9 +2,10 @@ from itertools import islice
 from random import Random
 from typing import List
 
-from hwtIde.layout.containers import LNode, PortType, NodeType
 from hwtIde.layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
-from layout.containers import LNodeLayer
+from layout.containers.constants import PortType, NodeType
+from layout.containers.lGraph import LNodeLayer
+from layout.containers.lNode import LNode
 
 
 def changeIndex(dir_: bool):
@@ -55,6 +56,7 @@ class BarycenterHeuristic():
         self.portDistributor = portDistributor
         self.states = constraintResolver.states
         self.portRanks = portDistributor.portRanks
+        self.isDeterministic = False
 
     # the barycenter values of every node in the graph, indexed by layer.id
     # and node.id.
@@ -110,7 +112,7 @@ class BarycenterHeuristic():
             st.summedWeight = st.barycenter = random()
             st.degree = 1
 
-    def setFirstLayerOrder(self, order: List[List[LNode]], isForwardSweep: bool):
+    def setFirstLayerOrder(self, order: List[LNodeLayer], isForwardSweep: bool):
         _startIndex = startIndex(isForwardSweep, len(order))
         nodes = list(order[_startIndex])
         self.minimizeCrossingsInLayer(nodes, False, True, isForwardSweep)
@@ -139,7 +141,7 @@ class BarycenterHeuristic():
                     # and the next defined value in the list
                     nextValue = lastValue + 1
 
-                    for node2 in islice(node, i + 1, None):
+                    for node2 in islice(nodes, i + 1, None):
                         x = states[node2].barycenter
                         if x is not None:
                             nextValue = x

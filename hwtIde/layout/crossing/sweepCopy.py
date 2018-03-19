@@ -1,5 +1,8 @@
+from typing import List
+
 from hwt.pyUtils.arrayQuery import flatten
-from layout.containers import Layout, LNode, NodeType
+from layout.containers.constants import NodeType
+from layout.containers.lGraph import LNodeLayer, Layout
 
 
 class SweepCopy():
@@ -11,13 +14,22 @@ class SweepCopy():
 
     def __init__(self, nodeOrderIn):
         # Saves a copy of the node order.
-        self.nodeOrder = []
+        self.nodeOrder = [layer[:] for layer in nodeOrderIn]
         # Saves a copy of the orders of the ports on each node, because they
         # are reordered in each sweep. */
         self.portOrders = {}
 
+    def __len__(self):
+        return len(self.nodeOrder)
+
+    def __getitem__(self, index):
+        return self.nodeOrder[index]
+
+    def __setitem__(self, index, item):
+        self.nodeOrder[index] = item
+
     @classmethod
-    def from_order(cls, nodeOrderIn):
+    def from_order(cls, nodeOrderIn: List[LNodeLayer]):
         # Copies on construction.
         self = cls()
         self.nodeOrder = [list(layer) for layer in nodeOrderIn]
@@ -42,7 +54,7 @@ class SweepCopy():
             # iterate and order the nodes within the layer
             for j, node, in enumerate(nodes):
                 # use the id field to remember the order within the layer
-                if node.getType() == NodeType.NORTH_SOUTH_PORT:
+                if node.type == NodeType.NORTH_SOUTH_PORT:
                     northSouthPortDummies.append(node)
 
                 nodes[j] = node

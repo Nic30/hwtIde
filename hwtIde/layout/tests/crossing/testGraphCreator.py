@@ -1,9 +1,11 @@
 from random import Random
 from typing import List, Union
-
-from layout.containers import Layout, PortSide, LNodeLayer, LEdge, LPort, LNode,\
-    NodeType, PortConstraints, EdgeRouting
-from hwt.hdl.constants import INTF_DIRECTION
+from layout.containers.lGraph import Layout, LNodeLayer
+from layout.containers.constants import EdgeRouting, PortSide, PortConstraints,\
+    NodeType
+from layout.containers.lNode import LNode
+from layout.containers.lEdge import LEdge
+from layout.containers.lPort import LPort
 
 
 class MockRandom(Random):
@@ -1058,9 +1060,7 @@ class TestGraphCreator():
 
     @staticmethod
     def makeLayerInGraph(g: Layout):
-        layers = g.layers
         layer = LNodeLayer(g)
-        layers.append(layer)
         return layer
 
     def addNodeToLayer(self, layer) -> LNode:

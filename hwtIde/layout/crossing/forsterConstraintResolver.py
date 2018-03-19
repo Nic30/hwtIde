@@ -2,7 +2,9 @@ from math import inf
 from typing import List, Dict
 
 from hwtIde.layout.crossing.barycenterState import BarycenterState
-from hwtIde.layout.containers import LNode, NodeType
+from layout.containers.lNode import LNode
+from layout.containers.lGraph import LNodeLayer
+from layout.containers.constants import NodeType
 
 
 class ConstraintGroup():
@@ -96,9 +98,9 @@ class ConstraintGroup():
 
     def __repr__(self):
         sb = []
-        bc = self.getBaryCenter()
         for n in self.nodes:
             sb.append(repr(n))
+            bc = self.getBarycenter(node=n)
             if bc is not None:
                 sb.append("<")
                 # [TODO] probably wrong, should be barycenter of selected node (now it is only of first)
@@ -111,11 +113,14 @@ class ConstraintGroup():
         for node in self.nodes:
             states[node].barycenter = barycenter
 
-    def getBarycenter(self):
+    def getBarycenter(self, node=None):
         """
         :return: barycenter of current constraint group.
         """
-        return self.states[self.nodes[0]].barycenter
+        if node is None:
+            node = self.nodes[0]
+
+        return self.states[node].barycenter
 
     def getOutgoingConstraints(self) -> List["ConstraintGroup"]:
         """
@@ -191,7 +196,7 @@ class ForsterConstraintResolver():
     """
     BARYCENTER_EQUALITY_DELTA = 0.0001
 
-    def __init__(self, layers: List[List[LNode]]):
+    def __init__(self, layers: List[LNodeLayer]):
         states = self.states = {}
         cGroups = self.constraintGroups = {}
         units = self.layoutUnits = {}

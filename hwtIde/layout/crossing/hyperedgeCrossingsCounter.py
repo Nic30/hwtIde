@@ -1,6 +1,7 @@
 from typing import Dict, List
-from layout.containers import LNode, PortSide
 from enum import Enum
+from layout.containers.lNode import LNode
+from layout.containers.constants import PortSide
 
 
 class Hyperedge():

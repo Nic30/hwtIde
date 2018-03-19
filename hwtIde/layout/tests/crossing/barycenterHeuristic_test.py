@@ -1,11 +1,12 @@
 import unittest
 
-from layout.containers import PortType, PortSide, LNodeLayer
 from layout.crossing.barycenterHeuristic import BarycenterHeuristic
 from layout.crossing.forsterConstraintResolver import ForsterConstraintResolver
 from layout.tests.crossing.testGraphCreator import TestGraphCreator
 from layout.crossing.nodeRelativePortDistributor import NodeRelativePortDistributor
 from _collections import defaultdict
+from layout.containers.constants import PortType, PortSide
+from layout.containers.lGraph import LNodeLayer
 
 
 class BarycenterHeuristicTest(unittest.TestCase):
