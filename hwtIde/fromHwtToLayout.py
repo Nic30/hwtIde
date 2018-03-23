@@ -9,7 +9,8 @@ from layeredGraphLayouter.containers.lNode import LayoutExternalPort, LNode
 from layeredGraphLayouter.containers.lPort import LPort
 from layeredGraphLayouter.containers.lGraph import LGraph
 from layeredGraphLayouter.containers.lEdge import LEdge
-from layeredGraphLayouter.containers.constants import PortType, PortSide
+from layeredGraphLayouter.containers.constants import PortType, PortSide,\
+    PortConstraints
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.statements import HdlStatement
 
@@ -350,12 +351,14 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
     # create subunits
     for su in u._units:
         n = la.add_node(name=su._name, originObj=su)
+        n.portConstraints = PortConstraints.FIXED_ORDER
         for intf in su._interfaces:
             add_port_to_unit(n, intf)
 
     # create subunits from statements
     for stm in u._ctx.statements:
         n = add_stm_as_unit(la, stm)
+        n.portConstraints = PortConstraints.FIXED_ORDER
 
     # create ports
     for intf in u._interfaces:
