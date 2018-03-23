@@ -4,7 +4,7 @@ Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 
 
 from os.path import expanduser
 
-from examples import DualSubunit, CyclicDualSubunit
+from examples import DualSubunit, CyclicDualSubunit, UnitWithDistributedSig
 from hwt.synthesizer.utils import toRtl
 from hwtIde.examples import LinearDualSubunit
 from hwtIde.fromHwtToLayout import Unit_to_LGraph
@@ -16,6 +16,7 @@ from layeredGraphLayouter.minWidthLayerer import MinWidthLayerer
 from layeredGraphLayouter.toMxGraph import ToMxGraph
 from layeredGraphLayouter.toSvg import ToSvg
 import xml.etree.ElementTree as etree
+from hwtLib.samples.hierarchy.netFilter import NetFilter
 
 
 def renderer_temporal(g: LGraph):
@@ -44,7 +45,9 @@ def renderer_temporal(g: LGraph):
 if __name__ == "__main__":
     #u = LinearDualSubunit(AxiStream)
     #u = DualSubunit(AxiStream)
-    u = CyclicDualSubunit(AxiStream)
+    #u = CyclicDualSubunit(AxiStream)
+    #u = NetFilter()
+    u = UnitWithDistributedSig()
 
     toRtl(u)
     g = Unit_to_LGraph(u)
