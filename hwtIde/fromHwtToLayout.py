@@ -9,9 +9,12 @@ from layeredGraphLayouter.containers.lNode import LayoutExternalPort, LNode
 from layeredGraphLayouter.containers.lPort import LPort
 from layeredGraphLayouter.containers.lGraph import LGraph
 from layeredGraphLayouter.containers.lEdge import LEdge
-from layeredGraphLayouter.containers.constants import PortType, PortSide
+from layeredGraphLayouter.containers.constants import PortType, PortSide,\
+    PortConstraints
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.statements import HdlStatement
+from hwt.hdl.operator import Operator
+from hwt.hdl.operatorDefs import AllOps
 
 
 def getParentUnit(intf):
@@ -64,8 +67,9 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     new_lp = LPort(lp, intf._name, d, lp.side)
     new_lp.originObj = origin
     if intf._interfaces:
-        for child_intf in intf:
-            _add_port(new_lp, child_intf, reverseDirection=reverseDirection)
+        for child_intf in intf._interfaces:
+            _add_port(lep, new_lp, child_intf,
+                      reverseDirection=reverseDirection)
 
     lp.children.append(new_lp)
     new_lp.parent = lp
@@ -104,18 +108,15 @@ def add_port(la: LGraph, intf: Interface):
     return ext_p
 
 
-def get_single_edge(ports) -> LEdge:
+def get_single_port(ports: List[LPort]) -> LEdge:
     assert len(ports) == 1
-    p = ports[0]
-    ce = p.incomingEdges
-    if ce:
-        assert not p.outgoingEdges
-    else:
-        ce = p.outgoingEdges
+    return ports[0]
 
-    assert len(ce) == 1
 
-    return ce[0]
+def remove_edge(allEdges, edge: LEdge):
+    edge.dst.incomingEdges.remove(edge)
+    edge.src.outgoingEdges.remove(edge)
+    allEdges.remove(edge)
 
 
 def reduce_useless_assignments(la: LGraph):
@@ -128,15 +129,26 @@ def reduce_useless_assignments(la: LGraph):
                 do_update = True
 
             nodes.remove(n)
-            in_e = get_single_edge(n.east)
-            out_e = get_single_edge(n.west)
-            edges.remove(out_e)
 
-            in_e.dst.incomingEdges.remove(in_e)
-            in_e.dst = out_e.dst
-            in_e.dstNode = out_e.dstNode
-            out_e.dst.incomingEdges.remove(out_e)
-            out_e.dst.incomingEdges.append(in_e)
+            srcPorts = []
+            dstPorts = []
+
+            inP = get_single_port(n.east)
+            assert not inP.outgoingEdges, inP
+            for in_e in inP.incomingEdges:
+                srcPorts.append(in_e.src)
+                remove_edge(edges, in_e)
+
+            outP = get_single_port(n.west)
+            assert not outP.incomingEdges, inP
+            for out_e in outP.outgoingEdges:
+                dstPorts.append(out_e.dst)
+                remove_edge(edges, out_e)
+
+            for srcPort in srcPorts:
+                for dstPort in dstPorts:
+                    new_e = la.add_edge(srcPort, dstPort)
+                    edges.add(new_e)
 
     if do_update:
         la.edges = list(edges)
@@ -176,13 +188,15 @@ def count_directly_connected(port: LPort, result: dict) -> int:
         print("Warning", port, "not connected")
         return 0
     else:
-        assert len(inEdges) + len(outEdges) == 1, (port,
-                                                   len(inEdges), len(outEdges))
+        if len(inEdges) + len(outEdges) != 1:
+            return 0
+
         if inEdges:
             e = inEdges[0]
         else:
             e = outEdges[0]
 
+        # if is connected to different port
         if e.src.name != e.dst.name:
             return 0
 
@@ -192,10 +206,11 @@ def count_directly_connected(port: LPort, result: dict) -> int:
             assert e.dst is port
             p = e.src.parent
 
+        # if is part of interface which can be reduced
         if not isinstance(p, LNode):
-            cons = result.get(p, [])
-            cons.append((port, e))
-            result[p] = cons
+            connections = result.get(p, [])
+            connections.append((port, e))
+            result[p] = connections
 
         return 1
 
@@ -322,6 +337,14 @@ def add_stm_as_unit(la: LGraph, stm: HdlStatement) -> LNode:
     return u
 
 
+def add_index_as_node(la: LGraph, op: Operator) -> LNode:
+    u = la.add_node(originObj=op, name="Index")
+    u.addPort("out", PortType.OUTPUT, PortSide.WEST)
+    u.addPort("index",  PortType.INPUT,  PortSide.EAST)
+    u.addPort("in",  PortType.INPUT,  PortSide.EAST)
+    return u
+
+
 def LNode_addPortFromHdl(node, origin: Union[Interface, PortItem],
                          direction: PortType,
                          name: str):
@@ -350,12 +373,14 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
     # create subunits
     for su in u._units:
         n = la.add_node(name=su._name, originObj=su)
+        n.portConstraints = PortConstraints.FIXED_ORDER
         for intf in su._interfaces:
             add_port_to_unit(n, intf)
 
     # create subunits from statements
     for stm in u._ctx.statements:
         n = add_stm_as_unit(la, stm)
+        n.portConstraints = PortConstraints.FIXED_ORDER
 
     # create ports
     for intf in u._interfaces:
@@ -364,21 +389,25 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
     # connect nets
     for s in u._ctx.signals:
         if not s.hidden:
-            assert len(s.drivers) == 1, s
-            stm = s.drivers[0]
-            la_stm = toL[stm]
-            if isinstance(stm, PortItem):
-                src = la_stm
-            else:
-                src = la_stm.west[0]
-
-            for stm in s.endpoints:
+            for stm in s.drivers:
                 la_stm = toL[stm]
                 if isinstance(stm, PortItem):
-                    dst = la_stm
+                    src = la_stm
                 else:
-                    dst = la_stm.east[0]
-                la.add_edge(src, dst, name=s.name, originObj=s)
+                    src = la_stm.west[0]
+
+                for stm in s.endpoints:
+                    if isinstance(stm, Operator) and stm.operator == AllOps.INDEX:
+                        print("NotImplemented index in endpoints")
+                        assert stm not in s.drivers, (s, stm, s.drivers, s.endpoints)
+                        dst = la_stm
+                    else:
+                        la_stm = toL[stm]
+                        if isinstance(stm, PortItem):
+                            dst = la_stm
+                        else:
+                            dst = la_stm.east[0]
+                    la.add_edge(src, dst, name=s.name, originObj=s)
 
     reduce_useless_assignments(la)
     resolve_shared_connections(la)

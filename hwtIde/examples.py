@@ -41,6 +41,27 @@ class DualSubunit(Unit):
         self.b1(u.b)
 
 
+class UnitWithDistributedSig(Unit):
+        def _declr(self):
+            self.a = Signal()
+            self.b0 = Signal()
+            self.b1 = Signal()
+            self.b2 = Signal()
+
+            self.u0 = SimpleUnit()
+            self.u1 = SimpleUnit()
+            self.u2 = SimpleUnit()
+
+        def _impl(self):
+            self.u0.a(self.a)
+            self.u1.a(self.a)
+            self.u2.a(self.a)
+
+            self.b0(self.u0.b)
+            self.b1(self.u1.b)
+            self.b2(self.u2.b)
+
+
 class CyclicDualSubunit(Unit):
     def __init__(self, intfCls=Signal):
         self._intfCls = intfCls
