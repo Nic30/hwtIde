@@ -15,6 +15,7 @@ from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.statements import HdlStatement
 from hwt.hdl.operator import Operator
 from hwt.hdl.operatorDefs import AllOps
+from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 
 
 def getParentUnit(intf):
@@ -332,26 +333,37 @@ def resolve_shared_connections(la: LGraph):
 
 def add_stm_as_unit(la: LGraph, stm: HdlStatement) -> LNode:
     u = la.add_node(originObj=stm, name=stm.__class__.__name__)
-    u.addPort("out", PortType.OUTPUT, PortSide.WEST)
-    u.addPort("in",  PortType.INPUT,  PortSide.EAST)
+    u.addPort("out", PortType.OUTPUT, PortSide.EAST)
+    u.addPort("in",  PortType.INPUT,  PortSide.WEST)
     return u
 
 
 def add_index_as_node(la: LGraph, op: Operator) -> LNode:
     u = la.add_node(originObj=op, name="Index")
-    u.addPort("out", PortType.OUTPUT, PortSide.WEST)
-    u.addPort("index",  PortType.INPUT,  PortSide.EAST)
-    u.addPort("in",  PortType.INPUT,  PortSide.EAST)
+    u.addPort("out", PortType.OUTPUT, PortSide.EAST)
+    u.addPort("in",  PortType.INPUT,  PortSide.WEST)
+    u.addPort("index",  PortType.INPUT,  PortSide.WEST)
     return u
+
+
+def add_operator_as_node(la: LGraph, op: Operator):
+    if op.operator == AllOps.INDEX:
+        return add_index_as_node(la, op)
+    else:
+        u = la.add_node(originObj=op, name="Index")
+        u.addPort("out", PortType.OUTPUT, PortSide.EAST)
+        for i in range(len(op.operands)):
+            u.addPort("in%d" % i,  PortType.INPUT,  PortSide.WEST)
+        return u
 
 
 def LNode_addPortFromHdl(node, origin: Union[Interface, PortItem],
                          direction: PortType,
                          name: str):
     if direction == PortType.OUTPUT:
-        side = PortSide.WEST
-    elif direction == PortType.INPUT:
         side = PortSide.EAST
+    elif direction == PortType.INPUT:
+        side = PortSide.WEST
     else:
         raise ValueError(direction)
 
@@ -386,28 +398,61 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
     for intf in u._interfaces:
         add_port(la, intf)
 
+    # pending and seen set because we do not want to draw
+    # hidden signals in statements
+    # we need to create connections for signals only outside of statements
+    pending_signals = set()
+    seen_signals = set()
+
+    def connect_signal(s):
+        seen_signals.add(s)
+
+        driverPorts = set()
+        endpointPorts = set()
+
+        # connect all drivers of this signal with all endpoints
+        for stm in s.drivers:
+            la_stm = toL[stm]
+            if isinstance(stm, PortItem):
+                src = la_stm
+            else:
+                src = la_stm.west[0]
+            driverPorts.add(src)
+
+            for stm in s.endpoints:
+                if isinstance(stm, Operator):
+                    try:
+                        node = toL[stm]
+                    except KeyError:
+                        toL[stm] = node = add_operator_as_node(la, stm)
+                    for dst, op in zip(node.west, stm.operands):
+                        if op is s:
+                            endpointPorts.add(dst)
+                        elif isinstance(op, RtlSignalBase) and op not in seen_signals:
+                            pending_signals.add(op)
+                        else:
+                            pass
+                            # [TODO] create nodes for constants
+                    continue
+                elif isinstance(stm, PortItem):
+                    dst = toL[stm]
+                    endpointPorts.add(dst)
+                else:
+                    # [TODO] pretty statements
+                    dst = toL[stm].east[0]
+                    endpointPorts.add(dst)
+        for src in driverPorts:
+            for dst in endpointPorts:
+                la.add_edge(src, dst, name=s.name, originObj=s)
+
     # connect nets
     for s in u._ctx.signals:
         if not s.hidden:
-            for stm in s.drivers:
-                la_stm = toL[stm]
-                if isinstance(stm, PortItem):
-                    src = la_stm
-                else:
-                    src = la_stm.west[0]
+            connect_signal(s)
 
-                for stm in s.endpoints:
-                    if isinstance(stm, Operator) and stm.operator == AllOps.INDEX:
-                        print("NotImplemented index in endpoints")
-                        assert stm not in s.drivers, (s, stm, s.drivers, s.endpoints)
-                        dst = la_stm
-                    else:
-                        la_stm = toL[stm]
-                        if isinstance(stm, PortItem):
-                            dst = la_stm
-                        else:
-                            dst = la_stm.east[0]
-                    la.add_edge(src, dst, name=s.name, originObj=s)
+    while pending_signals:
+        s = pending_signals.pop()
+        connect_signal(s)
 
     reduce_useless_assignments(la)
     resolve_shared_connections(la)
