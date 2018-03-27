@@ -9,6 +9,14 @@ from hwt.synthesizer.utils import toRtl
 from hwtIde.examples import LinearDualSubunit
 from hwtIde.fromHwtToLayout import Unit_to_LGraph
 from hwtLib.amba.axis import AxiStream
+from hwtLib.samples.hierarchy.groupOfBlockrams import GroupOfBlockrams
+from hwtLib.samples.hierarchy.netFilter import NetFilter
+from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
+from hwtLib.samples.hierarchy.simpleSubunit2 import SimpleSubunit2
+from hwtLib.samples.hierarchy.simpleSubunit3 import SimpleSubunit3
+from hwtLib.samples.hierarchy.unitToUnitConnection import UnitToUnitConnection
+from hwtLib.samples.showcase0 import Showcase0
+from hwtLib.samples.timers import TimerInfoTest
 from layeredGraphLayouter.containers.lGraph import LGraph
 from layeredGraphLayouter.crossing.layerSweepCrossingMinimizer import LayerSweepCrossingMinimizer
 from layeredGraphLayouter.greedyCycleBreaker import GreedyCycleBreaker
@@ -16,7 +24,6 @@ from layeredGraphLayouter.minWidthLayerer import MinWidthLayerer
 from layeredGraphLayouter.toMxGraph import ToMxGraph
 from layeredGraphLayouter.toSvg import ToSvg
 import xml.etree.ElementTree as etree
-from hwtLib.samples.hierarchy.netFilter import NetFilter
 
 
 def renderer_temporal(g: LGraph):
@@ -26,51 +33,66 @@ def renderer_temporal(g: LGraph):
         for n in nodes:
             g.layers.append([n, ])
 
+    x_padding = 50
+    y_padding = 50
     x_step = max(g.nodes, key=lambda x: x.geometry.width).geometry.width + 100
-    y_step = max(
-        g.nodes, key=lambda x: x.geometry.height).geometry.height + 100
 
-    x_offset = 0
+    x_offset = x_padding
+    max_y = 0
     for nodes in g.layers:
-        y_offset = 0
+        y_offset = y_padding
         for n in nodes:
             n.translate(x_offset, y_offset)
-            y_offset += y_step
+            y_offset += n.geometry.height + y_padding
+
+        max_y = max(max_y, y_offset)
         x_offset += x_step
 
     g.width = x_offset
-    g.height = max(map(len, g.layers)) * x_step
+    g.height = max_y
 
 
 if __name__ == "__main__":
-    #u = LinearDualSubunit(AxiStream)
-    #u = DualSubunit(AxiStream)
-    #u = CyclicDualSubunit(AxiStream)
-    #u = NetFilter()
-    u = UnitWithDistributedSig()
+    units = [
+        UnitWithDistributedSig(),
+        LinearDualSubunit(AxiStream),
+        DualSubunit(AxiStream),
+        CyclicDualSubunit(AxiStream),
+        NetFilter(),
+        GroupOfBlockrams(),
+        SimpleSubunit(),
+        SimpleSubunit2(),
+        SimpleSubunit3(),
+        UnitToUnitConnection(),
+        TimerInfoTest(),
+        Showcase0(),
+    ]
 
-    toRtl(u)
-    g = Unit_to_LGraph(u)
-    cycleBreaker = GreedyCycleBreaker()
-    layerer = MinWidthLayerer()
-    crossMin = LayerSweepCrossingMinimizer()
+    for u in units:
+        toRtl(u)
+        name = u._name
+        print(name)
+        g = Unit_to_LGraph(u)
+        cycleBreaker = GreedyCycleBreaker()
+        layerer = MinWidthLayerer()
+        crossMin = LayerSweepCrossingMinimizer()
 
-    cycleBreaker.process(g)
-    layerer.process(g)
-    crossMin.process(g)
-    renderer_temporal(g)
+        cycleBreaker.process(g)
+        layerer.process(g)
+        crossMin.process(g)
+        renderer_temporal(g)
 
-    def asSvg():
-        with open(expanduser("~/test.svg"), "wb") as f:
-            root = ToSvg(reversed_edge_stroke="lightcoral").LGraph_toSvg(g)
-            s = etree.tostring(root)
-            f.write(s)
+        def asSvg():
+            with open(expanduser("~/layeredGraphs/%s.svg" % name), "wb") as f:
+                root = ToSvg(reversed_edge_stroke="lightcoral").LGraph_toSvg(g)
+                s = etree.tostring(root)
+                f.write(s)
 
-    def asMxGraph():
-        with open(expanduser("~/test.xml"), "wb") as f:
-            root = ToMxGraph().LGraph_toMxGraph(g)
-            s = etree.tostring(root)
-            f.write(s)
+        def asMxGraph():
+            with open(expanduser("~/layeredGraphs/%s.xml" % name), "wb") as f:
+                root = ToMxGraph().LGraph_toMxGraph(g)
+                s = etree.tostring(root)
+                f.write(s)
 
-    asMxGraph()
-    asSvg()
+        asMxGraph()
+        asSvg()
