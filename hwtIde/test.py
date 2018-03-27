@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 """
 Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 174+
 """
@@ -5,7 +8,6 @@ Applications of Evolutionary Computing: EvoWorkshops 2001: EvoCOP, EvoFlight p. 
 from os.path import expanduser
 
 from examples import DualSubunit, CyclicDualSubunit, UnitWithDistributedSig
-from hwt.synthesizer.utils import toRtl
 from hwtIde.examples import LinearDualSubunit
 from hwtIde.fromHwtToLayout import Unit_to_LGraph
 from hwtLib.amba.axis import AxiStream
@@ -24,6 +26,7 @@ from layeredGraphLayouter.minWidthLayerer import MinWidthLayerer
 from layeredGraphLayouter.toMxGraph import ToMxGraph
 from layeredGraphLayouter.toSvg import ToSvg
 import xml.etree.ElementTree as etree
+from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 
 
 def renderer_temporal(g: LGraph):
@@ -69,7 +72,7 @@ if __name__ == "__main__":
     ]
 
     for u in units:
-        toRtl(u)
+        synthesised(u)
         name = u._name
         print(name)
         g = Unit_to_LGraph(u)
