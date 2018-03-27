@@ -134,13 +134,13 @@ def reduce_useless_assignments(la: LGraph):
             srcPorts = []
             dstPorts = []
 
-            inP = get_single_port(n.east)
+            inP = get_single_port(n.west)
             assert not inP.outgoingEdges, inP
             for in_e in inP.incomingEdges:
                 srcPorts.append(in_e.src)
                 remove_edge(edges, in_e)
 
-            outP = get_single_port(n.west)
+            outP = get_single_port(n.east)
             assert not outP.incomingEdges, inP
             for out_e in outP.outgoingEdges:
                 dstPorts.append(out_e.dst)
@@ -350,7 +350,7 @@ def add_operator_as_node(la: LGraph, op: Operator):
     if op.operator == AllOps.INDEX:
         return add_index_as_node(la, op)
     else:
-        u = la.add_node(originObj=op, name="Index")
+        u = la.add_node(originObj=op, name=op.operator.id)
         u.addPort("out", PortType.OUTPUT, PortSide.EAST)
         for i in range(len(op.operands)):
             u.addPort("in%d" % i,  PortType.INPUT,  PortSide.WEST)
@@ -385,14 +385,12 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
     # create subunits
     for su in u._units:
         n = la.add_node(name=su._name, originObj=su)
-        n.portConstraints = PortConstraints.FIXED_ORDER
         for intf in su._interfaces:
             add_port_to_unit(n, intf)
 
     # create subunits from statements
     for stm in u._ctx.statements:
         n = add_stm_as_unit(la, stm)
-        n.portConstraints = PortConstraints.FIXED_ORDER
 
     # create ports
     for intf in u._interfaces:
@@ -412,11 +410,18 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
 
         # connect all drivers of this signal with all endpoints
         for stm in s.drivers:
-            la_stm = toL[stm]
+            try:
+                la_stm = toL[stm]
+            except KeyError:
+                if isinstance(stm, Operator):
+                    toL[stm] = la_stm = add_operator_as_node(la, stm)
+                else:
+                    raise
+
             if isinstance(stm, PortItem):
                 src = la_stm
             else:
-                src = la_stm.west[0]
+                src = la_stm.east[0]
             driverPorts.add(src)
 
             for stm in s.endpoints:
@@ -425,6 +430,7 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
                         node = toL[stm]
                     except KeyError:
                         toL[stm] = node = add_operator_as_node(la, stm)
+
                     for dst, op in zip(node.west, stm.operands):
                         if op is s:
                             endpointPorts.add(dst)
@@ -433,14 +439,18 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
                         else:
                             pass
                             # [TODO] create nodes for constants
+                    if stm.result not in seen_signals:
+                        pending_signals.add(stm.result)
+
                     continue
                 elif isinstance(stm, PortItem):
                     dst = toL[stm]
                     endpointPorts.add(dst)
                 else:
                     # [TODO] pretty statements
-                    dst = toL[stm].east[0]
+                    dst = toL[stm].west[0]
                     endpointPorts.add(dst)
+
         for src in driverPorts:
             for dst in endpointPorts:
                 la.add_edge(src, dst, name=s.name, originObj=s)
