@@ -65,7 +65,7 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     if reverseDirection:
         d = PortType.opposite(d)
 
-    new_lp = LPort(lp, intf._name, d, lp.side)
+    new_lp = LPort(lp, d, lp.side, name=intf._name)
     new_lp.originObj = origin
     if intf._interfaces:
         for child_intf in intf._interfaces:

@@ -27,6 +27,7 @@ from layeredGraphLayouter.toMxGraph import ToMxGraph
 from layeredGraphLayouter.toSvg import ToSvg
 import xml.etree.ElementTree as etree
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
+from layeredGraphLayouter.edgeManipulators.longEdgeSplitter import LongEdgeSplitter
 
 
 def renderer_temporal(g: LGraph):
@@ -78,10 +79,12 @@ if __name__ == "__main__":
         g = Unit_to_LGraph(u)
         cycleBreaker = GreedyCycleBreaker()
         layerer = MinWidthLayerer()
+        longEdgeSplit = LongEdgeSplitter()
         crossMin = LayerSweepCrossingMinimizer()
 
         cycleBreaker.process(g)
         layerer.process(g)
+        longEdgeSplit.process(g)
         crossMin.process(g)
         renderer_temporal(g)
 
@@ -97,5 +100,5 @@ if __name__ == "__main__":
                 s = etree.tostring(root)
                 f.write(s)
 
-        asMxGraph()
         asSvg()
+        asMxGraph()
