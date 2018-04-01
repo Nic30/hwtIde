@@ -30,6 +30,9 @@ from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesi
 from layeredGraphLayouter.edgeManipulators.longEdgeSplitter import LongEdgeSplitter
 from layeredGraphLayouter.edgeManipulators.reversedEdgeRestorer import ReversedEdgeRestorer
 from layeredGraphLayouter.edgeManipulators.edgeAndLayerConstraintEdgeReverser import EdgeAndLayerConstraintEdgeReverser
+from layeredGraphLayouter.layoutProcessorConfiguration import LayoutProcessorConfiguration
+from layeredGraphLayouter.layoutProcessor import LayoutProcessor
+from layeredGraphLayouter.checkers.edgeChecker import EdgeChecker
 
 
 def renderer_temporal(g: LGraph):
@@ -79,25 +82,25 @@ if __name__ == "__main__":
         name = u._name
         print(name)
         g = Unit_to_LGraph(u)
+        g.unnecessaryBendpoints = True
+        g.p_externalPorts = True
+        g.p_hyperedges = True
 
-        # P1_CYCLE_BREAKING before
-        # from  MinWidthLayerer
-        EdgeAndLayerConstraintEdgeReverser().process(g)
-
-        # P1_CYCLE_BREAKING
-        GreedyCycleBreaker().process(g)
-
-        # 
-        MinWidthLayerer().process(g)
-
-        # P3_NODE_ORDERING before
-        # .addBefore(LayeredPhases.P3_NODE_ORDERING,
-        LongEdgeSplitter().process(g)
-        LayerSweepCrossingMinimizer().process(g)
-        LayerConstraintProcessor
-        # GreedyCycleBreaker.addAfter(LayeredPhases.P5_EDGE_ROUTING,
-        ReversedEdgeRestorer().process(g)
-
+        config = LayoutProcessorConfiguration(
+            p1_cycle_breaking=[
+                #EdgeChecker(),
+                GreedyCycleBreaker()],
+            p2_layering=[
+                #EdgeChecker(),
+                MinWidthLayerer()],
+            p3_node_ordering=[
+                #EdgeChecker(),
+                LayerSweepCrossingMinimizer(),
+                #EdgeChecker()
+                ]
+        )
+        proc = LayoutProcessor(g, config)
+        proc.run()
         renderer_temporal(g)
 
         def asSvg():
