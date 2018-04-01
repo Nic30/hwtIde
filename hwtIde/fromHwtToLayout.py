@@ -100,8 +100,7 @@ def add_port(la: LGraph, intf: Interface):
     """
     d = PortType_from_dir(intf._direction)
     ext_p = LayoutExternalPort(
-        la, intf._name,
-        PortType.opposite(d))
+        la, intf._name, d)
     ext_p.originObj = origin_obj_of_port(intf)
     la.nodes.append(ext_p)
     add_port_to_unit(ext_p, intf, reverseDirection=True)
