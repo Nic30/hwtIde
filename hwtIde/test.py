@@ -33,6 +33,7 @@ from layeredGraphLayouter.edgeManipulators.edgeAndLayerConstraintEdgeReverser im
 from layeredGraphLayouter.layoutProcessorConfiguration import LayoutProcessorConfiguration
 from layeredGraphLayouter.layoutProcessor import LayoutProcessor
 from layeredGraphLayouter.checkers.edgeChecker import EdgeChecker
+from layeredGraphLayouter.p4NodePlacerBK.nodePlacer import BKNodePlacer
 
 
 def renderer_temporal(g: LGraph):
@@ -88,16 +89,19 @@ if __name__ == "__main__":
 
         config = LayoutProcessorConfiguration(
             p1_cycle_breaking=[
-                #EdgeChecker(),
+                # EdgeChecker(),
                 GreedyCycleBreaker()],
             p2_layering=[
-                #EdgeChecker(),
+                # EdgeChecker(),
                 MinWidthLayerer()],
             p3_node_ordering=[
-                #EdgeChecker(),
+                # EdgeChecker(),
                 LayerSweepCrossingMinimizer(),
-                #EdgeChecker()
-                ]
+                # EdgeChecker()
+            ],
+            p4_node_placement=[
+                BKNodePlacer()
+            ]
         )
         proc = LayoutProcessor(g, config)
         proc.run()
