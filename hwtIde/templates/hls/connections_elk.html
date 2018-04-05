@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>elkjs d3 example ports</title>
+  <script type="text/javascript" src="/static/node_modules/d3/build/d3.js"></script>
+  <script type="text/javascript" src="/static/hls/connections_elk/elk.bundled.js"></script>
+  <script type="text/javascript" src="/static/hls/connections_elk/elk-d3.js"></script>
+  <style>
+    .node {
+      stroke: #fff;
+      stroke-width: 0px;
+    }
+    
+    .link {
+      stroke: #999;
+      stroke-opacity: .6;
+      fill: none;
+    }
+    
+    .port {
+      stroke: #000;
+      opacity: .6;
+    }
+  </style>
+</head>
+<body>
+<script>
+function viewport() {
+  var e = window,
+    a = 'inner';
+  if (!('innerWidth' in window)) {
+    a = 'client';
+    e = document.documentElement || document.body;
+  }
+  return {
+    width: e[a + 'Width'],
+    height: e[a + 'Height']
+  }
+}
+var width = viewport().width,
+    height = viewport().height;
+var zoom = d3.zoom()
+    .on("zoom", redraw); 
+var svg = d3.select("body")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .call(zoom)
+    .append("g");
+// group shizzle
+var root = svg.append("g");
+var layouter = elk.d3adapter();
+// load the data and render the elements
+d3.json("/static/hls/connections_elk/ports.json", function(error, graph) {
+ 
+  layouter
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .size([width, height])
+      .transformGroup(root)
+      .options({
+        edgeRouting: "ORTHOGONAL",
+        intCoordinates: false
+      })
+      .defaultPortSize([2, 2])
+      .start();
+      
+  var link = root.selectAll(".link")
+      .data(graph.links)
+      .enter()
+      .append("path")
+      .attr("class", "link")
+      .attr("d", "M0 0");
+  // we group nodes along with their ports
+  var node = root.selectAll(".node")
+      .data(graph.nodes)
+      .enter()
+      .append("g");
+      
+  node.append("rect")
+      .attr("class", "node")
+      .attr("width", 10)
+      .attr("height", 10)
+      .attr("x", 0)
+      .attr("y", 0);
+  node.append("text")
+      .text(function(d) { return d.name; });
+      
+  // ports
+  var port = node.selectAll(".port")
+    .data(function(d) { return d.ports; })
+    .enter()
+    .append("rect")
+    .attr("class", "port")
+    .attr("width", function(d){ return d.width || 2  })
+    .attr("height", function(d){ return d.height || 2 })
+    .attr("x", 0)
+    .attr("y", 0);
+  
+  port.append("title")
+    .text(function(d) { return d.id; });
+
+  // apply layout
+  layouter.on("finish", function(d) {
+  
+    // apply edge routes
+    link.transition().attr("d", function(d) {
+      var path = "";
+      if (d.bendpoints || d.sections.length > 1) {
+    	  throw new Error("NotImplemented");
+      }
+      
+      return elk.section2svgPath(d.sections[0]);
+    });
+  
+    // apply node positions
+    node.transition()
+      .attr("transform", function(d) { return "translate(" + d.x + " " + d.y + ")"});
+    // apply port positions  
+    port.transition()
+      .attr("x", function(d) { return d.x; })
+      .attr("y", function(d) { return d.y; });
+    
+  });
+  
+  layouter.start();
+});
+function redraw() {
+  svg.attr("transform", d3.event.transform)
+};
+</script>

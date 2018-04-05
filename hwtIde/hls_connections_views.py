@@ -7,7 +7,6 @@ import os
 import sys
 from fsEntry import FSEntry
 from json_resp import jsonResp
-from hwtIde.fromHwtToLayout import Unit_to_LGraph
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -37,6 +36,11 @@ def connections_save():
 @connectionsBp.route('/connections/')
 def connections():
     return render_template('hls/connections.html')
+
+
+@connectionsBp.route('/connections-elk/')
+def connections_elk():
+    return render_template('hls/connections_elk.html')
 
 
 @connectionsBp.route('/connections-tests/')
