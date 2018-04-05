@@ -45,7 +45,7 @@ def renderer_temporal(g: LGraph):
 
     x_padding = 50
     y_padding = 50
-    x_step = max(g.nodes, key=lambda x: x.geometry.width).geometry.width + 100
+    x_step = max(g.nodes, key=lambda x: x.size.x).size.x + 100
 
     x_offset = x_padding
     max_y = 0
@@ -53,13 +53,13 @@ def renderer_temporal(g: LGraph):
         y_offset = y_padding
         for n in nodes:
             n.translate(x_offset, y_offset)
-            y_offset += n.geometry.height + y_padding
+            y_offset += n.size.y + y_padding
 
         max_y = max(max_y, y_offset)
         x_offset += x_step
 
-    g.width = x_offset
-    g.height = max_y
+    g.size.x = x_offset
+    g.size.y = max_y
 
 
 if __name__ == "__main__":
