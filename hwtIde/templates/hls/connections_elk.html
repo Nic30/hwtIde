@@ -22,6 +22,11 @@
       opacity: .6;
     }
   </style>
+  <script type="text/javascript">
+     var MODULE_NAME = "{{MODULE_NAME}}";
+     var IN_MODULE_NAME = "{{IN_MODULE_NAME}}";
+  </script>
+  
 </head>
 <body>
 <script>
@@ -51,8 +56,11 @@ var svg = d3.select("body")
 var root = svg.append("g");
 var layouter = elk.d3adapter();
 // load the data and render the elements
-d3.json("/static/hls/connections_elk/ports.json", function(error, graph) {
- 
+d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, function(error, graph) {
+  if (error) {
+    throw error;
+  }
+
   layouter
       .nodes(graph.nodes)
       .links(graph.links)
@@ -79,8 +87,8 @@ d3.json("/static/hls/connections_elk/ports.json", function(error, graph) {
       
   node.append("rect")
       .attr("class", "node")
-      .attr("width", 10)
-      .attr("height", 10)
+      .attr("width", function(d){ return d.width || 10 })
+      .attr("height", function(d){ return d.height || 10 })
       .attr("x", 0)
       .attr("y", 0);
   node.append("text")
