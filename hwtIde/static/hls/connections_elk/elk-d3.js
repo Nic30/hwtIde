@@ -222,6 +222,9 @@ var elk;
             if (typeof d3node === 'undefined')
               throw new Error("Can not find node with id:" + n.id)
             copyProps(n, d3node);
+            if (!((!d3node.ports && !n.ports) || d3node.ports.length == n.ports.length)) {
+                throw new Error("Ports from ELK has different dimension than original ports");
+            }
             (n.ports || []).forEach(function(p, i) {
               copyProps(p, d3node.ports[i]);
             });

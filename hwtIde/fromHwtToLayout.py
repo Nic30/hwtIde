@@ -5,11 +5,10 @@ from hwt.hdl.portItem import PortItem
 from hwt.pyUtils.arrayQuery import where
 from hwt.synthesizer.interface import Interface
 from hwt.synthesizer.unit import Unit
-from layeredGraphLayouter.containers.lNode import LayoutExternalPort, LNode
-from layeredGraphLayouter.containers.lPort import LPort
-from layeredGraphLayouter.containers.lGraph import LGraph
-from layeredGraphLayouter.containers.lEdge import LEdge
-from layeredGraphLayouter.containers.constants import PortType, PortSide,\
+from elkContainer.lNode import LayoutExternalPort, LNode
+from elkContainer.lPort import LPort
+from elkContainer.lEdge import LEdge
+from elkContainer.constants import PortType, PortSide,\
     PortConstraints
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.statements import HdlStatement
@@ -74,7 +73,8 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
 
     lp.children.append(new_lp)
     new_lp.parent = lp
-    lep.graph._node2lnode[origin] = new_lp
+    if lep._node2lnode is not None:
+        lep._node2lnode[origin] = new_lp
 
     return new_lp
 
@@ -87,22 +87,22 @@ def add_port_to_unit(ln: LNode, intf: Interface, reverseDirection=False):
     if reverseDirection:
         d = PortType.opposite(d)
 
-    p = LNode_addPortFromHdl(ln, origin,
-                             d,
-                             intf._name)
+    p = LNode_add_portFromHdl(ln, origin,
+                              d,
+                              intf._name)
     for _intf in intf._interfaces:
         _add_port(ln, p, _intf, reverseDirection=reverseDirection)
 
 
-def add_port(la: LGraph, intf: Interface):
+def add_port(n: LNode, intf: Interface):
     """
     Add LayoutExternalPort for interface
     """
     d = PortType_from_dir(intf._direction)
     ext_p = LayoutExternalPort(
-        la, intf._name, d)
+        n, intf._name, d, node2lnode=n._node2lnode)
     ext_p.originObj = origin_obj_of_port(intf)
-    la.nodes.append(ext_p)
+    n.children.append(ext_p)
     add_port_to_unit(ext_p, intf, reverseDirection=True)
 
     return ext_p
@@ -113,19 +113,17 @@ def get_single_port(ports: List[LPort]) -> LEdge:
     return ports[0]
 
 
-def remove_edge(allEdges, edge: LEdge):
+def remove_edge(edge: LEdge):
     edge.dst.incomingEdges.remove(edge)
     edge.src.outgoingEdges.remove(edge)
-    allEdges.remove(edge)
 
 
-def reduce_useless_assignments(la: LGraph):
+def reduce_useless_assignments(root: LNode):
     do_update = False
-    for n in la.nodes:
+    for n in root.children:
         if isinstance(n.originObj, Assignment) and not n.originObj.indexes:
             if not do_update:
-                edges = set(la.edges)
-                nodes = set(la.nodes)
+                nodes = set(root.children)
                 do_update = True
 
             nodes.remove(n)
@@ -137,22 +135,20 @@ def reduce_useless_assignments(la: LGraph):
             assert not inP.outgoingEdges, inP
             for in_e in inP.incomingEdges:
                 srcPorts.append(in_e.src)
-                remove_edge(edges, in_e)
+                remove_edge(in_e)
 
             outP = get_single_port(n.east)
             assert not outP.incomingEdges, inP
             for out_e in outP.outgoingEdges:
                 dstPorts.append(out_e.dst)
-                remove_edge(edges, out_e)
+                remove_edge(out_e)
 
             for srcPort in srcPorts:
                 for dstPort in dstPorts:
-                    new_e = la.add_edge(srcPort, dstPort)
-                    edges.add(new_e)
+                    root.add_edge(srcPort, dstPort)
 
     if do_update:
-        la.edges = list(edges)
-        la.nodes = list(nodes)
+        root.children = list(nodes)
 
 
 def get_connected_node(port: LPort):
@@ -215,8 +211,7 @@ def count_directly_connected(port: LPort, result: dict) -> int:
         return 1
 
 
-def port_try_reduce(la: LGraph, port: LPort,
-                    edges_to_remove: Set[LNode]):
+def port_try_reduce(root: LNode, port: LPort):
     """
     Check if majority of children is connected to same port
     if it is the case reduce children and connect this port instead children
@@ -225,7 +220,7 @@ def port_try_reduce(la: LGraph, port: LPort,
         return
 
     for p in port.children:
-        port_try_reduce(la, p, edges_to_remove)
+        port_try_reduce(root, p)
 
     target_nodes = {}
     ch_cnt = count_directly_connected(port, target_nodes)
@@ -256,7 +251,6 @@ def port_try_reduce(la: LGraph, port: LPort,
         children_to_destroy.add(child)
         on_target_children_to_destroy.add(target_ch)
 
-        edges_to_remove.add(edge)
         for p in (child, target_ch):
             removed = False
             try:
@@ -280,9 +274,9 @@ def port_try_reduce(la: LGraph, port: LPort,
     # connect this port to new target as it was connected by children before
     # [TODO] names for new edges
     if port.direction == PortType.OUTPUT:
-        la.add_edge(port, new_target)
+        root.add_edge(port, new_target)
     elif port.direction == PortType.INPUT:
-        la.add_edge(new_target, port)
+        root.add_edge(new_target, port)
     else:
         raise NotImplementedError(port.direction)
 
@@ -303,62 +297,58 @@ def _flatten_ports_side(side: List[LNode]) -> List[LNode]:
     return new_side
 
 
-def flatten_ports(la: LGraph):
+def flatten_ports(root: LNode):
     """
     Flatten ports to simplify layout generation
 
     :attention: children property is destroyed, parent property stays same
     """
-    for u in la.nodes:
+    for u in root.children:
         u.west = _flatten_ports_side(u.west)
         u.east = _flatten_ports_side(u.east)
         u.north = _flatten_ports_side(u.north)
         u.south = _flatten_ports_side(u.south)
 
 
-def resolve_shared_connections(la: LGraph):
+def resolve_shared_connections(root: LNode):
     """
     Walk all ports on all nodes and group subinterface connections to only parent interface
     connection if it is possible
     """
-    edges_to_remove = set()
-    for u in la.nodes:
+    for u in root.children:
         for p in u.iterPorts():
-            port_try_reduce(la, p, edges_to_remove)
-
-    for e in edges_to_remove:
-        la.edges.remove(e)
+            port_try_reduce(root, p)
 
 
-def add_stm_as_unit(la: LGraph, stm: HdlStatement) -> LNode:
-    u = la.add_node(originObj=stm, name=stm.__class__.__name__)
-    u.addPort("out", PortType.OUTPUT, PortSide.EAST)
-    u.addPort("in",  PortType.INPUT,  PortSide.WEST)
+def add_stm_as_unit(root: LNode, stm: HdlStatement) -> LNode:
+    u = root.add_node(originObj=stm, name=stm.__class__.__name__)
+    u.add_port("out", PortType.OUTPUT, PortSide.EAST)
+    u.add_port("in",  PortType.INPUT,  PortSide.WEST)
     return u
 
 
-def add_index_as_node(la: LGraph, op: Operator) -> LNode:
-    u = la.add_node(originObj=op, name="Index")
-    u.addPort("out", PortType.OUTPUT, PortSide.EAST)
-    u.addPort("in",  PortType.INPUT,  PortSide.WEST)
-    u.addPort("index",  PortType.INPUT,  PortSide.WEST)
+def add_index_as_node(root: LNode, op: Operator) -> LNode:
+    u = root.add_node(originObj=op, name="Index")
+    u.add_port("out", PortType.OUTPUT, PortSide.EAST)
+    u.add_port("in",  PortType.INPUT,  PortSide.WEST)
+    u.add_port("index",  PortType.INPUT,  PortSide.WEST)
     return u
 
 
-def add_operator_as_node(la: LGraph, op: Operator):
+def add_operator_as_node(root: LNode, op: Operator):
     if op.operator == AllOps.INDEX:
-        return add_index_as_node(la, op)
+        return add_index_as_node(root, op)
     else:
-        u = la.add_node(originObj=op, name=op.operator.id)
-        u.addPort("out", PortType.OUTPUT, PortSide.EAST)
+        u = root.add_node(originObj=op, name=op.operator.id)
+        u.add_port("out", PortType.OUTPUT, PortSide.EAST)
         for i in range(len(op.operands)):
-            u.addPort("in%d" % i,  PortType.INPUT,  PortSide.WEST)
+            u.add_port("in%d" % i,  PortType.INPUT,  PortSide.WEST)
         return u
 
 
-def LNode_addPortFromHdl(node, origin: Union[Interface, PortItem],
-                         direction: PortType,
-                         name: str):
+def LNode_add_portFromHdl(node, origin: Union[Interface, PortItem],
+                          direction: PortType,
+                          name: str):
     if direction == PortType.OUTPUT:
         side = PortSide.EAST
     elif direction == PortType.INPUT:
@@ -366,34 +356,35 @@ def LNode_addPortFromHdl(node, origin: Union[Interface, PortItem],
     else:
         raise ValueError(direction)
 
-    p = node.addPort(name, direction, side)
+    p = node.add_port(name, direction, side)
     p.originObj = origin
-    node.graph._node2lnode[origin] = p
+    if node._node2lnode is not None:
+        node._node2lnode[origin] = p
     return p
 
 
-def Unit_to_LGraph(u: Unit) -> LGraph:
+def Unit_to_LNode(u: Unit) -> LNode:
     """
-    Build LGraph instance from Unit instance
+    Build LNode instance from Unit instance
 
     :attention: unit has to be synthesized
     """
 
-    la = LGraph()
-    toL = la._node2lnode
+    toL = {}
+    root = LNode(name=u._name, originObj=u, node2lnode=toL)
     # create subunits
     for su in u._units:
-        n = la.add_node(name=su._name, originObj=su)
+        n = root.add_node(name=su._name, originObj=su)
         for intf in su._interfaces:
             add_port_to_unit(n, intf)
 
     # create subunits from statements
     for stm in u._ctx.statements:
-        n = add_stm_as_unit(la, stm)
+        n = add_stm_as_unit(root, stm)
 
     # create ports
     for intf in u._interfaces:
-        add_port(la, intf)
+        add_port(root, intf)
 
     # pending and seen set because we do not want to draw
     # hidden signals in statements
@@ -410,17 +401,17 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
         # connect all drivers of this signal with all endpoints
         for stm in s.drivers:
             try:
-                la_stm = toL[stm]
+                root_stm = toL[stm]
             except KeyError:
                 if isinstance(stm, Operator):
-                    toL[stm] = la_stm = add_operator_as_node(la, stm)
+                    toL[stm] = root_stm = add_operator_as_node(root, stm)
                 else:
                     raise
 
             if isinstance(stm, PortItem):
-                src = la_stm
+                src = root_stm
             else:
-                src = la_stm.east[0]
+                src = root_stm.east[0]
             driverPorts.add(src)
 
             for stm in s.endpoints:
@@ -428,7 +419,7 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
                     try:
                         node = toL[stm]
                     except KeyError:
-                        toL[stm] = node = add_operator_as_node(la, stm)
+                        toL[stm] = node = add_operator_as_node(root, stm)
 
                     for dst, op in zip(node.west, stm.operands):
                         if op is s:
@@ -452,7 +443,7 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
 
         for src in driverPorts:
             for dst in endpointPorts:
-                la.add_edge(src, dst, name=s.name, originObj=s)
+                root.add_edge(src, dst, name=s.name, originObj=s)
 
     # connect nets
     for s in u._ctx.signals:
@@ -463,11 +454,8 @@ def Unit_to_LGraph(u: Unit) -> LGraph:
         s = pending_signals.pop()
         connect_signal(s)
 
-    reduce_useless_assignments(la)
-    resolve_shared_connections(la)
-    flatten_ports(la)
+    reduce_useless_assignments(root)
+    resolve_shared_connections(root)
+    flatten_ports(root)
 
-    for n in la.nodes:
-        n.initDim()
-
-    return la
+    return root

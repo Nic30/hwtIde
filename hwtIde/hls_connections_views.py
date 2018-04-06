@@ -7,6 +7,10 @@ import os
 import sys
 from fsEntry import FSEntry
 from json_resp import jsonResp
+from importlib import import_module
+from fromHwtToLayout import Unit_to_LNode
+from elkContainer.idStore import ElkIdStore
+from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -38,9 +42,11 @@ def connections():
     return render_template('hls/connections.html')
 
 
-@connectionsBp.route('/connections-elk/')
-def connections_elk():
-    return render_template('hls/connections_elk.html')
+@connectionsBp.route('/connections-elk/<module_name>/<in_module_name>')
+def connections_elk(module_name, in_module_name):
+    return render_template('hls/connections_elk.html',
+                           MODULE_NAME=module_name,
+                           IN_MODULE_NAME=in_module_name)
 
 
 @connectionsBp.route('/connections-tests/')
@@ -54,7 +60,7 @@ def connectionDataLs(path=""):
     data = []
     path = os.path.join(WORKSPACE_DIR, path)
     assert os.path.exists(path), (path, os.getcwd())
-    for f in glob.glob(path+"/*"):
+    for f in glob.glob(path + "/*"):
         data.append(FSEntry.fromFile(f))
     return jsonResp(data)
 
@@ -87,3 +93,21 @@ def connectionData(path):
     # else:
     #    raise Exception("not implemented")
     return jsonResp(data)
+
+
+@connectionsBp.route("/hls/connections-data-elk/<module_name>/<in_module_name>")
+def connectionDataElk(module_name, in_module_name):
+    # get and construct target unit specified by arguments
+    m = import_module(module_name)
+    ucls = m
+    for name in in_module_name.split("."):
+        ucls = getattr(ucls, name)
+    u = ucls()
+
+    # synthetize unit and convert it to json
+    synthesised(u)
+    g = Unit_to_LNode(u)
+    idStore = ElkIdStore()
+    data = g.toElkJson(idStore)
+
+    return jsonify(data)
