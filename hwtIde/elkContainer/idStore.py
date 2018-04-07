@@ -5,7 +5,7 @@ class ElkIdStore(dict):
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
         self.reverseDict = {v: k for k, v in self.items()}
-        self.nodeCnt = -1 # skip root node in numbering
+        self.nodeCnt = -1  # skip root node in numbering
 
     def __getitem__(self, key):
         try:

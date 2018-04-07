@@ -89,13 +89,22 @@ class LNode():
         e.setSrcDst(src, dst)
         return e
 
-    def toElkJson(self, idStore):
+    def toElkJson(self, idStore, config):
+        width_of_str = config.width_of_str
+        label_w = width_of_str(self.name)
+        port_w = max(*map(lambda p: width_of_str(p.name),
+                          self.iterPorts()),
+                     label_w / 2, 1)
+        width = max(port_w, label_w)
+        height = max(len(self.west), len(self.east)) * config.portHeight
+
         d = {
             "id": idStore[self],
             "name": self.name,
-            "width": 200,
-            "height": 20 * sum(1 for _ in self.iterPorts()),
-            "ports": [p.toElkJson(idStore) for p in self.iterPorts()],
+            "width": width,
+            "height": height,
+            "ports": [p.toElkJson(idStore)
+                      for p in self.iterPorts()],
             "properties": {
                 "org.eclipse.elk.portConstraints": self.portConstraints.name
             }
@@ -106,7 +115,7 @@ class LNode():
             for p in self.iterPorts():
                 edges.update(p.iterEdges())
             for ch in self.children:
-                nodes.append(ch.toElkJson(idStore))
+                nodes.append(ch.toElkJson(idStore, config))
                 for p in ch.iterPorts():
                     edges.update(p.iterEdges())
             d["nodes"] = nodes

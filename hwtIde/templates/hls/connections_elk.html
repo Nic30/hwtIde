@@ -7,8 +7,11 @@
   <script type="text/javascript" src="/static/hls/connections_elk/elk-d3.js"></script>
   <style>
     .node {
-      stroke: #fff;
+      stroke: #BDBDBD;
       stroke-width: 0px;
+      fill: url(#blue_grad);
+      border: 1;
+	  /*.attr("fill", "url(#blue_grad)")*/
     }
     
     .link {
@@ -25,6 +28,7 @@
   <script type="text/javascript">
      var MODULE_NAME = "{{MODULE_NAME}}";
      var IN_MODULE_NAME = "{{IN_MODULE_NAME}}";
+     var PORT_HEIGHT = 20;
   </script>
   
 </head>
@@ -52,15 +56,40 @@ var svg = d3.select("body")
     .attr("height", height)
     .call(zoom)
     .append("g");
-// group shizzle
+
+
+    // gradient
+    var minY = 50;
+    var maxY = 210;
+
+    var blue_grad = svg
+        .append("linearGradient")
+        .attr("y1", minY)
+        .attr("y2", maxY)
+        .attr("x1", "0")
+        .attr("x2", "0")
+        .attr("id", "blue_grad")
+        .attr("gradientUnits", "userSpaceOnUse")
+    
+    blue_grad
+    .append("stop")
+    .attr("offset", "0")
+    .attr("stop-color", "#E6E6E6")
+    
+    blue_grad
+    .append("stop")
+    .attr("offset", "0.5")
+    .attr("stop-color", "#A9D0F5")    
+
 var root = svg.append("g");
 var layouter = elk.d3adapter();
+
 // load the data and render the elements
 d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, function(error, graph) {
   if (error) {
     throw error;
   }
-
+  console.log(graph);
   layouter
       .nodes(graph.nodes)
       .links(graph.links)
@@ -90,7 +119,9 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
       .attr("width", function(d){ return d.width || 10 })
       .attr("height", function(d){ return d.height || 10 })
       .attr("x", 0)
-      .attr("y", 0);
+      .attr("y", 0)
+      .attr("rx", 5)
+      .attr("ry", 5);
   node.append("text")
       .text(function(d) { return d.name; });
       
@@ -98,6 +129,22 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   var port = node.selectAll(".port")
     .data(function(d) { return d.ports; })
     .enter()
+    .append("g");
+
+  port.append("text")
+    .attr("y", PORT_HEIGHT/4)
+    .attr("x", function(d) {
+    	var side = d.properties.portSide;
+    	if (side == "WEST") {
+    	   return 5;
+    	} else if (side == "EAST") {
+    	   return -d.name.length * 8;
+    	}
+    
+      })
+    .text(function(d) { return d.name; });
+
+  port
     .append("rect")
     .attr("class", "port")
     .attr("width", function(d){ return d.width || 2  })
@@ -105,8 +152,6 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
     .attr("x", 0)
     .attr("y", 0);
   
-  port.append("title")
-    .text(function(d) { return d.id; });
 
   // apply layout
   layouter.on("finish", function(d) {
@@ -124,11 +169,11 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
     // apply node positions
     node.transition()
       .attr("transform", function(d) { return "translate(" + d.x + " " + d.y + ")"});
+
     // apply port positions  
     port.transition()
-      .attr("x", function(d) { return d.x; })
-      .attr("y", function(d) { return d.y; });
-    
+      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"});
+
   });
   
   layouter.start();

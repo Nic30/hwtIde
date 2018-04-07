@@ -412,6 +412,7 @@ def Unit_to_LNode(u: Unit) -> LNode:
                 src = root_stm
             else:
                 src = root_stm.east[0]
+
             driverPorts.add(src)
 
             for stm in s.endpoints:
