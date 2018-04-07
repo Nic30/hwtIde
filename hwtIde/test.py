@@ -43,4 +43,5 @@ if __name__ == "__main__":
         print(name)
         g = Unit_to_LNode(u)
         idStore = ElkIdStore()
+        conf = ElkConfig()
         print(g.toElkJson(idStore))

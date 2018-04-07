@@ -1,16 +1,18 @@
 from flask import render_template, request, jsonify
 from flask.blueprints import Blueprint
 import glob
+from importlib import import_module
 import importlib
 import json
 import os
 import sys
-from fsEntry import FSEntry
-from json_resp import jsonResp
-from importlib import import_module
-from fromHwtToLayout import Unit_to_LNode
+
+from elkContainer.elkGraphicalConfig import ElkGraphicalConfig
 from elkContainer.idStore import ElkIdStore
+from fromHwtToLayout import Unit_to_LNode
+from fsEntry import FSEntry
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
+from json_resp import jsonResp
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -85,7 +87,7 @@ def connectionData(path):
     # u = SimpleSubunit()
     # for _ in u._toRtl():
     #    pass
-    data = Unit_to_LGraph(u)
+    data = Unit_to_LNode(u)
 
     # elif path.endswith(".json"):
     #    with open(path) as f:
@@ -108,6 +110,7 @@ def connectionDataElk(module_name, in_module_name):
     synthesised(u)
     g = Unit_to_LNode(u)
     idStore = ElkIdStore()
-    data = g.toElkJson(idStore)
+    config = ElkGraphicalConfig()
+    data = g.toElkJson(idStore, config)
 
     return jsonify(data)
