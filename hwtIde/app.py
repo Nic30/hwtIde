@@ -5,13 +5,15 @@ from hwtIde.dependencyViews import dependenciesBp
 from hwtIde.hls_connections_views import connectionsBp
 from hwtIde.hls_expr_tree import hlsExprTreeBp
 from hwtIde.wave_views import waveBp
+from hwtIde.moduleWalking import walk_Unit_cls_in_module
+import hwtLib
 
 
 app = Flask("hwtIde")
 
 
 # for loading all static files (antipatent, but it is necessary because
-# app is not deployed on webserver0
+# app is not deployed on webserver
 @app.route('/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
@@ -19,7 +21,9 @@ def send_static(path):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html',
+                           unitClasses=list(walk_Unit_cls_in_module(hwtLib))
+                           )
 
 
 # http://roberto.open-lab.com/2012/06/14/the-javascript-gantt-odyssey/

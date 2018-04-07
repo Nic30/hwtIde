@@ -97,7 +97,7 @@ class LNode():
             "height": 20 * sum(1 for _ in self.iterPorts()),
             "ports": [p.toElkJson(idStore) for p in self.iterPorts()],
             "properties": {
-                "portConstraints": self.portConstraints.name
+                "org.eclipse.elk.portConstraints": self.portConstraints.name
             }
         }
         if self.children:

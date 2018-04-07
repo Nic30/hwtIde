@@ -10,9 +10,11 @@
 	<li> <a href="/wave-test/">wave test</a> </li>
 </ul>
 
-<h3>Elk component diagrams<h3>
+<h3>Elk component diagrams</h3>
 <ul>
-	<li> <a href="/connections-elk/hwtLib.samples.hierarchy.groupOfBlockrams/GroupOfBlockrams">GroupOfBlockrams</a> </li>
+    {% for u in unitClasses %}
+	<li> <a href="/connections-elk/{{u.__module__}}/{{u.__name__}}">{{u.__name__}}</a> </li>
+    {% endfor %}
 </ul>
 
 <h3>expr tree</h3>
