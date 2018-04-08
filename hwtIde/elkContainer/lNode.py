@@ -89,35 +89,41 @@ class LNode():
         e.setSrcDst(src, dst)
         return e
 
-    def toElkJson(self, idStore, config):
+    def toElkJson(self, idStore, config, isTop=True):
         width_of_str = config.width_of_str
         label_w = width_of_str(self.name)
-        port_w = max(*map(lambda p: width_of_str(p.name),
-                          self.iterPorts()),
-                     label_w / 2, 1)
-        width = max(port_w, label_w)
-        height = max(len(self.west), len(self.east)) * config.portHeight
-
         d = {
-            "id": idStore[self],
             "name": self.name,
-            "width": width,
-            "height": height,
             "ports": [p.toElkJson(idStore)
                       for p in self.iterPorts()],
             "properties": {
-                "org.eclipse.elk.portConstraints": self.portConstraints.name
+                "org.eclipse.elk.portConstraints": self.portConstraints.name,
+                'org.eclipse.elk.randomSeed': 0,
             }
         }
+        if not isTop:
+            d["id"] = idStore[self]
+
+        if self.west or self.east or self.north or self.south:
+            port_w = max(*map(lambda p: width_of_str(p.name),
+                              self.west),
+                         *map(lambda p: width_of_str(p.name),
+                              self.east),
+                         1)
+            d["width"] = max(port_w * 2, label_w)
+            d["height"] = max(len(self.west), len(
+                self.east)) * config.portHeight
+
         if self.children:
             nodes = []
             edges = set()
             for p in self.iterPorts():
                 edges.update(p.iterEdges())
             for ch in self.children:
-                nodes.append(ch.toElkJson(idStore, config))
+                nodes.append(ch.toElkJson(idStore, config, isTop=False))
                 for p in ch.iterPorts():
                     edges.update(p.iterEdges())
+            nodes.sort(key=lambda n: n["id"])
             d["nodes"] = nodes
             d["links"] = [e.toElkJson(idStore) for e in edges]
         return d

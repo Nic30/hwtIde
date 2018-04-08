@@ -6,4 +6,4 @@ class ElkGraphicalConfig():
     def width_of_str(self, s):
         if not s:
             return 0
-        return len(s) * 12
+        return len(s) * 7.55

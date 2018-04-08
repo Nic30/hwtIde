@@ -54,6 +54,11 @@ class LEdge():
             self.isSelfLoop = self.srcNode is self.dstNode
 
     def toElkJson(self, idStore):
+        assert self.srcNode is not None, self
+        assert self.src is not None, self
+        assert self.dstNode is not None, self
+        assert self.dst is not None, self
+
         return {
             "source": idStore[self.srcNode],
             "sourcePort": idStore[self.src],

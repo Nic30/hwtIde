@@ -6,6 +6,9 @@
   <script type="text/javascript" src="/static/hls/connections_elk/elk.bundled.js"></script>
   <script type="text/javascript" src="/static/hls/connections_elk/elk-d3.js"></script>
   <style>
+    text {
+      font-family: monospace;
+    }
     .node {
       stroke: #BDBDBD;
       stroke-width: 0px;
@@ -89,7 +92,6 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   if (error) {
     throw error;
   }
-  console.log(graph);
   layouter
       .nodes(graph.nodes)
       .links(graph.links)
@@ -97,7 +99,6 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
       .transformGroup(root)
       .options({
         edgeRouting: "ORTHOGONAL",
-        intCoordinates: false
       })
       .defaultPortSize([2, 2])
       .start();
@@ -133,16 +134,16 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
 
   port.append("text")
     .attr("y", PORT_HEIGHT/4)
+    .text(function(d) { return d.name; })
     .attr("x", function(d) {
     	var side = d.properties.portSide;
     	if (side == "WEST") {
     	   return 5;
     	} else if (side == "EAST") {
-    	   return -d.name.length * 8;
+    	   return -this.getBBox().width;
     	}
     
-      })
-    .text(function(d) { return d.name; });
+      });
 
   port
     .append("rect")
