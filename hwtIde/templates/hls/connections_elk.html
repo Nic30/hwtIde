@@ -12,7 +12,7 @@
     .node {
       stroke: #BDBDBD;
       stroke-width: 0px;
-      fill: url(#blue_grad);
+      fill: #A9D0F5;
       border: 1;
 	  /*.attr("fill", "url(#blue_grad)")*/
     }
@@ -60,30 +60,51 @@ var svg = d3.select("body")
     .call(zoom)
     .append("g");
 
+var defs = svg.append("defs")
 
-    // gradient
-    var minY = 50;
-    var maxY = 210;
 
-    var blue_grad = svg
-        .append("linearGradient")
-        .attr("y1", minY)
-        .attr("y2", maxY)
-        .attr("x1", "0")
-        .attr("x2", "0")
-        .attr("id", "blue_grad")
-        .attr("gradientUnits", "userSpaceOnUse")
-    
-    blue_grad
-    .append("stop")
-    .attr("offset", "0")
-    .attr("stop-color", "#E6E6E6")
-    
-    blue_grad
-    .append("stop")
-    .attr("offset", "0.5")
-    .attr("stop-color", "#A9D0F5")    
+defs.append("g")
+   .attr("id", "westInPortMarker")
+   .append("path")
+   .attr("d", "M 2 -4  7 1  2 6 Z")
 
+defs.append("g")
+   .attr("id", "westOutPortMarker")
+   .append("path")
+   .attr("d", "M 7 -4  2 1  7 6 Z")
+
+defs.append("g")
+   .attr("id", "eastInPortMarker")
+   .append("path")
+   .attr("d", "M 0 -5  -5 0  0 5 Z")
+
+defs.append("g")
+   .attr("id", "eastOutPortMarker")
+   .append("path")
+   .attr("d", "M -5 -5  0 0  -5 5 Z")
+
+function getIOMarker(d) {
+	var side = d.properties.portSide;
+	var portType = d.direction;
+
+	if (side == "WEST") {
+		if (portType == "INPUT") {
+			return "#westInPortMarker";
+		} else if (portType == "OUTPUT") {
+			return "#westOutPortMarker";
+		}
+	} else if (side == "EAST") {
+		if (portType == "INPUT") {
+			return "#eastInPortMarker";
+		} else if (portType == "OUTPUT") {
+			return "#eastOutPortMarker";
+		}
+	}
+	throw new Error("Wrong side, portType", side, portType)
+}
+   
+   
+   
 var root = svg.append("g");
 var layouter = elk.d3adapter();
 
@@ -92,6 +113,7 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   if (error) {
     throw error;
   }
+  // config of layouter
   layouter
       .nodes(graph.nodes)
       .links(graph.links)
@@ -100,7 +122,7 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
       .options({
         edgeRouting: "ORTHOGONAL",
       })
-      .defaultPortSize([2, 2])
+      .defaultPortSize([2, 2]) // size of port icon
       .start();
       
   var link = root.selectAll(".link")
@@ -108,52 +130,19 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
       .enter()
       .append("path")
       .attr("class", "link")
-      .attr("d", "M0 0");
+
   // we group nodes along with their ports
   var node = root.selectAll(".node")
       .data(graph.nodes)
       .enter()
       .append("g");
-      
-  node.append("rect")
-      .attr("class", "node")
-      .attr("width", function(d){ return d.width || 10 })
-      .attr("height", function(d){ return d.height || 10 })
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("rx", 5)
-      .attr("ry", 5);
-  node.append("text")
-      .text(function(d) { return d.name; });
-      
-  // ports
-  var port = node.selectAll(".port")
-    .data(function(d) { return d.ports; })
-    .enter()
-    .append("g");
-
-  port.append("text")
-    .attr("y", PORT_HEIGHT/4)
-    .text(function(d) { return d.name; })
-    .attr("x", function(d) {
-    	var side = d.properties.portSide;
-    	if (side == "WEST") {
-    	   return 5;
-    	} else if (side == "EAST") {
-    	   return -this.getBBox().width;
-    	}
-    
-      });
-
-  port
-    .append("rect")
-    .attr("class", "port")
-    .attr("width", function(d){ return d.width || 2  })
-    .attr("height", function(d){ return d.height || 2 })
-    .attr("x", 0)
-    .attr("y", 0);
+  var nodeBody = node.append("rect");
   
-
+  var port = node.selectAll(".port")
+      .data(function(d) { return d.ports; })
+      .enter()
+      .append("g");
+  
   // apply layout
   layouter.on("finish", function(d) {
   
@@ -169,15 +158,48 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   
     // apply node positions
     node.transition()
+      .duration(0)
       .attr("transform", function(d) { return "translate(" + d.x + " " + d.y + ")"});
 
     // apply port positions  
     port.transition()
+      .duration(0)
       .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"});
 
   });
   
   layouter.start();
+  
+  nodeBody
+      .attr("class", "node")
+      .attr("width", function(d){ return d.width || 10 })
+      .attr("height", function(d){ return d.height || 10 })
+      .attr("rx", 5)
+      .attr("ry", 5);
+  node.append("text")
+      .text(function(d) { return d.name; });
+
+  port.append("text")
+    .attr("y", PORT_HEIGHT/4)
+    .text(function(d) { return d.name; })
+    .attr("x", function(d) {
+    	var side = d.properties.portSide;
+    	if (side == "WEST") {
+    	   return 5;
+    	} else if (side == "EAST") {
+    	   return -this.getBBox().width - 5;
+    	}
+    });
+  port.append("use")
+      .attr("href", getIOMarker)
+
+  port
+    .append("rect")
+    .attr("class", "port")
+    .attr("width", function(d){ return d.width || 2  })
+    .attr("height", function(d){ return d.height || 2 })
+
+
 });
 function redraw() {
   svg.attr("transform", d3.event.transform)

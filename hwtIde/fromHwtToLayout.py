@@ -108,7 +108,7 @@ def add_port(n: LNode, intf: Interface):
 
 
 def get_single_port(ports: List[LPort]) -> LEdge:
-    assert len(ports) == 1
+    assert len(ports) == 1, ports
     return ports[0]
 
 
@@ -121,7 +121,7 @@ def remove_edge(edge: LEdge):
 def reduce_useless_assignments(root: LNode):
     do_update = False
     for n in root.children:
-        if isinstance(n.originObj, Assignment) and not n.originObj.indexes:
+        if isinstance(n.originObj, Assignment) and not n.originObj.indexes and len(n.originObj._inputs) == 1:
             if not do_update:
                 nodes = set(root.children)
                 do_update = True
@@ -148,7 +148,6 @@ def reduce_useless_assignments(root: LNode):
 
             for srcPort in srcPorts:
                 for dstPort in dstPorts:
-                    print(srcPort, dstPort)
                     root.add_edge(srcPort, dstPort)
     if do_update:
         root.children = list(nodes)
@@ -400,12 +399,7 @@ def Unit_to_LNode(u: Unit) -> LNode:
     # pending and seen set because we do not want to draw
     # hidden signals in statements
     # we need to create connections for signals only outside of statements
-    pending_signals = set()
-    seen_signals = set()
-
     def connect_signal(s):
-        seen_signals.add(s)
-
         driverPorts = set()
         endpointPorts = set()
 
@@ -466,8 +460,8 @@ def Unit_to_LNode(u: Unit) -> LNode:
     #    s = pending_signals.pop()
     #    connect_signal(s)
 
-    # reduce_useless_assignments(root)
-    # resolve_shared_connections(root)
+    reduce_useless_assignments(root)
+    resolve_shared_connections(root)
     flatten_ports(root)
 
     return root

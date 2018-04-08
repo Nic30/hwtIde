@@ -166,7 +166,7 @@ var elk;
         return d3elk;
       };
       d3elk.onError = function(e) {
-        console.error(e);
+        throw e;
       };
       /**
        * Start the layout process.

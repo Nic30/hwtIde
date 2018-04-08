@@ -60,6 +60,7 @@ class LPort():
         return {
             "id": idStore[self],
             "name": self.name,
+            "direction": self.direction.name,
             "properties": {
                 "portSide": self.side.name
             }
