@@ -8,13 +8,12 @@ from hwt.synthesizer.unit import Unit
 from elkContainer.lNode import LayoutExternalPort, LNode
 from elkContainer.lPort import LPort
 from elkContainer.lEdge import LEdge
-from elkContainer.constants import PortType, PortSide,\
-    PortConstraints
+from elkContainer.constants import PortType, PortSide
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.statements import HdlStatement
-from hwt.hdl.operator import Operator
+from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.operatorDefs import AllOps
-from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
+from hwt.hdl.value import Value
 
 
 def getParentUnit(intf):
@@ -116,6 +115,7 @@ def get_single_port(ports: List[LPort]) -> LEdge:
 def remove_edge(edge: LEdge):
     edge.dst.incomingEdges.remove(edge)
     edge.src.outgoingEdges.remove(edge)
+    edge.dst = edge.dstNode = edge.src = edge.srcNode = None
 
 
 def reduce_useless_assignments(root: LNode):
@@ -125,28 +125,31 @@ def reduce_useless_assignments(root: LNode):
             if not do_update:
                 nodes = set(root.children)
                 do_update = True
-
             nodes.remove(n)
 
             srcPorts = []
             dstPorts = []
 
             inP = get_single_port(n.west)
-            assert not inP.outgoingEdges, inP
-            for in_e in inP.incomingEdges:
-                srcPorts.append(in_e.src)
-                remove_edge(in_e)
-
             outP = get_single_port(n.east)
+            assert not inP.outgoingEdges, inP
+            for e in inP.incomingEdges:
+                sPort = e.src
+                assert sPort is not outP
+                srcPorts.append(sPort)
+                remove_edge(e)
+
             assert not outP.incomingEdges, inP
-            for out_e in outP.outgoingEdges:
-                dstPorts.append(out_e.dst)
-                remove_edge(out_e)
+            for e in outP.outgoingEdges:
+                dPort = e.dst
+                assert dPort is not inP
+                dstPorts.append(dPort)
+                remove_edge(e)
 
             for srcPort in srcPorts:
                 for dstPort in dstPorts:
+                    print(srcPort, dstPort)
                     root.add_edge(srcPort, dstPort)
-
     if do_update:
         root.children = list(nodes)
 
@@ -322,8 +325,10 @@ def resolve_shared_connections(root: LNode):
 
 def add_stm_as_unit(root: LNode, stm: HdlStatement) -> LNode:
     u = root.add_node(originObj=stm, name=stm.__class__.__name__)
-    u.add_port("out", PortType.OUTPUT, PortSide.EAST)
-    u.add_port("in",  PortType.INPUT,  PortSide.WEST)
+    for i, _ in enumerate(stm._inputs):
+        u.add_port("i%d" % i,  PortType.INPUT,  PortSide.WEST)
+    for i, _ in enumerate(stm._outputs):
+        u.add_port("o%d" % i, PortType.OUTPUT, PortSide.EAST)
     return u
 
 
@@ -361,6 +366,12 @@ def LNode_add_portFromHdl(node, origin: Union[Interface, PortItem],
     if node._node2lnode is not None:
         node._node2lnode[origin] = p
     return p
+
+
+def Value_as_LNode(root: LNode, val: Value):
+    u = root.add_node(originObj=val, name=repr(val))
+    u.add_port("out", PortType.OUTPUT, PortSide.EAST)
+    return u
 
 
 def Unit_to_LNode(u: Unit) -> LNode:
@@ -401,46 +412,46 @@ def Unit_to_LNode(u: Unit) -> LNode:
         # connect all drivers of this signal with all endpoints
         for stm in s.drivers:
             try:
-                root_stm = toL[stm]
+                node = toL[stm]
             except KeyError:
                 if isinstance(stm, Operator):
-                    toL[stm] = root_stm = add_operator_as_node(root, stm)
+                    toL[stm] = node = add_operator_as_node(root, stm)
                 else:
                     raise
 
             if isinstance(stm, PortItem):
-                src = root_stm
+                src = node
+            elif isinstance(stm, Operator):
+                src = node.east[0]
+                for i, (op, opPort) in enumerate(zip(stm.operands, node.west)):
+                    if isConst(op):
+                        n = Value_as_LNode(root, op)
+                        root.add_edge(n.east[0], opPort)
             else:
-                src = root_stm.east[0]
+                src = node.east[stm._outputs.index(s)]
 
             driverPorts.add(src)
 
-            for stm in s.endpoints:
-                if isinstance(stm, Operator):
-                    try:
-                        node = toL[stm]
-                    except KeyError:
-                        toL[stm] = node = add_operator_as_node(root, stm)
+        for stm in s.endpoints:
+            if isinstance(stm, Operator):
+                try:
+                    node = toL[stm]
+                except KeyError:
+                    toL[stm] = node = add_operator_as_node(root, stm)
 
-                    for dst, op in zip(node.west, stm.operands):
-                        if op is s:
-                            endpointPorts.add(dst)
-                        elif isinstance(op, RtlSignalBase) and op not in seen_signals:
-                            pending_signals.add(op)
-                        else:
-                            pass
-                            # [TODO] create nodes for constants
-                    if stm.result not in seen_signals:
-                        pending_signals.add(stm.result)
+                for i, op in enumerate(stm.operands):
+                    if op is s:
+                        src = node.west[i]
+                        endpointPorts.add(src)
 
-                    continue
-                elif isinstance(stm, PortItem):
-                    dst = toL[stm]
-                    endpointPorts.add(dst)
-                else:
-                    # [TODO] pretty statements
-                    dst = toL[stm].west[0]
-                    endpointPorts.add(dst)
+            elif isinstance(stm, PortItem):
+                dst = toL[stm]
+                endpointPorts.add(dst)
+            else:
+                # [TODO] pretty statements
+                laStm = toL[stm]
+                dst = laStm.west[stm._inputs.index(s)]
+                endpointPorts.add(dst)
 
         for src in driverPorts:
             for dst in endpointPorts:
@@ -448,15 +459,15 @@ def Unit_to_LNode(u: Unit) -> LNode:
 
     # connect nets
     for s in u._ctx.signals:
-        if not s.hidden:
-            connect_signal(s)
-
-    while pending_signals:
-        s = pending_signals.pop()
+        # if not s.hidden:
         connect_signal(s)
 
-    reduce_useless_assignments(root)
-    resolve_shared_connections(root)
+    # while pending_signals:
+    #    s = pending_signals.pop()
+    #    connect_signal(s)
+
+    # reduce_useless_assignments(root)
+    # resolve_shared_connections(root)
     flatten_ports(root)
 
     return root

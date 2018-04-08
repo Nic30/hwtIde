@@ -112,5 +112,5 @@ def connectionDataElk(module_name, in_module_name):
     idStore = ElkIdStore()
     config = ElkGraphicalConfig()
     data = g.toElkJson(idStore, config)
-
+    assert len(g.children) == idStore.nodeCnt, (len(g.children), idStore.nodeCnt)
     return jsonify(data)

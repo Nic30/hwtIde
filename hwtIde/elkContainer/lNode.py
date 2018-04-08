@@ -90,8 +90,6 @@ class LNode():
         return e
 
     def toElkJson(self, idStore, config, isTop=True):
-        width_of_str = config.width_of_str
-        label_w = width_of_str(self.name)
         d = {
             "name": self.name,
             "ports": [p.toElkJson(idStore)
@@ -99,18 +97,21 @@ class LNode():
             "properties": {
                 "org.eclipse.elk.portConstraints": self.portConstraints.name,
                 'org.eclipse.elk.randomSeed': 0,
+                'org.eclipse.elk.layered.mergeEdges': 1
             }
         }
         if not isTop:
             d["id"] = idStore[self]
 
         if self.west or self.east or self.north or self.south:
+            width_of_str = config.width_of_str
+            label_w = width_of_str(self.name)
             port_w = max(*map(lambda p: width_of_str(p.name),
                               self.west),
                          *map(lambda p: width_of_str(p.name),
                               self.east),
                          1)
-            d["width"] = max(port_w * 2, label_w)
+            d["width"] = max(port_w * 2 + config.nodeMidlePortSpacing, label_w)
             d["height"] = max(len(self.west), len(
                 self.east)) * config.portHeight
 

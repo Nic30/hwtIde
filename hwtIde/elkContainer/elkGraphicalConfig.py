@@ -2,6 +2,7 @@
 class ElkGraphicalConfig():
     def __init__(self):
         self.portHeight = 20
+        self.nodeMidlePortSpacing = 20
 
     def width_of_str(self, s):
         if not s:
