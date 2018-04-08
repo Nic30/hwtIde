@@ -4,8 +4,8 @@ from flask.helpers import send_from_directory
 from hwtIde.dependencyViews import dependenciesBp
 from hwtIde.hls_connections_views import connectionsBp
 from hwtIde.hls_expr_tree import hlsExprTreeBp
-from hwtIde.wave_views import waveBp
 from hwtIde.moduleWalking import walk_Unit_cls_in_module
+from hwtIde.wave_views import waveBp
 import hwtLib
 
 
