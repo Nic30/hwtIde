@@ -117,10 +117,10 @@ def remove_edge(edge: LEdge):
 
 def add_stm_as_unit(root: LNode, stm: HdlStatement) -> LNode:
     u = root.add_node(originObj=stm, name=stm.__class__.__name__)
-    for i, _ in enumerate(stm._inputs):
-        u.add_port("i%d" % i,  PortType.INPUT,  PortSide.WEST)
-    for i, _ in enumerate(stm._outputs):
-        u.add_port("o%d" % i, PortType.OUTPUT, PortSide.EAST)
+    for _ in stm._inputs:
+        u.add_port("",  PortType.INPUT,  PortSide.WEST)
+    for _ in stm._outputs:
+        u.add_port("", PortType.OUTPUT, PortSide.EAST)
     return u
 
 
@@ -137,9 +137,9 @@ def add_operator_as_node(root: LNode, op: Operator):
         return add_index_as_node(root, op)
     else:
         u = root.add_node(originObj=op, name=op.operator.id)
-        u.add_port("out", PortType.OUTPUT, PortSide.EAST)
-        for i in range(len(op.operands)):
-            u.add_port("in%d" % i,  PortType.INPUT,  PortSide.WEST)
+        u.add_port("", PortType.OUTPUT, PortSide.EAST)
+        for _ in range(len(op.operands)):
+            u.add_port("",  PortType.INPUT,  PortSide.WEST)
         return u
 
 
