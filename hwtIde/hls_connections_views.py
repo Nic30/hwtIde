@@ -2,7 +2,6 @@ from flask import render_template, request, jsonify
 from flask.blueprints import Blueprint
 import glob
 from importlib import import_module
-import importlib
 import json
 import os
 import sys
