@@ -9,7 +9,7 @@ import sys
 
 from elkContainer.elkGraphicalConfig import ElkGraphicalConfig
 from elkContainer.idStore import ElkIdStore
-from fromHwtToLayout import Unit_to_LNode
+from fromHwtToElk.convertor import Unit_to_LNode
 from fsEntry import FSEntry
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 from json_resp import jsonResp
