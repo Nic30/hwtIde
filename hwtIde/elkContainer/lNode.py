@@ -89,7 +89,7 @@ class LNode():
         e.setSrcDst(src, dst)
         return e
 
-    def toElkJson(self, idStore, config, isTop=True):
+    def toElkJson(self, idStore, isTop=True):
         d = {
             "name": self.name,
             "ports": [p.toElkJson(idStore)
@@ -103,25 +103,13 @@ class LNode():
         if not isTop:
             d["id"] = idStore[self]
 
-        if self.west or self.east or self.north or self.south:
-            width_of_str = config.width_of_str
-            label_w = width_of_str(self.name)
-            port_w = max(*map(lambda p: width_of_str(p.name),
-                              self.west),
-                         *map(lambda p: width_of_str(p.name),
-                              self.east),
-                         1)
-            d["width"] = max(port_w * 2 + config.nodeMidlePortSpacing, label_w)
-            d["height"] = max(len(self.west), len(
-                self.east)) * config.portHeight
-
         if self.children:
             nodes = []
             edges = set()
             for p in self.iterPorts():
                 edges.update(p.iterEdges())
             for ch in self.children:
-                nodes.append(ch.toElkJson(idStore, config, isTop=False))
+                nodes.append(ch.toElkJson(idStore, isTop=False))
                 for p in ch.iterPorts():
                     edges.update(p.iterEdges())
             nodes.sort(key=lambda n: n["id"])

@@ -32,6 +32,8 @@
      var MODULE_NAME = "{{MODULE_NAME}}";
      var IN_MODULE_NAME = "{{IN_MODULE_NAME}}";
      var PORT_HEIGHT = 20;
+     var CHAR_WIDTH = 7.55;
+     var NODE_MIDDLE_PORT_SPACING = 20;
   </script>
   
 </head>
@@ -102,8 +104,36 @@ function getIOMarker(d) {
 	}
 	throw new Error("Wrong side, portType", side, portType)
 }
-   
-   
+
+function widthOfText(text) {
+	if (text)
+	    return text.length * CHAR_WIDTH;
+	else
+		return 0;
+}
+
+function initNodeSizes(d) {
+    var labelW = widthOfText(d.name)
+    var westCnt = 0;
+    var eastCnt = 0;
+	var portW = 0;
+	var max = Math.max
+	
+    d.ports.forEach(function(p) {
+    	var t = p.properties.portSide;
+    	if (t == "WEST"){
+    		westCnt++;	
+    	} else if (t == "EAST") {
+    		eastCnt++;
+    	} else {
+    		throw new Error(t);
+    	}
+    	portW = max(portW, widthOfText(p.name))
+    })
+    
+    d.width = max(portW * 2 + NODE_MIDDLE_PORT_SPACING, labelW)
+    d.height = max(westCnt, eastCnt) * PORT_HEIGHT;
+}
    
 var root = svg.append("g");
 var layouter = elk.d3adapter();
@@ -113,6 +143,7 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   if (error) {
     throw error;
   }
+  graph.nodes.forEach(initNodeSizes);
   // config of layouter
   layouter
       .nodes(graph.nodes)
@@ -131,11 +162,12 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
       .append("path")
       .attr("class", "link")
 
-  // we group nodes along with their ports
+  // by "g" we group nodes along with their ports
   var node = root.selectAll(".node")
       .data(graph.nodes)
       .enter()
       .append("g");
+
   var nodeBody = node.append("rect");
   
   var port = node.selectAll(".port")
@@ -169,16 +201,20 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   });
   
   layouter.start();
-  
+
+  // set dimensions and style of node
   nodeBody
       .attr("class", "node")
-      .attr("width", function(d){ return d.width || 10 })
-      .attr("height", function(d){ return d.height || 10 })
+      .attr("width", function(d) { return d.width })
+      .attr("height", function(d) { return d.height })
       .attr("rx", 5)
       .attr("ry", 5);
+
+  // spot node label
   node.append("text")
       .text(function(d) { return d.name; });
 
+  // spot port name
   port.append("text")
     .attr("y", PORT_HEIGHT/4)
     .text(function(d) { return d.name; })
@@ -188,11 +224,16 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
     	   return 5;
     	} else if (side == "EAST") {
     	   return -this.getBBox().width - 5;
+    	} else {
+    		throw new Error(side);
     	}
     });
+
+  // spot input/output marker
   port.append("use")
       .attr("href", getIOMarker)
 
+  // spot port connection pin
   port
     .append("rect")
     .attr("class", "port")

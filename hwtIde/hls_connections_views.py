@@ -7,7 +7,6 @@ import json
 import os
 import sys
 
-from elkContainer.elkGraphicalConfig import ElkGraphicalConfig
 from elkContainer.idStore import ElkIdStore
 from fromHwtToElk.convertor import Unit_to_LNode
 from fsEntry import FSEntry
@@ -110,7 +109,6 @@ def connectionDataElk(module_name, in_module_name):
     synthesised(u)
     g = Unit_to_LNode(u)
     idStore = ElkIdStore()
-    config = ElkGraphicalConfig()
-    data = g.toElkJson(idStore, config)
+    data = g.toElkJson(idStore)
     assert len(g.children) == idStore.nodeCnt, (len(g.children), idStore.nodeCnt)
     return jsonify(data)
