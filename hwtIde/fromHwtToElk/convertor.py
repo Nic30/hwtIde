@@ -5,7 +5,7 @@ from hwt.synthesizer.unit import Unit
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 from hwt.hdl.operator import Operator, isConst
-from fromHwtToElk.reduceUselessAssignements import reduceUselessAssignments
+from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
 from fromHwtToElk.utils import add_operator_as_node, add_port_to_unit,\
     add_stm_as_unit, add_port, Value_as_LNode
 from fromHwtToElk.resolveSharedConnections import resolve_shared_connections
