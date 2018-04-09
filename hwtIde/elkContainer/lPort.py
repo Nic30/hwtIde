@@ -13,6 +13,11 @@ class LPort():
     :ivar geometry: absolute geometry in layout
     :ivar children: list of children ports, before interface connecting phase
             (when routing this list is empty and children are directly on parent LNode)
+    :ivar index: The index of a port in the fixed order around a node.
+        The order is assumed as clockwise, starting with the leftmost port on the top side.
+        This option must be set if ‘Port Constraints’ is set to FIXED_ORDER
+        and no specific positions are given for the ports. Additionally,
+        the option ‘Port Side’ must be defined in this case.
     """
 
     def __init__(self, parent: "LNode", direction, side, name: str=None):
@@ -26,6 +31,7 @@ class LPort():
         self.incomingEdges = []
         self.children = []
         self.side = side
+        self.index = None
 
     def getNode(self):
         p = self
@@ -51,7 +57,11 @@ class LPort():
                 break
             name = p.name
             if name is None:
-                name = "<Unnamed>"
+                if isinstance(p, LPort) and p.parent is not None:
+                    index = p.parent.getPortSideView(p.side).index(p)
+                    name = "[%d]" % (index)
+                else:
+                    name = "<Unnamed>"
             names.append(name)
             p = p.parent
         return list(reversed(names))
@@ -62,10 +72,11 @@ class LPort():
             "name": self.name,
             "direction": self.direction.name,
             "properties": {
-                "portSide": self.side.name
+                "portSide": self.side.name,
+                "portIndex": self.index
             }
         }
 
     def __repr__(self):
-        return "<%s %s>" % (
-            self.__class__.__name__, ".".join(self._getDebugName()))
+        return "<{0} {1:#018x} {2}>".format(
+            self.__class__.__name__, id(self), ".".join(self._getDebugName()))

@@ -63,6 +63,13 @@ function ComponentGraph() {
     	    .append("path")
     	    .attr("class", "link")
 
+	link.on("click", function(d) {
+            d.selected = !d.selected;
+            d3.select(this).classed("link-selected", d.selected);
+    	    console.log("rect");
+    	    //d3.event.stopPropagation();
+    	});
+
     	// by "g" we group nodes along with their ports
     	var node = root.selectAll(".node")
     	    .data(graph.nodes)

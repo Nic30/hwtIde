@@ -42,7 +42,7 @@ class LNode():
         self._node2lnode = node2lnode
 
     def iterPorts(self) -> Generator[LPort, None, None]:
-        return chain(self.north, self.east, self.south, self.west)
+        return chain(self.north, self.east, reversed(self.south), reversed(self.west))
 
     def getPortSideView(self, side) -> List["LPort"]:
         """
@@ -89,6 +89,29 @@ class LNode():
         e.setSrcDst(src, dst)
         return e
 
+    def toElkJson_registerNodes(self, idStore, isTop=False):
+        if not isTop:
+            idStore.registerNode(self)
+        for ch in self.children:
+            ch.toElkJson_registerNodes(idStore)
+
+    def toElkJson_registerPorts(self, idStore):
+        """
+        The index of a port in the fixed order around a node.
+        The order is assumed as clockwise, starting with the leftmost port on the top side.
+        This option must be set if ‘Port Constraints’ is set to FIXED_ORDER
+        and no specific positions are given for the ports. Additionally,
+        the option ‘Port Side’ must be defined in this case.
+        """
+        addIndex = self.portConstraints == PortConstraints.FIXED_ORDER
+        for i, p in enumerate(self.iterPorts()):
+            if addIndex:
+                p.index = i
+            idStore.registerPort(p)
+
+        for ch in self.children:
+            ch.toElkJson_registerPorts(idStore)
+
     def toElkJson(self, idStore, isTop=True):
         d = {
             "name": self.name,
@@ -102,6 +125,9 @@ class LNode():
         }
         if not isTop:
             d["id"] = idStore[self]
+        else:
+            self.toElkJson_registerNodes(idStore, isTop=isTop)
+            self.toElkJson_registerPorts(idStore)
 
         if self.children:
             nodes = []
@@ -115,10 +141,12 @@ class LNode():
             nodes.sort(key=lambda n: n["id"])
             d["nodes"] = nodes
             d["links"] = [e.toElkJson(idStore) for e in edges]
+
         return d
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.name)
+        return "<{0} {1:#018x} {2}>".format(
+            self.__class__.__name__, id(self), self.name)
 
 
 class LayoutExternalPort(LNode):

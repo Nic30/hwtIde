@@ -22,7 +22,9 @@ def send_static(path):
 @app.route('/')
 def index():
     return render_template('index.html',
-                           unitClasses=list(walk_Unit_cls_in_module(hwtLib))
+                           unitClasses=sorted(
+                               list(walk_Unit_cls_in_module(hwtLib)),
+                               key=lambda u: u.__name__)
                            )
 
 
