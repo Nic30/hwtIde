@@ -120,12 +120,7 @@ def Unit_to_LNode(u: Unit) -> LNode:
 
     # connect nets
     for s in u._ctx.signals:
-        # if not s.hidden:
         connect_signal(s)
-
-    # while pending_signals:
-    #    s = pending_signals.pop()
-    #    connect_signal(s)
 
     reduceUselessAssignments(root)
     resolve_shared_connections(root)
