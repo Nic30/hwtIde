@@ -11,33 +11,44 @@ def reduceUselessAssignments(root: LNode):
     for n in root.children:
         if isinstance(n.originObj, Assignment)\
                 and not n.originObj.indexes\
-                and len(n.originObj._inputs) == 1:
+                and len(n.originObj._inputs) >= 1:
+
             if not do_update:
                 nodes = set(root.children)
                 do_update = True
+
             nodes.remove(n)
 
             srcPorts = []
             dstPorts = []
+            edgesToRemove = []
 
             inP = get_single_port(n.west)
             outP = get_single_port(n.east)
-            assert not inP.outgoingEdges, inP
             for e in inP.incomingEdges:
                 sPort = e.src
-                assert sPort is not outP
                 srcPorts.append(sPort)
-                remove_edge(e)
+                edgesToRemove.append(e)
 
-            assert not outP.incomingEdges, inP
             for e in outP.outgoingEdges:
                 dPort = e.dst
-                assert dPort is not inP
                 dstPorts.append(dPort)
+                edgesToRemove.append(e)
+
+            for e in edgesToRemove:
                 remove_edge(e)
 
             for srcPort in srcPorts:
                 for dstPort in dstPorts:
                     root.add_edge(srcPort, dstPort)
+
+    for n in nodes:
+        for p in n.iterPorts():
+            for e in p.iterEdges():
+                try:
+                    assert e.dstNode in nodes, (e, n, e.dstNode)
+                    assert e.srcNode in nodes, (e, n, e.srcNode)
+                except AssertionError:
+                    raise
     if do_update:
         root.children = list(nodes)
