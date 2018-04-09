@@ -1,6 +1,6 @@
 from elkContainer.lNode import LNode
-from hwt.hdl.assignment import Assignment
 from fromHwtToElk.utils import get_single_port, remove_edge
+from hwt.hdl.assignment import Assignment
 
 
 def reduceUselessAssignments(root: LNode):
