@@ -150,6 +150,7 @@ function ExprTreeGraph(svg) {
             .data(levels)
             .enter()
             .append("text")
+            .style("font-size", "34px")
             .attr("x", 0)
             .attr("y", function (d) { return d.y + 20; })
             .text(function(d) { return d.level });
