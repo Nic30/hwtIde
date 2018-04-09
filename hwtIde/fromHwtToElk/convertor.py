@@ -1,14 +1,14 @@
 from typing import List
 
-from hwt.hdl.portItem import PortItem
-from hwt.synthesizer.unit import Unit
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
-from hwt.hdl.operator import Operator, isConst
 from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
+from fromHwtToElk.resolveSharedConnections import resolve_shared_connections
 from fromHwtToElk.utils import add_operator_as_node, add_port_to_unit,\
     add_stm_as_unit, add_port, Value_as_LNode
-from fromHwtToElk.resolveSharedConnections import resolve_shared_connections
+from hwt.hdl.operator import Operator, isConst
+from hwt.hdl.portItem import PortItem
+from hwt.synthesizer.unit import Unit
 
 
 def flatten_port(port: LPort):
