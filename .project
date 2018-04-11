@@ -6,6 +6,7 @@
 		<project>hwt</project>
 		<project>hwtHls</project>
 		<project>hwtLib</project>
+		<project>pyDigitalWaveTools</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

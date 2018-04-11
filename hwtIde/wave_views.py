@@ -1,6 +1,7 @@
 from flask import abort, jsonify, request
 from flask.blueprints import Blueprint
 from flask.templating import render_template
+from typing import Union
 
 from hwt.hdl.constants import Time
 from hwt.hdl.types.bits import Bits
@@ -10,7 +11,12 @@ from hwt.interfaces.std import Handshaked
 from hwt.simulator.hdlSimConfig import HdlSimConfig
 from hwt.simulator.hdlSimulator import HdlSimulator
 from hwt.simulator.shortcuts import simPrepare
+from hwt.synthesizer.interface import Interface
+from hwt.synthesizer.interfaceLevel.unitImplHelpers import getSignalName
+from hwt.synthesizer.unit import Unit
 from hwtLib.handshaked.fifo import HandshakedFifo
+from json_resp import jsonResp
+from pyDigitalWaveTools.vcd.parser import VcdParser, VcdSignalScope, VcdSignalInfo
 
 
 waveBp = Blueprint('wave',
@@ -24,6 +30,8 @@ class WebHdlSimConfig(HdlSimConfig):
     def __init__(self):
         self.logPropagation = False
         self.logApplyingValues = False
+        self._scope = None
+        self._signals = {}
         self.collectedWave = {}
         # unit :  signal | unit
         # signal : None
@@ -37,15 +45,55 @@ class WebHdlSimConfig(HdlSimConfig):
         else:
             return "%x" % v
 
+    def registerSignal(self, s):
+        if isinstance(s._dtype, self.supported_type_classes):
+            name = getSignalName(s)
+            parent = self._scope
+            if isinstance(s, Interface):
+                s = s._sig
+
+            sInfo = VcdSignalInfo(
+                None, name, s._dtype.bit_length(), "wire", self._scope)
+
+            if parent is None:
+                self._signals[name] = sInfo
+            else:
+                parent.children[name] = sInfo
+
+            d = self.collectedWave[s] = sInfo.data
+            nextVal = s._val
+            d.append((0, self.dumpVal(nextVal, s._dtype)))
+
+            return sInfo
+
+    def registerInterfaces(self, intf: Union[Interface, Unit]):
+        if hasattr(intf, "_interfaces") and intf._interfaces:
+            parent = self._scope
+            name = intf._name
+            info = VcdSignalScope(name, parent)
+            self._scope = info
+            for chIntf in intf._interfaces:
+                self.registerInterfaces(chIntf)
+            self._scope = parent
+            if parent is None:
+                self._signals[name] = info
+            else:
+                parent.children[name] = info
+            return info
+        else:
+            return self.registerSignal(intf)
+
     def initUnitSignals(self, unit):
-        for s in unit._cntx.signals:
-            if isinstance(s._dtype, self.supported_type_classes):
-                d = self.collectedWave.setdefault(s, [])
-                nextVal = s._val
-                d.append((0, self.dumpVal(nextVal, s._dtype)))
+        parentScope = self._scope
+        self._scope = self.registerInterfaces(unit)
+        for s in unit._ctx.signals:
+            if s not in self.collectedWave:
+                self.registerSignal(s)
 
         for u in unit._units:
             self.initUnitSignals(u)
+
+        self._scope = parentScope
 
     def beforeSim(self, simulator, synthesisedUnit):
         self.initUnitSignals(synthesisedUnit)
@@ -55,7 +103,7 @@ class WebHdlSimConfig(HdlSimConfig):
         This method is called for every value change of any signal.
         """
         if isinstance(sig._dtype, Bits):
-            d = self.collectedWave.setdefault(sig, [])
+            d = self.collectedWave[sig]
             d.append((nowTime // Time.ns, self.dumpVal(nextVal, sig._dtype)))
 
 
@@ -64,7 +112,16 @@ def connections_test():
     return render_template('wave_test.html')
 
 
+def wave_data_vcd():
+    fName = "/home/nic30/Documents/workspace/hwtLib/hwtLib/amba/axiLite_comp/tmp/AxiRegTC_test_write.vcd"
+    with open(fName) as vcd_file:
+        vcd = VcdParser()
+        vcd.parse(vcd_file)
+        return jsonResp({n: s.toJson() for n, s in vcd.signals.items()})
+
+
 @waveBp.route("/wave-data/", methods=["POST", 'GET'])
+#@waveBp.route("/wave-data/", methods=["POST", 'GET'])
 def wave_data():
     # if not request.json:
     #    abort(400)
@@ -83,19 +140,7 @@ def wave_data():
 
     sim.config = WebHdlSimConfig()
     sim.simUnit(model,
-                time=waveRange[1] + 1,
+                until=waveRange[1] + 1,
                 extraProcesses=procs)
-    data = []
-    for sig, wave in sorted(sim.config.collectedWave.items(), key=lambda x: x[0].name):
-        t = sig._dtype
-        w = t.bit_length()
-        if w == 1:
-            typeName = 'bit'
-        else:
-            typeName = 'bits'
 
-        data.append((sig.name,
-                     {'name': typeName, 'width': w},
-                     wave))
-
-    return jsonify(data)
+    return jsonify({n: v.toJson() for n, v in sim.config._signals.items()})

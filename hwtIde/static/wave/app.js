@@ -103,7 +103,7 @@ function WaveGraph(svg) {
         this.xaxisScale = xaxisScale;
         this.waveRowX = xaxisScale;
         
-        //var axisX = g.selectAll(".axis-x")
+        // var axisX = g.selectAll(".axis-x")
         // https://bl.ocks.org/HarryStevens/54d01f118bc8d1f2c4ccd98235f33848
         // General Update Pattern, I https://bl.ocks.org/mbostock/3808218
         // http://bl.ocks.org/nnattawat/9054068
@@ -196,8 +196,45 @@ function WaveGraph(svg) {
 
 var waveGraph = new WaveGraph(svg);
 
+function keysOfDict(obj) {
+    var keys = [];
+
+    for(var key in obj)
+        if(obj.hasOwnProperty(key))
+            keys.push(key);
+
+    return keys;
+}
+
+function temporaryFlattenSignals(sigs, res) {
+	keysOfDict(sigs).sort().forEach(function(k){
+	    var ch = sigs[k];
+	 	temporaryFlattenSignal(ch, res)
+	})
+}
+
+function temporaryFlattenSignal(s, res) {
+	if (s.children) {
+		// hierachical interface
+		// add separator
+		res.push([s.name, {"name": "bit"}, []]);
+	    // add sub signals
+		temporaryFlattenSignals(s.children, res);
+	} else {
+		// simple signal
+		var tName;
+		if (s.type.width == 1)
+			tName = "bit";
+		else
+			tName = "bits";
+		res.push([s.name, {"name": tName, "width": s.type.width}, s.data]);
+	}
+}
+
 d3.json("/wave-data", function(signalData) {
-    waveGraph.bindData(signalData);
+	var signalRows = [];
+	temporaryFlattenSignals(signalData, signalRows)
+    waveGraph.bindData(signalRows);
     waveGraph.draw();
 })
 
