@@ -3,44 +3,44 @@ from typing import List
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
-from fromHwtToElk.resolveSharedConnections import resolve_shared_connections
-from fromHwtToElk.utils import add_operator_as_node, add_port_to_unit,\
-    add_stm_as_unit, add_port, Value_as_LNode
+from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
+from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
+    addStmAsLNode, addPort, ValueAsLNode
 from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
 
 
-def flatten_port(port: LPort):
+def flattenPort(port: LPort):
     yield port
     if port.children:
         for ch in port.children:
-            yield from flatten_port(ch)
+            yield from flattenPort(ch)
         port.children.clear()
 
 
-def _flatten_ports_side(side: List[LNode]) -> List[LNode]:
+def _flattenPortsSide(side: List[LNode]) -> List[LNode]:
     new_side = []
     for i in side:
-        for new_p in flatten_port(i):
+        for new_p in flattenPort(i):
             new_side.append(new_p)
     return new_side
 
 
-def flatten_ports(root: LNode):
+def flattenPorts(root: LNode):
     """
     Flatten ports to simplify layout generation
 
     :attention: children property is destroyed, parent property stays same
     """
     for u in root.children:
-        u.west = _flatten_ports_side(u.west)
-        u.east = _flatten_ports_side(u.east)
-        u.north = _flatten_ports_side(u.north)
-        u.south = _flatten_ports_side(u.south)
+        u.west = _flattenPortsSide(u.west)
+        u.east = _flattenPortsSide(u.east)
+        u.north = _flattenPortsSide(u.north)
+        u.south = _flattenPortsSide(u.south)
 
 
-def Unit_to_LNode(u: Unit) -> LNode:
+def UnitToLNode(u: Unit) -> LNode:
     """
     Build LNode instance from Unit instance
 
@@ -53,15 +53,15 @@ def Unit_to_LNode(u: Unit) -> LNode:
     for su in u._units:
         n = root.add_node(name=su._name, originObj=su)
         for intf in su._interfaces:
-            add_port_to_unit(n, intf)
+            addPortToLNode(n, intf)
 
     # create subunits from statements
     for stm in u._ctx.statements:
-        n = add_stm_as_unit(root, stm)
+        n = addStmAsLNode(root, stm)
 
     # create ports
     for intf in u._interfaces:
-        add_port(root, intf)
+        addPort(root, intf)
 
     # pending and seen set because we do not want to draw
     # hidden signals in statements
@@ -76,7 +76,7 @@ def Unit_to_LNode(u: Unit) -> LNode:
                 node = toL[stm]
             except KeyError:
                 if isinstance(stm, Operator):
-                    toL[stm] = node = add_operator_as_node(root, stm)
+                    toL[stm] = node = addOperatorAsLNode(root, stm)
                 else:
                     raise
 
@@ -86,7 +86,7 @@ def Unit_to_LNode(u: Unit) -> LNode:
                 src = node.east[0]
                 for i, (op, opPort) in enumerate(zip(stm.operands, node.west)):
                     if isConst(op):
-                        n = Value_as_LNode(root, op)
+                        n = ValueAsLNode(root, op)
                         root.add_edge(n.east[0], opPort)
             else:
                 src = node.east[stm._outputs.index(s)]
@@ -98,7 +98,7 @@ def Unit_to_LNode(u: Unit) -> LNode:
                 try:
                     node = toL[stm]
                 except KeyError:
-                    toL[stm] = node = add_operator_as_node(root, stm)
+                    toL[stm] = node = addOperatorAsLNode(root, stm)
 
                 for i, op in enumerate(stm.operands):
                     if op is s:
@@ -123,7 +123,8 @@ def Unit_to_LNode(u: Unit) -> LNode:
         connect_signal(s)
 
     reduceUselessAssignments(root)
-    resolve_shared_connections(root)
-    flatten_ports(root)
+    #flattenConcatenations(root)
+    resolveSharedConnections(root)
+    flattenPorts(root)
 
     return root

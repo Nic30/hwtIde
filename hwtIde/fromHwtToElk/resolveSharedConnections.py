@@ -3,7 +3,7 @@ from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 
 
-def port_try_reduce(root: LNode, port: LPort):
+def portTryReduce(root: LNode, port: LPort):
     """
     Check if majority of children is connected to same port
     if it is the case reduce children and connect this port instead children
@@ -12,10 +12,10 @@ def port_try_reduce(root: LNode, port: LPort):
         return
 
     for p in port.children:
-        port_try_reduce(root, p)
+        portTryReduce(root, p)
 
     target_nodes = {}
-    ch_cnt = count_directly_connected(port, target_nodes)
+    ch_cnt = countDirectlyConnected(port, target_nodes)
     if not target_nodes:
         # disconnected port
         return
@@ -73,17 +73,17 @@ def port_try_reduce(root: LNode, port: LPort):
         raise NotImplementedError(port.direction)
 
 
-def resolve_shared_connections(root: LNode):
+def resolveSharedConnections(root: LNode):
     """
     Walk all ports on all nodes and group subinterface connections to only parent interface
     connection if it is possible
     """
     for u in root.children:
         for p in u.iterPorts():
-            port_try_reduce(root, p)
+            portTryReduce(root, p)
 
 
-def get_connected_node(port: LPort):
+def getConnectedNode(port: LPort):
     assert len(port.connectedEdges) == 1
     e = port.connectedEdges[0]
     raise NotImplementedError()
@@ -93,7 +93,7 @@ def get_connected_node(port: LPort):
         assert e.dst is port
 
 
-def count_directly_connected(port: LPort, result: dict) -> int:
+def countDirectlyConnected(port: LPort, result: dict) -> int:
     """
     Count how many ports are directly connected to other nodes
 
@@ -108,7 +108,7 @@ def count_directly_connected(port: LPort, result: dict) -> int:
         assert not outEdges, (port, port.children, outEdges)
 
         for ch in port.children:
-            ch_cnt += count_directly_connected(ch, result)
+            ch_cnt += countDirectlyConnected(ch, result)
 
         return ch_cnt
 

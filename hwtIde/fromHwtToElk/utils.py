@@ -10,8 +10,8 @@ from hwt.hdl.operatorDefs import AllOps
 from hwt.hdl.portItem import PortItem
 from hwt.hdl.statements import HdlStatement
 from hwt.hdl.value import Value
-from hwt.synthesizer.interface import Interface
 from hwt.serializer.hwt.serializer import HwtSerializer
+from hwt.synthesizer.interface import Interface
 
 
 def toStr(obj):
@@ -28,7 +28,7 @@ def getParentUnit(intf):
     return intf._parent
 
 
-def PortType_from_dir(direction):
+def PortTypeFromDir(direction):
     if direction == INTF_DIRECTION.SLAVE:
         return PortType.INPUT
     elif direction == INTF_DIRECTION.MASTER:
@@ -37,9 +37,9 @@ def PortType_from_dir(direction):
         raise ValueError(direction)
 
 
-def origin_obj_of_port(intf):
+def originObjOfPort(intf):
     d = intf._direction
-    d = PortType_from_dir(d)
+    d = PortTypeFromDir(d)
 
     if intf._interfaces:
         origin = intf
@@ -56,14 +56,14 @@ def origin_obj_of_port(intf):
     return origin
 
 
-def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
-              reverseDirection=False):
+def _addPort(lep: LayoutExternalPort, lp: LPort, intf: Interface,
+             reverseDirection=False):
     """
     add port to LPort for interface
     """
-    origin = origin_obj_of_port(intf)
+    origin = originObjOfPort(intf)
     d = intf._direction
-    d = PortType_from_dir(d)
+    d = PortTypeFromDir(d)
 
     if reverseDirection:
         d = PortType.opposite(d)
@@ -72,8 +72,8 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     new_lp.originObj = origin
     if intf._interfaces:
         for child_intf in intf._interfaces:
-            _add_port(lep, new_lp, child_intf,
-                      reverseDirection=reverseDirection)
+            _addPort(lep, new_lp, child_intf,
+                     reverseDirection=reverseDirection)
 
     lp.children.append(new_lp)
     new_lp.parent = lp
@@ -83,80 +83,80 @@ def _add_port(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     return new_lp
 
 
-def add_port_to_unit(ln: LNode, intf: Interface, reverseDirection=False):
-    origin = origin_obj_of_port(intf)
+def addPortToLNode(ln: LNode, intf: Interface, reverseDirection=False):
+    origin = originObjOfPort(intf)
 
     d = intf._direction
-    d = PortType_from_dir(d)
+    d = PortTypeFromDir(d)
     if reverseDirection:
         d = PortType.opposite(d)
 
-    p = LNode_add_portFromHdl(ln, origin,
-                              d,
-                              intf._name)
+    p = LNodeAddPortFromHdl(ln, origin,
+                            d,
+                            intf._name)
     for _intf in intf._interfaces:
-        _add_port(ln, p, _intf, reverseDirection=reverseDirection)
+        _addPort(ln, p, _intf, reverseDirection=reverseDirection)
 
 
-def add_port(n: LNode, intf: Interface):
+def addPort(n: LNode, intf: Interface):
     """
     Add LayoutExternalPort for interface
     """
-    d = PortType_from_dir(intf._direction)
+    d = PortTypeFromDir(intf._direction)
     ext_p = LayoutExternalPort(
         n, intf._name, d, node2lnode=n._node2lnode)
-    ext_p.originObj = origin_obj_of_port(intf)
+    ext_p.originObj = originObjOfPort(intf)
     n.children.append(ext_p)
-    add_port_to_unit(ext_p, intf, reverseDirection=True)
+    addPortToLNode(ext_p, intf, reverseDirection=True)
 
     return ext_p
 
 
-def get_single_port(ports: List[LPort]) -> LEdge:
+def getSinglePort(ports: List[LPort]) -> LEdge:
     assert len(ports) == 1, ports
     return ports[0]
 
 
-def remove_edge(edge: LEdge):
+def removeEdge(edge: LEdge):
     edge.dst.incomingEdges.remove(edge)
     edge.src.outgoingEdges.remove(edge)
     edge.dst = edge.dstNode = edge.src = edge.srcNode = None
 
 
-def add_stm_as_unit(root: LNode, stm: HdlStatement) -> LNode:
+def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
     bodyText = toStr(stm)
     u = root.add_node(
         originObj=stm, bodyText=bodyText)
     for _ in stm._inputs:
-        u.add_port(None,  PortType.INPUT,  PortSide.WEST)
+        u.addPort(None,  PortType.INPUT,  PortSide.WEST)
     for _ in stm._outputs:
-        u.add_port(None, PortType.OUTPUT, PortSide.EAST)
+        u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u
 
 
-def add_index_as_node(root: LNode, op: Operator) -> LNode:
+def addIndexAsLNode(root: LNode, op: Operator) -> LNode:
     bodyText = toStr(op)
     u = root.add_node(originObj=op, name="Index", bodyText=bodyText)
-    u.add_port("out", PortType.OUTPUT, PortSide.EAST)
-    u.add_port("in",  PortType.INPUT,  PortSide.WEST)
-    u.add_port("index",  PortType.INPUT,  PortSide.WEST)
+    u.addPort("out", PortType.OUTPUT, PortSide.EAST)
+    u.addPort("in",  PortType.INPUT,  PortSide.WEST)
+    u.addPort("index",  PortType.INPUT,  PortSide.WEST)
     return u
 
 
-def add_operator_as_node(root: LNode, op: Operator):
+def addOperatorAsLNode(root: LNode, op: Operator):
     if op.operator == AllOps.INDEX:
-        return add_index_as_node(root, op)
+        return addIndexAsLNode(root, op)
     else:
         u = root.add_node(originObj=op, name=op.operator.id)
-        u.add_port(None, PortType.OUTPUT, PortSide.EAST)
+        u.addPort(None, PortType.OUTPUT, PortSide.EAST)
         for _ in range(len(op.operands)):
-            u.add_port(None,  PortType.INPUT,  PortSide.WEST)
+            u.addPort(None,  PortType.INPUT,  PortSide.WEST)
         return u
 
 
-def LNode_add_portFromHdl(node, origin: Union[Interface, PortItem],
-                          direction: PortType,
-                          name: str):
+def LNodeAddPortFromHdl(node, origin: Union[Interface, PortItem],
+                        direction: PortType,
+                        name: str):
     if direction == PortType.OUTPUT:
         side = PortSide.EAST
     elif direction == PortType.INPUT:
@@ -164,14 +164,14 @@ def LNode_add_portFromHdl(node, origin: Union[Interface, PortItem],
     else:
         raise ValueError(direction)
 
-    p = node.add_port(name, direction, side)
+    p = node.addPort(name, direction, side)
     p.originObj = origin
     if node._node2lnode is not None:
         node._node2lnode[origin] = p
     return p
 
 
-def Value_as_LNode(root: LNode, val: Value):
+def ValueAsLNode(root: LNode, val: Value):
     u = root.add_node(originObj=val, bodyText=toStr(val))
-    u.add_port(None, PortType.OUTPUT, PortSide.EAST)
+    u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u

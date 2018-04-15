@@ -72,12 +72,12 @@ class LNode():
         else:
             raise ValueError(side)
 
-    def add_port(self, name, direction: PortType, side: PortSide):
+    def addPort(self, name, direction: PortType, side: PortSide):
         port = LPort(self, direction, side, name=name)
         self.getPortSideView(side).append(port)
         return port
 
-    def add_node(self, name: str=None, originObj=None,
+    def addNode(self, name: str=None, originObj=None,
                  portConstraint=PortConstraints.FIXED_ORDER, bodyText=None) -> "LNode":
         n = LNode(self, name=name, originObj=originObj,
                   node2lnode=self._node2lnode, bodyText=bodyText)
@@ -87,7 +87,7 @@ class LNode():
         self.children.append(n)
         return n
 
-    def add_edge(self, src: LPort, dst: LPort, name=None, originObj=None):
+    def addEdge(self, src: LPort, dst: LPort, name=None, originObj=None):
         e = LEdge(name, originObj=originObj)
         e.setSrcDst(src, dst)
         return e
