@@ -1,5 +1,5 @@
 from elkContainer.lNode import LNode
-from fromHwtToElk.utils import get_single_port, remove_edge
+from fromHwtToElk.utils import getSinglePort, removeEdge
 from hwt.hdl.assignment import Assignment
 
 
@@ -23,8 +23,8 @@ def reduceUselessAssignments(root: LNode):
             dstPorts = []
             edgesToRemove = []
 
-            inP = get_single_port(n.west)
-            outP = get_single_port(n.east)
+            inP = getSinglePort(n.west)
+            outP = getSinglePort(n.east)
             for e in inP.incomingEdges:
                 sPort = e.src
                 srcPorts.append(sPort)
@@ -36,11 +36,11 @@ def reduceUselessAssignments(root: LNode):
                 edgesToRemove.append(e)
 
             for e in edgesToRemove:
-                remove_edge(e)
+                removeEdge(e)
 
             for srcPort in srcPorts:
                 for dstPort in dstPorts:
-                    root.add_edge(srcPort, dstPort)
+                    root.addEdge(srcPort, dstPort)
 
     if do_update:
         for n in nodes:

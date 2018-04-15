@@ -7,14 +7,13 @@ import os
 import sys
 
 from elkContainer.idStore import ElkIdStore
-from fromHwtToElk.convertor import Unit_to_LNode
+from fromHwtToElk.convertor import UnitToLNode
 from fsEntry import FSEntry
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 from json_resp import jsonResp
 from hwt.synthesizer.dummyPlatform import DummyPlatform
 from hwt.hdl.assignment import Assignment
 from hwt.hdl.operator import isConst
-from hwt.hdl.types.slice import Slice
 from hwt.code import Concat
 
 
@@ -119,18 +118,14 @@ def indexedAssignmentsToConcatenation(netlist):
     for s in signalsToReduce:
         inputs = []
         for d in list(s.drivers):
-            i = d.indexes[0].staticEval()
-            assert i.vldMask, s
-            if isinstance(i._dtype, Slice):
-                i = (int(i.val[0]), int(i.val[1]))
-            else:
-                i = int(i)
-                i = (i, i + 1)
+            i = d.indexes[0].staticEval().toPy()
+            if isinstance(i, int):
+                i = slice(i + 1, i)
             v = d.src
             inputs.append((i, v))
             d._destroy()
 
-        inputs.sort(key=lambda x: x[0])
+        inputs.sort(key=lambda x: x[0].stop)
         s(Concat(*map(lambda x: x[1], inputs)))
 
 
@@ -146,7 +141,7 @@ def connectionDataElk(module_name, in_module_name):
     plat.beforeHdlArchGeneration.append(indexedAssignmentsToConcatenation)
     # synthetize unit and convert it to json
     synthesised(u, plat)
-    g = Unit_to_LNode(u)
+    g = UnitToLNode(u)
     idStore = ElkIdStore()
     data = g.toElkJson(idStore)
     assert len(g.children) == idStore.nodeCnt, (len(

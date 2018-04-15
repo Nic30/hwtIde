@@ -78,7 +78,8 @@ class LNode():
         return port
 
     def addNode(self, name: str=None, originObj=None,
-                 portConstraint=PortConstraints.FIXED_ORDER, bodyText=None) -> "LNode":
+                portConstraint=PortConstraints.FIXED_ORDER,
+                bodyText=None) -> "LNode":
         n = LNode(self, name=name, originObj=originObj,
                   node2lnode=self._node2lnode, bodyText=bodyText)
         n.portConstraints = portConstraint

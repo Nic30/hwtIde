@@ -9,9 +9,13 @@ from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
 from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
+from fromHwtToElk.extractSplits import extractSplits
 
 
 def flattenPort(port: LPort):
+    """
+    Flatten hierarchical ports
+    """
     yield port
     if port.children:
         for ch in port.children:
@@ -20,6 +24,9 @@ def flattenPort(port: LPort):
 
 
 def _flattenPortsSide(side: List[LNode]) -> List[LNode]:
+    """
+    Flatten hierarchical ports on node side
+    """
     new_side = []
     for i in side:
         for new_p in flattenPort(i):
@@ -51,7 +58,7 @@ def UnitToLNode(u: Unit) -> LNode:
     root = LNode(name=u._name, originObj=u, node2lnode=toL)
     # create subunits
     for su in u._units:
-        n = root.add_node(name=su._name, originObj=su)
+        n = root.addNode(name=su._name, originObj=su)
         for intf in su._interfaces:
             addPortToLNode(n, intf)
 
@@ -87,7 +94,7 @@ def UnitToLNode(u: Unit) -> LNode:
                 for i, (op, opPort) in enumerate(zip(stm.operands, node.west)):
                     if isConst(op):
                         n = ValueAsLNode(root, op)
-                        root.add_edge(n.east[0], opPort)
+                        root.addEdge(n.east[0], opPort)
             else:
                 src = node.east[stm._outputs.index(s)]
 
@@ -116,14 +123,14 @@ def UnitToLNode(u: Unit) -> LNode:
 
         for src in driverPorts:
             for dst in endpointPorts:
-                root.add_edge(src, dst, name=s.name, originObj=s)
+                root.addEdge(src, dst, name=s.name, originObj=s)
 
     # connect nets
     for s in u._ctx.signals:
         connect_signal(s)
 
     reduceUselessAssignments(root)
-    #flattenConcatenations(root)
+    extractSplits(root, u._ctx.signals, toL)
     resolveSharedConnections(root)
     flattenPorts(root)
 

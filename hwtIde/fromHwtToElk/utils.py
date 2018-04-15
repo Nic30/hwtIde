@@ -125,7 +125,7 @@ def removeEdge(edge: LEdge):
 
 def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
     bodyText = toStr(stm)
-    u = root.add_node(
+    u = root.addNode(
         originObj=stm, bodyText=bodyText)
     for _ in stm._inputs:
         u.addPort(None,  PortType.INPUT,  PortSide.WEST)
@@ -136,7 +136,7 @@ def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
 
 def addIndexAsLNode(root: LNode, op: Operator) -> LNode:
     bodyText = toStr(op)
-    u = root.add_node(originObj=op, name="Index", bodyText=bodyText)
+    u = root.addNode(originObj=op, name="Index", bodyText=bodyText)
     u.addPort("out", PortType.OUTPUT, PortSide.EAST)
     u.addPort("in",  PortType.INPUT,  PortSide.WEST)
     u.addPort("index",  PortType.INPUT,  PortSide.WEST)
@@ -147,7 +147,7 @@ def addOperatorAsLNode(root: LNode, op: Operator):
     if op.operator == AllOps.INDEX:
         return addIndexAsLNode(root, op)
     else:
-        u = root.add_node(originObj=op, name=op.operator.id)
+        u = root.addNode(originObj=op, name=op.operator.id)
         u.addPort(None, PortType.OUTPUT, PortSide.EAST)
         for _ in range(len(op.operands)):
             u.addPort(None,  PortType.INPUT,  PortSide.WEST)
@@ -172,6 +172,6 @@ def LNodeAddPortFromHdl(node, origin: Union[Interface, PortItem],
 
 
 def ValueAsLNode(root: LNode, val: Value):
-    u = root.add_node(originObj=val, bodyText=toStr(val))
+    u = root.addNode(originObj=val, bodyText=toStr(val))
     u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u

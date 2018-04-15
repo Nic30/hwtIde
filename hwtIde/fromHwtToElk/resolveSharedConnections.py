@@ -66,9 +66,9 @@ def portTryReduce(root: LNode, port: LPort):
     # connect this port to new target as it was connected by children before
     # [TODO] names for new edges
     if port.direction == PortType.OUTPUT:
-        root.add_edge(port, new_target)
+        root.addEdge(port, new_target)
     elif port.direction == PortType.INPUT:
-        root.add_edge(new_target, port)
+        root.addEdge(new_target, port)
     else:
         raise NotImplementedError(port.direction)
 

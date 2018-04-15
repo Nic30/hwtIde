@@ -4,7 +4,7 @@ function ComponentGraph() {
     var self = {};
     self.PORT_HEIGHT = 20;
     self.CHAR_WIDTH = 7.55;
-    self.CHAR_HEIGHT = 12;
+    self.CHAR_HEIGHT = 13;
     self.NODE_MIDDLE_PORT_SPACING = 20;
     // top, right, bottom, left
     self.BODY_TEXT_PADDING = [15,10,10,10]
