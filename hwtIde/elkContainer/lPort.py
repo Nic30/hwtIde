@@ -40,6 +40,19 @@ class LPort():
             if not isinstance(p, LPort):
                 return p
 
+    def getLevel(self):
+        """
+        Get nest-level of this port
+        """
+        lvl = 0
+        p = self
+        while True:
+            p = p.parent
+            if not isinstance(p, LPort):
+                break
+            lvl += 1
+        return lvl
+
     def iterEdges(self, filterSelfLoops=False):
         it = chain(self.incomingEdges, self.outgoingEdges)
         if filterSelfLoops:
@@ -71,6 +84,7 @@ class LPort():
             "id": idStore[self],
             "name": self.name,
             "direction": self.direction.name,
+            "level": self.getLevel(),
             "properties": {
                 "portSide": self.side.name,
                 "portIndex": self.index
