@@ -19,15 +19,18 @@ class LNode():
     :ivar east: list of LPort for on right side.
     :ivar south: list of LPort for on bottom side.
     :ivar west: list of LPort for on left side.
+    :ivar bodyText: text which should be rendered inside body of component
+        (if it is not only container of children)
     """
 
     def __init__(self, parent: "LNode"=None, name: str= None,
-                 originObj=None, node2lnode=None):
+                 originObj=None, node2lnode=None, bodyText=None):
         super(LNode, self).__init__()
         if name is not None:
             assert isinstance(name, str)
         self.originObj = originObj
         self.name = name
+        self.bodyText = bodyText
 
         self.west = []
         self.east = []
@@ -75,9 +78,9 @@ class LNode():
         return port
 
     def add_node(self, name: str=None, originObj=None,
-                 portConstraint=PortConstraints.FIXED_ORDER) -> "LNode":
+                 portConstraint=PortConstraints.FIXED_ORDER, bodyText=None) -> "LNode":
         n = LNode(self, name=name, originObj=originObj,
-                  node2lnode=self._node2lnode)
+                  node2lnode=self._node2lnode, bodyText=bodyText)
         n.portConstraints = portConstraint
         if self._node2lnode is not None:
             self._node2lnode[originObj] = n
@@ -115,6 +118,7 @@ class LNode():
     def toElkJson(self, idStore, isTop=True):
         d = {
             "name": self.name,
+            "bodyText": self.bodyText,
             "ports": [p.toElkJson(idStore)
                       for p in self.iterPorts()],
             "properties": {
@@ -162,3 +166,9 @@ class LayoutExternalPort(LNode):
             self.layeringLayerConstraint = LayerConstraint.LAST
         else:
             raise ValueError(direction)
+
+    def toElkJson(self, idStore, isTop=True):
+        d = super(LayoutExternalPort, self).toElkJson(idStore, isTop=isTop)
+        del d['name']
+        d['properties']["org.eclipse.elk.layered.layering.layerConstraint"] = self.layeringLayerConstraint.name
+        return d

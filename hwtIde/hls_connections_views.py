@@ -65,34 +65,34 @@ def connectionDataLs(path=""):
     return jsonResp(data)
 
 
-@connectionsBp.route('/hls/connections-data/<path:path>')
-def connectionData(path):
-    # path = os.path.join(WORKSPACE_DIR, path)
-    # if path.endswith(".py"):
-    #    path = path[:-3]
-        # try:
-        #    module = importlib.reload(sys.modules[path])
-        # except KeyError:
-        #    module = importlib.import_module(path.replace("/", "."))
-
-    # from hwtLib.samples.hierarchy.netFilter import NetFilter
-    # u = NetFilter()
-
-    from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
-    u = SimpleSubunit()
-
-    # from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
-    # u = SimpleSubunit()
-    # for _ in u._toRtl():
-    #    pass
-    data = Unit_to_LNode(u)
-
-    # elif path.endswith(".json"):
-    #    with open(path) as f:
-    #        data = f.read()
-    # else:
-    #    raise Exception("not implemented")
-    return jsonResp(data)
+#@connectionsBp.route('/hls/connections-data/<path:path>')
+#def connectionData(path):
+#    # path = os.path.join(WORKSPACE_DIR, path)
+#    # if path.endswith(".py"):
+#    #    path = path[:-3]
+#        # try:
+#        #    module = importlib.reload(sys.modules[path])
+#        # except KeyError:
+#        #    module = importlib.import_module(path.replace("/", "."))
+#
+#    # from hwtLib.samples.hierarchy.netFilter import NetFilter
+#    # u = NetFilter()
+#
+#    from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
+#    u = SimpleSubunit()
+#
+#    # from hwtLib.samples.hierarchy.simpleSubunit import SimpleSubunit
+#    # u = SimpleSubunit()
+#    # for _ in u._toRtl():
+#    #    pass
+#    data = Unit_to_LNode(u)
+#
+#    # elif path.endswith(".json"):
+#    #    with open(path) as f:
+#    #        data = f.read()
+#    # else:
+#    #    raise Exception("not implemented")
+#    return jsonResp(data)
 
 
 @connectionsBp.route("/hls/connections-data-elk/<module_name>/<in_module_name>")

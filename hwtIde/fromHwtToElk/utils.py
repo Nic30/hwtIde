@@ -11,6 +11,14 @@ from hwt.hdl.portItem import PortItem
 from hwt.hdl.statements import HdlStatement
 from hwt.hdl.value import Value
 from hwt.synthesizer.interface import Interface
+from hwt.serializer.hwt.serializer import HwtSerializer
+
+
+def toStr(obj):
+    """
+    Convert hwt object to string
+    """
+    return HwtSerializer.asHdl(obj, HwtSerializer.getBaseContext())
 
 
 def getParentUnit(intf):
@@ -116,7 +124,9 @@ def remove_edge(edge: LEdge):
 
 
 def add_stm_as_unit(root: LNode, stm: HdlStatement) -> LNode:
-    u = root.add_node(originObj=stm, name=stm.__class__.__name__)
+    bodyText = toStr(stm)
+    u = root.add_node(
+        originObj=stm, bodyText=bodyText)
     for _ in stm._inputs:
         u.add_port(None,  PortType.INPUT,  PortSide.WEST)
     for _ in stm._outputs:
@@ -125,7 +135,8 @@ def add_stm_as_unit(root: LNode, stm: HdlStatement) -> LNode:
 
 
 def add_index_as_node(root: LNode, op: Operator) -> LNode:
-    u = root.add_node(originObj=op, name="Index")
+    bodyText = toStr(op)
+    u = root.add_node(originObj=op, name="Index", bodyText=bodyText)
     u.add_port("out", PortType.OUTPUT, PortSide.EAST)
     u.add_port("in",  PortType.INPUT,  PortSide.WEST)
     u.add_port("index",  PortType.INPUT,  PortSide.WEST)
