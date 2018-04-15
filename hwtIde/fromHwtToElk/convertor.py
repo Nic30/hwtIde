@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set, Callable
 
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
@@ -10,41 +10,9 @@ from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
 from fromHwtToElk.extractSplits import extractSplits
-
-
-def flattenPort(port: LPort):
-    """
-    Flatten hierarchical ports
-    """
-    yield port
-    if port.children:
-        for ch in port.children:
-            yield from flattenPort(ch)
-        port.children.clear()
-
-
-def _flattenPortsSide(side: List[LNode]) -> List[LNode]:
-    """
-    Flatten hierarchical ports on node side
-    """
-    new_side = []
-    for i in side:
-        for new_p in flattenPort(i):
-            new_side.append(new_p)
-    return new_side
-
-
-def flattenPorts(root: LNode):
-    """
-    Flatten ports to simplify layout generation
-
-    :attention: children property is destroyed, parent property stays same
-    """
-    for u in root.children:
-        u.west = _flattenPortsSide(u.west)
-        u.east = _flattenPortsSide(u.east)
-        u.north = _flattenPortsSide(u.north)
-        u.south = _flattenPortsSide(u.south)
+from hwt.hdl.operatorDefs import OpDefinition
+from fromHwtToElk.flattenTrees import flattenTrees
+from fromHwtToElk.flattenPorts import flattenPorts
 
 
 def UnitToLNode(u: Unit) -> LNode:
@@ -131,6 +99,7 @@ def UnitToLNode(u: Unit) -> LNode:
 
     reduceUselessAssignments(root)
     extractSplits(root, u._ctx.signals, toL)
+    #flattenTrees(root, toL, lambda node: node.name == "CONCAT")
     resolveSharedConnections(root)
     flattenPorts(root)
 
