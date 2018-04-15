@@ -172,9 +172,6 @@ def LNode_add_portFromHdl(node, origin: Union[Interface, PortItem],
 
 
 def Value_as_LNode(root: LNode, val: Value):
-    if val._isFullVld():
-        val = repr(val.val)
-
-    u = root.add_node(originObj=val, name=repr(val))
-    u.add_port("out", PortType.OUTPUT, PortSide.EAST)
+    u = root.add_node(originObj=val, bodyText=toStr(val))
+    u.add_port(None, PortType.OUTPUT, PortSide.EAST)
     return u

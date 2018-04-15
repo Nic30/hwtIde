@@ -170,7 +170,13 @@ function ComponentGraph() {
         
         // set dimensions and style of node
         nodeBody
-            .attr("class", "node")
+            .attr("class", function (d) { 
+            	if (d.isExternalPort) {
+            		return "node-external-port";
+            	} else {
+            		return "node";
+            	}
+            })
             .attr("width", function(d) { return d.width })
             .attr("height", function(d) { return d.height })
             .attr("rx", 5)

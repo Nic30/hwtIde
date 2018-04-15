@@ -171,4 +171,5 @@ class LayoutExternalPort(LNode):
         d = super(LayoutExternalPort, self).toElkJson(idStore, isTop=isTop)
         del d['name']
         d['properties']["org.eclipse.elk.layered.layering.layerConstraint"] = self.layeringLayerConstraint.name
+        d['isExternalPort'] = True
         return d

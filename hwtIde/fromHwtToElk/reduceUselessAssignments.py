@@ -42,13 +42,13 @@ def reduceUselessAssignments(root: LNode):
                 for dstPort in dstPorts:
                     root.add_edge(srcPort, dstPort)
 
-    for n in nodes:
-        for p in n.iterPorts():
-            for e in p.iterEdges():
-                try:
-                    assert e.dstNode in nodes, (e, n, e.dstNode)
-                    assert e.srcNode in nodes, (e, n, e.srcNode)
-                except AssertionError:
-                    raise
     if do_update:
+        for n in nodes:
+            for p in n.iterPorts():
+                for e in p.iterEdges():
+                    try:
+                        assert e.dstNode in nodes, (e, n, e.dstNode)
+                        assert e.srcNode in nodes, (e, n, e.srcNode)
+                    except AssertionError:
+                        raise
         root.children = list(nodes)
