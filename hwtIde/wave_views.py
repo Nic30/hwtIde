@@ -16,7 +16,8 @@ from hwt.synthesizer.interfaceLevel.unitImplHelpers import getSignalName
 from hwt.synthesizer.unit import Unit
 from hwtLib.handshaked.fifo import HandshakedFifo
 from json_resp import jsonResp
-from pyDigitalWaveTools.vcd.parser import VcdParser, VcdSignalScope, VcdSignalInfo
+from pyDigitalWaveTools.vcd.parser import VcdParser
+from pyDigitalWaveTools.vcd.common import VcdVarInfo, VcdVarScope
 
 
 waveBp = Blueprint('wave',
@@ -52,7 +53,7 @@ class WebHdlSimConfig(HdlSimConfig):
             if isinstance(s, Interface):
                 s = s._sig
 
-            sInfo = VcdSignalInfo(
+            sInfo = VcdVarInfo(
                 None, name, s._dtype.bit_length(), "wire", self._scope)
 
             if parent is None:
@@ -70,7 +71,7 @@ class WebHdlSimConfig(HdlSimConfig):
         if hasattr(intf, "_interfaces") and intf._interfaces:
             parent = self._scope
             name = intf._name
-            info = VcdSignalScope(name, parent)
+            info = VcdVarScope(name, parent)
             self._scope = info
             for chIntf in intf._interfaces:
                 self.registerInterfaces(chIntf)
