@@ -2,6 +2,7 @@ from elkContainer.constants import PortType
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 
+# [TODO] reduce when there are splits / concatenations as well
 
 def portTryReduce(root: LNode, port: LPort):
     """
