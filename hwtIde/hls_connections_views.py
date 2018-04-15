@@ -11,6 +11,11 @@ from fromHwtToElk.convertor import Unit_to_LNode
 from fsEntry import FSEntry
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 from json_resp import jsonResp
+from hwt.synthesizer.dummyPlatform import DummyPlatform
+from hwt.hdl.assignment import Assignment
+from hwt.hdl.operator import isConst
+from hwt.hdl.types.slice import Slice
+from hwt.code import Concat
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -66,7 +71,7 @@ def connectionDataLs(path=""):
 
 
 #@connectionsBp.route('/hls/connections-data/<path:path>')
-#def connectionData(path):
+# def connectionData(path):
 #    # path = os.path.join(WORKSPACE_DIR, path)
 #    # if path.endswith(".py"):
 #    #    path = path[:-3]
@@ -95,6 +100,40 @@ def connectionDataLs(path=""):
 #    return jsonResp(data)
 
 
+def indexedAssignmentsToConcatenation(netlist):
+    signalsToReduce = set()
+
+    for s in netlist.signals:
+        if len(s.drivers) > 1:
+            compatible = True
+            for d in s.drivers:
+                if not isinstance(d, Assignment)\
+                        or len(d.indexes) != 1\
+                        or not isConst(d.indexes[0]):
+                    compatible = False
+                    break
+
+            if compatible:
+                signalsToReduce.add(s)
+
+    for s in signalsToReduce:
+        inputs = []
+        for d in list(s.drivers):
+            i = d.indexes[0].staticEval()
+            assert i.vldMask, s
+            if isinstance(i._dtype, Slice):
+                i = (int(i.val[0]), int(i.val[1]))
+            else:
+                i = int(i)
+                i = (i, i + 1)
+            v = d.src
+            inputs.append((i, v))
+            d._destroy()
+
+        inputs.sort(key=lambda x: x[0])
+        s(Concat(*map(lambda x: x[1], inputs)))
+
+
 @connectionsBp.route("/hls/connections-data-elk/<module_name>/<in_module_name>")
 def connectionDataElk(module_name, in_module_name):
     # get and construct target unit specified by arguments
@@ -103,11 +142,13 @@ def connectionDataElk(module_name, in_module_name):
     for name in in_module_name.split("."):
         ucls = getattr(ucls, name)
     u = ucls()
-
+    plat = DummyPlatform()
+    plat.beforeHdlArchGeneration.append(indexedAssignmentsToConcatenation)
     # synthetize unit and convert it to json
-    synthesised(u)
+    synthesised(u, plat)
     g = Unit_to_LNode(u)
     idStore = ElkIdStore()
     data = g.toElkJson(idStore)
-    assert len(g.children) == idStore.nodeCnt, (len(g.children), idStore.nodeCnt)
+    assert len(g.children) == idStore.nodeCnt, (len(
+        g.children), idStore.nodeCnt)
     return jsonify(data)
