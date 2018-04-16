@@ -4,6 +4,7 @@ from elkContainer.lPort import LPort
 
 # [TODO] reduce when there are splits / concatenations as well
 
+
 def portTryReduce(root: LNode, port: LPort):
     """
     Check if majority of children is connected to same port
@@ -38,8 +39,13 @@ def portTryReduce(root: LNode, port: LPort):
         else:
             raise ValueError(child.direction)
 
-        assert target_ch.parent is new_target
-
+        try:
+            assert target_ch.parent is new_target, (
+                target_ch,
+                target_ch.parent,
+                new_target)
+        except AssertionError:
+            raise
         # disconnect selected children from this port and target
         children_to_destroy.add(child)
         on_target_children_to_destroy.add(target_ch)
@@ -76,8 +82,8 @@ def portTryReduce(root: LNode, port: LPort):
 
 def resolveSharedConnections(root: LNode):
     """
-    Walk all ports on all nodes and group subinterface connections to only parent interface
-    connection if it is possible
+    Walk all ports on all nodes and group subinterface connections
+    to only parent interface connection if it is possible
     """
     for u in root.children:
         for p in u.iterPorts():

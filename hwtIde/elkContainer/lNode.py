@@ -149,6 +149,9 @@ class LNode():
 
         return d
 
+    def getNode(self):
+        return self
+
     def __repr__(self):
         return "<{0} {1:#018x} {2}>".format(
             self.__class__.__name__, id(self), self.name)
