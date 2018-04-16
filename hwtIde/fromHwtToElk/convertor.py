@@ -13,6 +13,7 @@ from fromHwtToElk.extractSplits import extractSplits
 from hwt.hdl.operatorDefs import OpDefinition
 from fromHwtToElk.flattenTrees import flattenTrees
 from fromHwtToElk.flattenPorts import flattenPorts
+from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
 
 
 def UnitToLNode(u: Unit) -> LNode:
@@ -99,6 +100,7 @@ def UnitToLNode(u: Unit) -> LNode:
 
     reduceUselessAssignments(root)
     extractSplits(root, u._ctx.signals, toL)
+    mergeSplitsOnInterfaces(root)
     #flattenTrees(root, toL, lambda node: node.name == "CONCAT")
     resolveSharedConnections(root)
     flattenPorts(root)
