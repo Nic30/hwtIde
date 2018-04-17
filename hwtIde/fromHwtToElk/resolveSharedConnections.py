@@ -111,9 +111,11 @@ def countDirectlyConnected(port: LPort, result: dict) -> int:
 
     if port.children:
         ch_cnt = 0
-        assert not inEdges, (port, port.children, inEdges)
-        assert not outEdges, (port, port.children, outEdges)
-
+        #try:
+        #    assert not inEdges, (port, port.children, inEdges)
+        #    assert not outEdges, (port, port.children, outEdges)
+        #except AssertionError:
+        #    raise
         for ch in port.children:
             ch_cnt += countDirectlyConnected(ch, result)
 

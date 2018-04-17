@@ -50,23 +50,26 @@ def flattenTrees(root, nodeSelector: Callable[[LNode], bool]):
             else:
                 inputEdges.append(e)
 
-        outputedge = treeRoot.east[0].outgoingEdges[0]
-        assert outputedge is not None
+        if len(reducedNodes) > 1:
+            outputedge = treeRoot.east[0].outgoingEdges[0]
+            assert outputedge is not None
 
-        newName = reducedNodes[0].name
-        newNode = root.addNode(newName)
+            newName = reducedNodes[0].name
+            newNode = root.addNode(newName)
 
-        o = newNode.addPort("", PortType.OUTPUT, PortSide.EAST)
-        dst = outputedge.dst
-        removeEdge(outputedge)
-        root.addEdge(o, dst)
+            o = newNode.addPort("", PortType.OUTPUT, PortSide.EAST)
+            dst = outputedge.dst
+            removeEdge(outputedge)
+            root.addEdge(o, dst)
 
-        for ie in inputEdges:
-            inp = newNode.addPort("", PortType.INPUT, PortSide.WEST)
-            src = ie.src
-            removeEdge(ie)
-            root.addEdge(src, inp)
+            for ie in inputEdges:
+                inp = newNode.addPort("", PortType.INPUT, PortSide.WEST)
+                src = ie.src
+                removeEdge(ie)
+                root.addEdge(src, inp)
 
-        for n in reducedNodes:
-            root.children.remove(n)
-            reducibleChildren.remove(n)
+            for n in reducedNodes:
+                root.children.remove(n)
+                reducibleChildren.remove(n)
+        else:
+            reducibleChildren.remove(reducedNodes[0])
