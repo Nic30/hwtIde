@@ -88,6 +88,10 @@ class LNode():
         self.children.append(n)
         return n
 
+    def iterEdges(self, filterSelfLoops=False):
+        for p in self.iterPorts():
+            yield from p.iterEdges(filterSelfLoops=filterSelfLoops)
+
     def addEdge(self, src: LPort, dst: LPort, name=None, originObj=None):
         e = LEdge(name, originObj=originObj)
         e.setSrcDst(src, dst)
@@ -125,7 +129,7 @@ class LNode():
             "properties": {
                 "org.eclipse.elk.portConstraints": self.portConstraints.name,
                 'org.eclipse.elk.randomSeed': 0,
-                'org.eclipse.elk.layered.mergeEdges': 1
+                'org.eclipse.elk.layered.mergeEdges': 1,
             }
         }
         if not isTop:

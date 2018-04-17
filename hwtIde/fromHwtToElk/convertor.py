@@ -101,7 +101,7 @@ def UnitToLNode(u: Unit) -> LNode:
     reduceUselessAssignments(root)
     extractSplits(root, u._ctx.signals, toL)
     mergeSplitsOnInterfaces(root)
-    #flattenTrees(root, toL, lambda node: node.name == "CONCAT")
+    flattenTrees(root, lambda node: node.name == "CONCAT")
     resolveSharedConnections(root)
     flattenPorts(root)
 
