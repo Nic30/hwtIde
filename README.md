@@ -15,6 +15,12 @@ Simple component connection editor used for visualization of of hierarchical com
 
 ![Connections viewer](/doc/connections.png)
 
+## Connection visualizer
+Simple component connection visualizer for visualization of of hierarchical components. Using ELK (Eclipse Layout Kernel).
+
+![Connections viewer](/doc/connections_elk.png)
+
+
 ## HLS visualizations
 * Gantt graph, pipeline mapping graphs etc.
 
