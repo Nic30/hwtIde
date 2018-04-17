@@ -56,7 +56,7 @@ def originObjOfPort(intf):
     return origin
 
 
-def _addPort(lep: LayoutExternalPort, lp: LPort, intf: Interface,
+def _addPort(n: LNode, lp: LPort, intf: Interface,
              reverseDirection=False):
     """
     add port to LPort for interface
@@ -72,13 +72,13 @@ def _addPort(lep: LayoutExternalPort, lp: LPort, intf: Interface,
     new_lp.originObj = origin
     if intf._interfaces:
         for child_intf in intf._interfaces:
-            _addPort(lep, new_lp, child_intf,
+            _addPort(n, new_lp, child_intf,
                      reverseDirection=reverseDirection)
 
     lp.children.append(new_lp)
     new_lp.parent = lp
-    if lep._node2lnode is not None:
-        lep._node2lnode[origin] = new_lp
+    if n._node2lnode is not None:
+        n._node2lnode[origin] = new_lp
 
     return new_lp
 
