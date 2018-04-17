@@ -2,18 +2,33 @@ from typing import List, Set, Callable
 
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
+from fromHwtToElk.extractSplits import extractSplits
+from fromHwtToElk.flattenPorts import flattenPorts
+from fromHwtToElk.flattenTrees import flattenTrees
+from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
 from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
 from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
 from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
-    addStmAsLNode, addPort, ValueAsLNode
+    addStmAsLNode, addPort, ValueAsLNode, ternaryAsSimpleAssignment,\
+    isUselessTernary
 from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
-from fromHwtToElk.extractSplits import extractSplits
-from hwt.hdl.operatorDefs import OpDefinition
-from fromHwtToElk.flattenTrees import flattenTrees
-from fromHwtToElk.flattenPorts import flattenPorts
-from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
+
+
+def lazyLoadNode(root, stm, toL):
+    try:
+        return toL[stm]
+    except KeyError:
+        if isinstance(stm, Operator):
+            if isUselessTernary(stm):
+                node = ternaryAsSimpleAssignment(root, stm)
+            else:
+                node = addOperatorAsLNode(root, stm)
+            toL[stm] = node
+            return node
+        else:
+            raise
 
 
 def UnitToLNode(u: Unit) -> LNode:
@@ -48,13 +63,7 @@ def UnitToLNode(u: Unit) -> LNode:
 
         # connect all drivers of this signal with all endpoints
         for stm in s.drivers:
-            try:
-                node = toL[stm]
-            except KeyError:
-                if isinstance(stm, Operator):
-                    toL[stm] = node = addOperatorAsLNode(root, stm)
-                else:
-                    raise
+            node = lazyLoadNode(root, stm, toL)
 
             if isinstance(stm, PortItem):
                 src = node
@@ -71,14 +80,10 @@ def UnitToLNode(u: Unit) -> LNode:
 
         for stm in s.endpoints:
             if isinstance(stm, Operator):
-                try:
-                    node = toL[stm]
-                except KeyError:
-                    toL[stm] = node = addOperatorAsLNode(root, stm)
+                node = lazyLoadNode(root, stm, toL)
 
-                for i, op in enumerate(stm.operands):
+                for op, src in zip(stm.operands, node.west):
                     if op is s:
-                        src = node.west[i]
                         endpointPorts.add(src)
 
             elif isinstance(stm, PortItem):

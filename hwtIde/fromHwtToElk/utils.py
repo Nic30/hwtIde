@@ -12,6 +12,8 @@ from hwt.hdl.statements import HdlStatement
 from hwt.hdl.value import Value
 from hwt.serializer.hwt.serializer import HwtSerializer
 from hwt.synthesizer.interface import Interface
+from hwt.hdl.types.defs import BIT
+from hwt.hdl.assignment import Assignment
 
 
 def toStr(obj):
@@ -140,6 +142,26 @@ def addIndexAsLNode(root: LNode, op: Operator) -> LNode:
     u.addPort("out", PortType.OUTPUT, PortSide.EAST)
     u.addPort("in",  PortType.INPUT,  PortSide.WEST)
     u.addPort("index",  PortType.INPUT,  PortSide.WEST)
+    return u
+
+
+def isUselessTernary(op):
+    if op.operator == AllOps.TERNARY:
+        ifTrue = op.operands[1]
+        ifFalse = op.operands[2]
+        if ifTrue._dtype == BIT and ifFalse._dtype == BIT:
+            try:
+                return bool(ifTrue) and not bool(ifFalse)
+            except Exception:
+                pass
+    return False
+
+
+def ternaryAsSimpleAssignment(root, op):
+    originObj = Assignment(op.operands[0], op.result, virtualOnly=True)
+    u = root.addNode(originObj=originObj, name="Assignment")
+    u.addPort("", PortType.OUTPUT, PortSide.EAST)
+    u.addPort("",  PortType.INPUT,  PortSide.WEST)
     return u
 
 

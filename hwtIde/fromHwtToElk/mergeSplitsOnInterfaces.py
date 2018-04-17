@@ -94,21 +94,18 @@ def reconnectPorts(root, srcPort, oldSplits, newSplitNode):
             root.addEdge(preSplitPort, splitInp)
         else:
             root.addEdge(splitInp, preSplitPort)
-        #print("reconnecting", preSplitPort, splitInp)
 
         _newSplitPorts = [next(p) for p in newSplitPorts]
         # reconnect part from split node to other target nodes
         if oldSplitNode.name == "CONCAT":
             for oldP, newP in zip(oldSplitNode.west, _newSplitPorts):
                 for e in list(oldP.incomingEdges):
-                    #print(">reconnecting", e.src, newP)
                     root.addEdge(e.src, newP)
                     removeEdge(e)
 
         elif oldSplitNode.name == "SLICE":
             for oldP, newP in zip(oldSplitNode.east, _newSplitPorts):
                 for e in list(oldP.outgoingEdges):
-                    #print(">reconnecting", newP, e.dst)
                     root.addEdge(newP, e.dst)
                     removeEdge(e)
         else:
