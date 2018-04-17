@@ -36,7 +36,9 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
                     op = ep.src.origin
                 else:
                     op = ep
-                if isinstance(op, Operator) and op.operator == AllOps.INDEX:
+                if isinstance(op, Operator)\
+                        and op.operator == AllOps.INDEX\
+                        and op.operands[0] is s:
                     index = op.operands[1]
                     if isConst(index):
                         i = index.staticEval().toPy()
