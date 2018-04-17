@@ -1,9 +1,10 @@
-from elkContainer.lNode import LNode
-from hwt.pyUtils.arrayQuery import single, DuplicitValueExc
-from elkContainer.constants import PortType, PortSide
-from elkContainer.lPort import LPort
 from typing import Union
+
+from elkContainer.constants import PortType, PortSide
+from elkContainer.lNode import LNode
+from elkContainer.lPort import LPort
 from fromHwtToElk.utils import removeEdge
+from hwt.pyUtils.arrayQuery import single, DuplicitValueExc
 
 
 def getRootIntfPort(port):
@@ -62,40 +63,58 @@ def walkSignalPorts(rootPort: LPort):
 
 
 def reconnectPorts(root, srcPort, oldSplits, newSplitNode):
+    # sort oldSplit nodes because they are not in same order as signals on
+    # ports
+    srcPortSignals = list(walkSignalPorts(srcPort))
+    portOrder = {p: i for i, p in enumerate(srcPortSignals)}
+
+    def portSortKey(x):
+        n, e = x
+        if e.dstNode is n:
+            return portOrder[e.src]
+        elif e.srcNode is n:
+            return portOrder[e.dst]
+        else:
+            raise ValueError("Edge not connected to split node", e, n)
+
+    oldSplits.sort(key=portSortKey)
     newSplitPorts = [walkSignalPorts(p) for p in newSplitNode.east]
 
     for preSplitPort, splitInp, (oldSplitNode, e) in zip(
-            walkSignalPorts(srcPort),
+            srcPortSignals,
             walkSignalPorts(newSplitNode.west[0]),
             oldSplits):
 
-        try:
-            # reconnect edge from src port to split node
-            assert (e.src is preSplitPort and e.dstNode is oldSplitNode)\
-                or (e.dst is preSplitPort and e.srcNode is oldSplitNode), e
-        except AssertionError:
-            raise
+        # reconnect edge from src port to split node
+        assert (e.src is preSplitPort and e.dstNode is oldSplitNode)\
+            or (e.dst is preSplitPort and e.srcNode is oldSplitNode), e
+        ouputPort = e.src is preSplitPort
         removeEdge(e)
-        root.addEdge(preSplitPort, splitInp)
-        print("reconnecting", preSplitPort, splitInp)
+        if ouputPort:
+            root.addEdge(preSplitPort, splitInp)
+        else:
+            root.addEdge(splitInp, preSplitPort)
+        #print("reconnecting", preSplitPort, splitInp)
 
         _newSplitPorts = [next(p) for p in newSplitPorts]
         # reconnect part from split node to other target nodes
         if oldSplitNode.name == "CONCAT":
             for oldP, newP in zip(oldSplitNode.west, _newSplitPorts):
                 for e in list(oldP.incomingEdges):
-                    print(">reconnecting", e.src, newP)
+                    #print(">reconnecting", e.src, newP)
                     root.addEdge(e.src, newP)
                     removeEdge(e)
 
         elif oldSplitNode.name == "SLICE":
             for oldP, newP in zip(oldSplitNode.east, _newSplitPorts):
                 for e in list(oldP.outgoingEdges):
-                    print(">reconnecting", newP, e.dst)
+                    #print(">reconnecting", newP, e.dst)
                     root.addEdge(newP, e.dst)
                     removeEdge(e)
         else:
             raise ValueError(oldSplitNode)
+
+        root.children.remove(oldSplitNode)
 
 
 def mergeSplitsOnInterfaces(root: LNode):
