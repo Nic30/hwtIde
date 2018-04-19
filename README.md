@@ -35,3 +35,10 @@ Simple component connection visualizer for visualization of of hierarchical comp
 * download repo and run "npm install" in  hwtIde/static to download node packages for frontend
 
 run by executing app.py
+
+
+# Connected similar projects
+* https://github.com/1138-4EB/hwd-ide
+
+# Similar projects
+* https://github.com/YosysHQ/yosys
