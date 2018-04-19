@@ -100,11 +100,14 @@ def UnitToLNode(u: Unit) -> LNode:
     for s in u._ctx.signals:
         connect_signal(s)
 
+    # optimizations
     reduceUselessAssignments(root)
     extractSplits(root, u._ctx.signals, toL)
-    mergeSplitsOnInterfaces(root)
     flattenTrees(root, lambda node: node.name == "CONCAT")
+    mergeSplitsOnInterfaces(root)
     resolveSharedConnections(root)
+
+    # required for to json conversion
     flattenPorts(root)
 
     return root

@@ -5,7 +5,7 @@ from hwt.hdl.assignment import Assignment
 
 def reduceUselessAssignments(root: LNode):
     """
-    Remove assingments if it is only a direct connection and can be replaced with direct link
+    Remove assignments if it is only a direct connection and can be replaced with direct link
     """
     do_update = False
     for n in root.children:
