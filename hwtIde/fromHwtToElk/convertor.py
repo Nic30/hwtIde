@@ -69,10 +69,10 @@ def UnitToLNode(u: Unit) -> LNode:
                 src = node
             elif isinstance(stm, Operator):
                 src = node.east[0]
-                for i, (op, opPort) in enumerate(zip(stm.operands, node.west)):
+                for op, opPort in zip(stm.operands, node.west):
                     if isConst(op):
                         n = ValueAsLNode(root, op)
-                        root.addEdge(n.east[0], opPort)
+                        root.addEdge(n.east[0], opPort, originObj=op)
             else:
                 src = node.east[stm._outputs.index(s)]
 

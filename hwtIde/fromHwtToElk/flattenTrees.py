@@ -60,13 +60,26 @@ def flattenTrees(root, nodeSelector: Callable[[LNode], bool]):
             o = newNode.addPort("", PortType.OUTPUT, PortSide.EAST)
             dst = outputedge.dst
             removeEdge(outputedge)
-            root.addEdge(o, dst)
+            root.addEdge(o, dst, originObj=outputedge.originObj)
 
-            for ie in inputEdges:
-                inp = newNode.addPort("", PortType.INPUT, PortSide.WEST)
+            for i, ie in enumerate(inputEdges):
+                name = None
+                index = len(inputEdges) - i - 1
+                if hasattr(ie.originObj, "_dtype"):
+                    w = ie.originObj._dtype.bit_length()
+                    if w > 1:
+                        name = "[%d:%d]" % ((index + 1) * w, index * w)
+                    else:
+                        name = None
+
+                if name is None:
+                    name = "[%d]" % (index)
+
+                inp = newNode.addPort(name,
+                                      PortType.INPUT, PortSide.WEST)
                 src = ie.src
                 removeEdge(ie)
-                root.addEdge(src, inp)
+                root.addEdge(src, inp, originObj=ie.originObj)
 
             for n in reducedNodes:
                 root.children.remove(n)

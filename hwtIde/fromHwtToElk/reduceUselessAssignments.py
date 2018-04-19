@@ -27,7 +27,7 @@ def reduceUselessAssignments(root: LNode):
             outP = getSinglePort(n.east)
             for e in inP.incomingEdges:
                 sPort = e.src
-                srcPorts.append(sPort)
+                srcPorts.append((sPort, e.originObj))
                 edgesToRemove.append(e)
 
             for e in outP.outgoingEdges:
@@ -38,9 +38,9 @@ def reduceUselessAssignments(root: LNode):
             for e in edgesToRemove:
                 removeEdge(e)
 
-            for srcPort in srcPorts:
+            for srcPort, originObj in srcPorts:
                 for dstPort in dstPorts:
-                    root.addEdge(srcPort, dstPort)
+                    root.addEdge(srcPort, dstPort, originObj=originObj)
 
     if do_update:
         for n in nodes:
