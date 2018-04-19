@@ -1,7 +1,4 @@
-from typing import List, Set, Callable
-
 from elkContainer.lNode import LNode
-from elkContainer.lPort import LPort
 from fromHwtToElk.extractSplits import extractSplits
 from fromHwtToElk.flattenPorts import flattenPorts
 from fromHwtToElk.flattenTrees import flattenTrees

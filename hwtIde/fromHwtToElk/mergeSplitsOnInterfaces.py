@@ -104,8 +104,9 @@ def reconnectPorts(root, srcPort, oldSplits, newSplitNode):
                     removeEdge(e)
 
         elif oldSplitNode.name == "SLICE":
-            for oldP, newP in zip(oldSplitNode.east, _newSplitPorts):
+            for oldP, newP in zip(oldSplitNode.east, reversed(_newSplitPorts)):
                 for e in list(oldP.outgoingEdges):
+                    print(e)
                     root.addEdge(newP, e.dst, originObj=e.originObj)
                     removeEdge(e)
         else:
