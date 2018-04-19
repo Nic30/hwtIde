@@ -2,13 +2,14 @@ from elkContainer.constants import PortType
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 
-# [TODO] reduce when there are splits / concatenations as well
-
 
 def portTryReduce(root: LNode, port: LPort):
     """
     Check if majority of children is connected to same port
     if it is the case reduce children and connect this port instead children
+
+    :note: use reduceUselessAssignments, extractSplits, flattenTrees before this function
+        to maximize it's effect
     """
     if not port.children:
         return
@@ -111,10 +112,10 @@ def countDirectlyConnected(port: LPort, result: dict) -> int:
 
     if port.children:
         ch_cnt = 0
-        #try:
+        # try:
         #    assert not inEdges, (port, port.children, inEdges)
         #    assert not outEdges, (port, port.children, outEdges)
-        #except AssertionError:
+        # except AssertionError:
         #    raise
         for ch in port.children:
             ch_cnt += countDirectlyConnected(ch, result)

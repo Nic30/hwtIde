@@ -62,7 +62,7 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
                                 continue
 
                         if items * sliceW == w:
-                            sliceI = i.start // sliceW
+                            sliceI = i.stop // sliceW
                             sliceParts.append((sliceI, ep))
                             continue
 
@@ -70,12 +70,12 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
 
             if compatible:
                 # reduce to slice
-                sliceParts.sort()
+                sliceParts.sort(reverse=True)
                 srcPort = toL[sliceParts[0][1]].west[0].incomingEdges[0].src
                 sliceNode = root.addNode(
                     "SLICE", originObj=InterfaceSplitInfo(sliceParts))
                 inputPort = sliceNode.addPort(
-                    "in", PortType.INPUT, PortSide.WEST)
+                    "", PortType.INPUT, PortSide.WEST)
 
                 # create new sliceNode
                 for i, assig in sliceParts:
@@ -89,7 +89,7 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
                         removeEdge(e)
 
                     for e in list(oldAssigNode.east[0].outgoingEdges):
-                        dstPorts.append(e.dst)
+                        dstPorts.append((e.dst, e.originObj))
                         removeEdge(e)
 
                     root.children.remove(oldAssigNode)
@@ -98,7 +98,7 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
                     root.children.remove(
                         oldAssigNode.west[1].incomingEdges[0].srcNode)
 
-                    for dst in dstPorts:
-                        root.addEdge(outPort, dst)
+                    for dst, originObj in dstPorts:
+                        root.addEdge(outPort, dst, originObj=originObj)
 
                 root.addEdge(srcPort, inputPort, e.name, e.originObj)

@@ -1,7 +1,4 @@
-from typing import List, Set, Callable
-
 from elkContainer.lNode import LNode
-from elkContainer.lPort import LPort
 from fromHwtToElk.extractSplits import extractSplits
 from fromHwtToElk.flattenPorts import flattenPorts
 from fromHwtToElk.flattenTrees import flattenTrees
@@ -69,10 +66,10 @@ def UnitToLNode(u: Unit) -> LNode:
                 src = node
             elif isinstance(stm, Operator):
                 src = node.east[0]
-                for i, (op, opPort) in enumerate(zip(stm.operands, node.west)):
+                for op, opPort in zip(stm.operands, node.west):
                     if isConst(op):
                         n = ValueAsLNode(root, op)
-                        root.addEdge(n.east[0], opPort)
+                        root.addEdge(n.east[0], opPort, originObj=op)
             else:
                 src = node.east[stm._outputs.index(s)]
 
@@ -103,11 +100,14 @@ def UnitToLNode(u: Unit) -> LNode:
     for s in u._ctx.signals:
         connect_signal(s)
 
+    # optimizations
     reduceUselessAssignments(root)
     extractSplits(root, u._ctx.signals, toL)
-    mergeSplitsOnInterfaces(root)
     flattenTrees(root, lambda node: node.name == "CONCAT")
+    mergeSplitsOnInterfaces(root)
     resolveSharedConnections(root)
+
+    # required for to json conversion
     flattenPorts(root)
 
     return root
