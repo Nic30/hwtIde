@@ -1,11 +1,11 @@
 from typing import Union, List, Tuple
 
 from elkContainer.constants import PortType, PortSide
+from elkContainer.lEdge import LEdge
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 from fromHwtToElk.utils import removeEdge
 from hwt.pyUtils.arrayQuery import single, DuplicitValueExc
-from elkContainer.lEdge import LEdge
 
 
 def getRootIntfPort(port: LPort):
