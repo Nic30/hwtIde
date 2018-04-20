@@ -61,7 +61,6 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
     # hidden signals in statements
     # we need to create connections for signals only outside of statements
     def connect_signal(s):
-        print(s, s.endpoints)
         driverPorts = set()
         endpointPorts = set()
 
