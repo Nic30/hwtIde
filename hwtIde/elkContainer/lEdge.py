@@ -55,10 +55,11 @@ class LEdge():
 
     def toElkJson(self, idStore):
         return {
-            "source": idStore[self.srcNode],
-            "sourcePort": idStore[self.src],
-            "target": idStore[self.dstNode],
-            "targetPort": idStore[self.dst],
+            "id": str(idStore[self]),
+            "source": str(idStore[self.srcNode]),
+            "sourcePort": str(idStore[self.src]),
+            "target": str(idStore[self.dstNode]),
+            "targetPort": str(idStore[self.dst]),
         }
 
     def __repr__(self):

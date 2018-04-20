@@ -81,7 +81,7 @@ class LPort():
 
     def toElkJson(self, idStore):
         return {
-            "id": idStore[self],
+            "id": str(idStore[self]),
             "name": self.name,
             "direction": self.direction.name,
             "level": self.getLevel(),

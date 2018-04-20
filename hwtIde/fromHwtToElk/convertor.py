@@ -11,6 +11,7 @@ from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
 from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
+from typing import Optional
 
 
 def lazyLoadNode(root, stm, toL):
@@ -28,18 +29,23 @@ def lazyLoadNode(root, stm, toL):
             raise
 
 
-def UnitToLNode(u: Unit) -> LNode:
+def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -> LNode:
     """
     Build LNode instance from Unit instance
 
     :attention: unit has to be synthesized
     """
+    if toL is None:
+        toL = {}
+    if node is None:
+        root = LNode(name=u._name, originObj=u, node2lnode=toL)
+    else:
+        root = node
 
-    toL = {}
-    root = LNode(name=u._name, originObj=u, node2lnode=toL)
     # create subunits
     for su in u._units:
         n = root.addNode(name=su._name, originObj=su)
+        UnitToLNode(su, n, toL)
         for intf in su._interfaces:
             addPortToLNode(n, intf)
 

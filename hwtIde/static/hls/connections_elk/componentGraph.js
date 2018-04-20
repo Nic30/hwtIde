@@ -51,24 +51,26 @@ function ComponentGraph() {
         var portW = 0;
         var max = Math.max
         var bodyTextSize = initBodyTextLines(d);
-        
-        d.ports.forEach(function(p) {
-            var t = p.properties.portSide;
-            if (t == "WEST"){
-                westCnt++;    
-            } else if (t == "EAST") {
-                eastCnt++;
-            } else {
-                throw new Error(t);
-            }
-            portW = max(portW, widthOfText(p.name))
-            // dimension of connection pin
-            p.width = 2;
-            p.height = 2;
-        })
+        if (d.ports != null)
+          d.ports.forEach(function(p) {
+              var t = p.properties.portSide;
+              if (t == "WEST"){
+                  westCnt++;    
+              } else if (t == "EAST") {
+                  eastCnt++;
+              } else {
+                  throw new Error(t);
+              }
+              portW = max(portW, widthOfText(p.name))
+              // dimension of connection pin
+              p.width = 2;
+              p.height = 2;
+          })
         d.portLabelWidth = portW;
         d.width = max(portW * 2 + self.NODE_MIDDLE_PORT_SPACING, labelW) + bodyTextSize[0];
         d.height = max(max(westCnt, eastCnt) * self.PORT_HEIGHT, bodyTextSize[1]);
+        if (d.children)
+        	d.children.forEach(initNodeSizes);
     }
     
     function renderTextLines(bodyTexts) {
@@ -93,7 +95,7 @@ function ComponentGraph() {
     }
     
     self.root = svg.append("g");
-    self.layouter = elk.d3adapter();
+    self.layouter = elk.d3kgraph();
     
     /*
      * Set bind graph data to graph rendering engine
@@ -101,20 +103,21 @@ function ComponentGraph() {
     self.bindData = function (graph) {
         var root = self.root;
         var layouter = self.layouter;
-        graph.nodes.forEach(initNodeSizes);
         // config of layouter
         layouter
-            .nodes(graph.nodes)
-            .links(graph.links)
+            .kgraph(graph)
             .size([width, height])
             .transformGroup(root)
             .options({
               edgeRouting: "ORTHOGONAL",
             })
             .defaultPortSize([2, 2]) // size of port icon
+        var nodes = layouter.getNodes();
+        var links = layouter.getLinks();
+        nodes.forEach(initNodeSizes);
             
         var link = root.selectAll(".link")
-            .data(graph.links)
+            .data(links)
             .enter()
             .append("path")
             .attr("class", "link")
@@ -130,14 +133,14 @@ function ComponentGraph() {
         
         // by "g" we group nodes along with their ports
         var node = root.selectAll(".node")
-            .data(graph.nodes)
+            .data(nodes)
             .enter()
             .append("g");
         
         var nodeBody = node.append("rect");
         
         var port = node.selectAll(".port")
-            .data(function(d) { return d.ports; })
+            .data(function(d) { return d.ports || []; })
             .enter()
             .append("g");
         

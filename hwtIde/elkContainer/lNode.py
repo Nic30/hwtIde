@@ -5,6 +5,7 @@ from elkContainer.constants import PortSide, PortType,\
     NodeType, PortConstraints, LayerConstraint
 from elkContainer.lPort import LPort
 from elkContainer.lEdge import LEdge
+from hwt.pyUtils.uniqList import UniqList
 
 
 class LNode():
@@ -133,23 +134,29 @@ class LNode():
             }
         }
         if not isTop:
-            d["id"] = idStore[self]
+            d["id"] = str(idStore[self])
         else:
             self.toElkJson_registerNodes(idStore, isTop=isTop)
             self.toElkJson_registerPorts(idStore)
 
         if self.children:
             nodes = []
-            edges = set()
+            edges = UniqList()
             for p in self.iterPorts():
-                edges.update(p.iterEdges())
+                edges.extend(p.iterEdges())
             for ch in self.children:
                 nodes.append(ch.toElkJson(idStore, isTop=False))
                 for p in ch.iterPorts():
-                    edges.update(p.iterEdges())
+                    edges.extend(p.iterEdges())
+
             nodes.sort(key=lambda n: n["id"])
-            d["nodes"] = nodes
-            d["links"] = [e.toElkJson(idStore) for e in edges]
+            d["children"] = nodes
+
+            for e in edges:
+                idStore.registerEdge(e)
+            d["links"] = [e.toElkJson(idStore) for e in edges
+                          #if e.srcNode is not self and e.dstNode is not self
+                          ]
 
         return d
 

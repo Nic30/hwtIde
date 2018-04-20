@@ -144,6 +144,6 @@ def connectionDataElk(module_name, in_module_name):
     g = UnitToLNode(u)
     idStore = ElkIdStore()
     data = g.toElkJson(idStore)
-    assert len(g.children) == idStore.nodeCnt, (len(
-        g.children), idStore.nodeCnt)
+    #assert len(g.children) == idStore.nodeCnt, (len(
+    #    g.children), idStore.nodeCnt)
     return jsonify(data)
