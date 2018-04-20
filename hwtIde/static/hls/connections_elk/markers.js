@@ -1,26 +1,21 @@
 
 function addMarkers(svg) {
 	var defs = svg.append("defs")
-	
-	defs.append("g")
-	   .attr("id", "westInPortMarker")
-	   .append("path")
-	   .attr("d", "M 2 -4  7 1  2 6 Z")
-	
-	defs.append("g")
-	   .attr("id", "westOutPortMarker")
-	   .append("path")
-	   .attr("d", "M 7 -4  2 1  7 6 Z")
-	
-	defs.append("g")
-	   .attr("id", "eastInPortMarker")
-	   .append("path")
-	   .attr("d", "M 0 -5  -5 0  0 5 Z")
-	
-	defs.append("g")
-	   .attr("id", "eastOutPortMarker")
-	   .append("path")
-	   .attr("d", "M -5 -5  0 0  -5 5 Z")
+        function addMarker(id, arrowPath, arrowTranslate) {
+          var cont = defs.append("g")
+	    .attr("id", id)
+            .attr("class", "port")
+	    .append("path")
+	    .attr("d", arrowPath)
+            .attr("transform", "translate(" + arrowTranslate[0] + ", " + arrowTranslate[1] + ")");
+        
+        }
+        var right = "M 0 4  2 4  2 0  7 5  2 10  2 6  0 6 Z";
+        var left = "M 7 4  5 4  5 0  0 5  5 10  5 6  7 6 Z";
+        addMarker("westInPortMarker", right, [0, -4])
+	addMarker("westOutPortMarker", left, [0, -4])
+        addMarker("eastInPortMarker", left, [0, -4])
+        addMarker("eastOutPortMarker", right, [0, -4])
 }
 
 function getIOMarker(d) {
