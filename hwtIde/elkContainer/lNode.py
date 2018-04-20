@@ -154,7 +154,7 @@ class LNode():
 
             for e in edges:
                 idStore.registerEdge(e)
-            d["links"] = [e.toElkJson(idStore) for e in edges
+            d["edges"] = [e.toElkJson(idStore) for e in edges
                           #if e.srcNode is not self and e.dstNode is not self
                           ]
 

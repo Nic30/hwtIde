@@ -26,7 +26,7 @@ var elk;
     dispatch = d3.dispatch("finish"),
     // containers
     nodes = [],
-    links = [],
+    edges = [],
     graph = {}, // internal (hierarchical graph)
     ports = function(n) {
       // by default the 'ports' field
@@ -166,15 +166,15 @@ var elk;
       d3elk.__nodeCache = nodes;
       return nodes;
     };
-    d3elk.getLinks = function() {
-      if (d3elk.__linksCache != null)
-        return d3elk.__linksCache;
-      d3elk.__linksCache = graph.links || [];
-      var linksOfChildren = d3.merge(d3elk.getNodes().map(function(n) {
-        return n.links || [];
+    d3elk.getEdges = function() {
+      if (d3elk.__edgesCache != null)
+        return d3elk.__edgesCache;
+      d3elk.__edgesCache = graph.edges || [];
+      var edgesOfChildren = d3.merge(d3elk.getNodes().map(function(n) {
+        return n.edges || [];
       }));
-      d3elk.__linksCache = d3elk.__linksCache.concat(linksOfChildren);
-      return d3elk.__linksCache;
+      d3elk.__edgesCache = d3elk.__edgesCache.concat(edgesOfChildren);
+      return d3elk.__edgesCache;
     };
     d3elk.getPorts = function() {
         if (d3elk.__portsCache != null)
@@ -187,7 +187,7 @@ var elk;
     };
     d3elk.invalidateCaches = function() {
         d3elk.__nodeCache = null;
-        d3elk.__linksCache = null;
+        d3elk.__edgesCache = null;
         d3elk.__portsCache = null;
     };
       
@@ -253,7 +253,7 @@ var elk;
     }
     var toAbsolutePositionsEdges = function(n, nodeMap) {
       // edges
-      (n.links || []).forEach(function (e) {
+      (n.edges || []).forEach(function (e) {
         // transform edge coordinates to absolute coordinates. Note that
         //  node coordinates are already absolute and that
         //  edge coordinates are relative to the source node's parent node

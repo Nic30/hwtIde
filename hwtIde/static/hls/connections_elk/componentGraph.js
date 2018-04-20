@@ -116,11 +116,11 @@ function ComponentGraph() {
             })
             .defaultPortSize(self.PORT_PIN_SIZE) // size of port icon
         var nodes = layouter.getNodes();
-        var links = layouter.getLinks();
+        var edges = layouter.getEdges();
         nodes.forEach(initNodeSizes);
             
         var link = root.selectAll(".link")
-            .data(links)
+            .data(edges)
             .enter()
             .append("path")
             .attr("class", "link")
@@ -149,7 +149,10 @@ function ComponentGraph() {
         
         // apply layout
         layouter.on("finish", function(d) {
-        
+          nodeBody
+            .attr("width", function(d) { return d.width })
+            .attr("height", function(d) { return d.height });
+
           // apply edge routes
           link.transition().attr("d", function(d) {
             var path = "";
@@ -184,8 +187,6 @@ function ComponentGraph() {
                     return "node";
                 }
             })
-            .attr("width", function(d) { return d.width })
-            .attr("height", function(d) { return d.height })
             .attr("rx", 5)
             .attr("ry", 5);
         
