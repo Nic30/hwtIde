@@ -22,7 +22,7 @@ function ComponentGraph() {
      * */
     function initBodyTextLines(d) {
         var max = Math.max
-        if (d.bodyText) {
+        if (d.bodyText != null) {
             d.bodyText = d.bodyText.split("\n");
             var bodyTextW = 0;
             d.bodyText.forEach(function (line) {
@@ -46,6 +46,9 @@ function ComponentGraph() {
      * Init bodyText and resolve size of node from body text and ports 
      * */
     function initNodeSizes(d) {
+    	if (d.children)
+    		return
+
         var labelW = widthOfText(d.name)
         var westCnt = 0;
         var eastCnt = 0;
@@ -63,17 +66,23 @@ function ComponentGraph() {
               } else {
                   throw new Error(t);
               }
-              portW = max(portW, widthOfText(p.name))
+              var indent = 0;
+              if (d.level > 0)
+            	  indent =(d.level + 1) * self.CHAR_WIDTH;
+              portW = max(portW, widthOfText(p.name) + indent)
               // dimension of connection pin
               p.width = self.PORT_PIN_SIZE[0];
               p.height = self.PORT_PIN_SIZE[1];
           })
-
+        var portColums = 0;
+        if (westCnt) portColums += 1;
+        if (eastCnt) portColums += 1;
+        var middleSpacing = 0;
+        if (portColums == 2) middleSpacing = self.NODE_MIDDLE_PORT_SPACING
+        
         d.portLabelWidth = portW;
-        d.width = max(portW * 2 + self.NODE_MIDDLE_PORT_SPACING, labelW) + bodyTextSize[0];
+        d.width = max(portW * portColums + middleSpacing, labelW) + bodyTextSize[0];
         d.height = max(max(westCnt, eastCnt) * self.PORT_HEIGHT, bodyTextSize[1]);
-        if (d.children)
-        	d.children.forEach(initNodeSizes);
     }
     
     function renderTextLines(bodyTexts) {
@@ -115,10 +124,23 @@ function ComponentGraph() {
               edgeRouting: "ORTHOGONAL",
             })
             .defaultPortSize(self.PORT_PIN_SIZE) // size of port icon
-        var nodes = layouter.getNodes();
+        var nodes = layouter.getNodes().slice(1); // skip root node
         var edges = layouter.getEdges();
         nodes.forEach(initNodeSizes);
             
+        // by "g" we group nodes along with their ports
+        var node = root.selectAll(".node")
+            .data(nodes)
+            .enter()
+            .append("g");
+        
+        var nodeBody = node.append("rect");
+        
+        var port = node.selectAll(".port")
+            .data(function(d) { return d.ports || []; })
+            .enter()
+            .append("g");
+        
         var link = root.selectAll(".link")
             .data(edges)
             .enter()
@@ -134,19 +156,7 @@ function ComponentGraph() {
                 //d3.event.stopPropagation();
         });
         
-        // by "g" we group nodes along with their ports
-        var node = root.selectAll(".node")
-            .data(nodes)
-            .enter()
-            .append("g");
-        
-        var nodeBody = node.append("rect");
-        
-        var port = node.selectAll(".port")
-            .data(function(d) { return d.ports || []; })
-            .enter()
-            .append("g");
-        
+
         // apply layout
         layouter.on("finish", function(d) {
           nodeBody
@@ -198,7 +208,7 @@ function ComponentGraph() {
         node.append("text")
             .call(renderTextLines)
         
-        var PORT_X_OFFSET = self.PORT_PIN_SIZE[0];
+
         // spot port name
         port.append("text")
           .attr("y", self.PORT_HEIGHT / 4)
@@ -221,9 +231,9 @@ function ComponentGraph() {
           .attr("x", function(d) {
               var side = d.properties.portSide;
               if (side == "WEST") {
-                 return PORT_X_OFFSET;
+                 return 7;
               } else if (side == "EAST") {
-                 return -this.getBBox().width - PORT_X_OFFSET;
+                 return -this.getBBox().width;
               } else {
                   throw new Error(side);
               }

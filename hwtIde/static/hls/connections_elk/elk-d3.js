@@ -262,6 +262,7 @@ var elk;
         var tgtNode = nodeMap[e.target];
         var relative = isDescendant(srcNode, tgtNode) ?
                         srcNode : srcNode.parent;
+        
         var offset = {x: 0, y: 0};
         if (relative) {
           offset.x = relative.x;
@@ -271,19 +272,22 @@ var elk;
           offset.x += relative.padding.left || 0;
           offset.y += relative.padding.top || 0;
         }
-        // ... and apply it to the edge
-        if (e.sourcePoint) {
-          e.sourcePoint.x += offset.x || 0;
-          e.sourcePoint.y += offset.y || 0;
-        }
-        if (e.targetPoint) {
-          e.targetPoint.x += offset.x || 0;
-          e.targetPoint.y += offset.y || 0;
-        }
-        (e.bendPoints || []).forEach(function (bp) {
-          bp.x += offset.x;
-          bp.y += offset.y;
+        (e.sections || []).forEach(function (s) {
+	        // ... and apply it to the edge
+	        if (s.startPoint) {
+	          s.startPoint.x += offset.x || 0;
+	          s.startPoint.y += offset.y || 0;
+	        }
+	        if (s.endPoint) {
+	          s.endPoint.x += offset.x || 0;
+	          s.endPoint.y += offset.y || 0;
+	        }
+	        (s.bendPoints || []).forEach(function (bp) {
+	          bp.x += offset.x;
+	          bp.y += offset.y;
+	        });
         });
+
       });
       // children
       (n.children || []).forEach(function(c) {

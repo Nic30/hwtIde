@@ -124,7 +124,6 @@ class LNode():
     def toElkJson(self, idStore, isTop=True):
         d = {
             "name": self.name,
-            "bodyText": self.bodyText,
             "ports": [p.toElkJson(idStore)
                       for p in self.iterPorts()],
             "properties": {
@@ -133,6 +132,9 @@ class LNode():
                 'org.eclipse.elk.layered.mergeEdges': 1,
             }
         }
+        if self.bodyText is not None:
+            d["bodyText"] = self.bodyText
+
         if not isTop:
             d["id"] = str(idStore[self])
         else:
