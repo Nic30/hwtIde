@@ -46,8 +46,13 @@ function ComponentGraph() {
      * Init bodyText and resolve size of node from body text and ports 
      * */
     function initNodeSizes(d) {
-    	if (d.children)
-    		return
+    	if (d.children) {
+            if (d.ports != null)
+                d.ports.forEach(function(p) {
+                	p.ignoreLabel = true;
+                });
+    		return;
+    	}
 
         var labelW = widthOfText(d.name)
         var westCnt = 0;
@@ -67,8 +72,8 @@ function ComponentGraph() {
                   throw new Error(t);
               }
               var indent = 0;
-              if (d.level > 0)
-            	  indent =(d.level + 1) * self.CHAR_WIDTH;
+              if (p.level > 0)
+            	  indent = (p.level + 1) * self.CHAR_WIDTH;
               portW = max(portW, widthOfText(p.name) + indent)
               // dimension of connection pin
               p.width = self.PORT_PIN_SIZE[0];
@@ -158,21 +163,37 @@ function ComponentGraph() {
         
 
         // apply layout
-        layouter.on("finish", function(d) {
+        layouter.on("finish", function(graph) {
           nodeBody
             .attr("width", function(d) { return d.width })
             .attr("height", function(d) { return d.height });
 
+          var junctionPoints = [];
           // apply edge routes
           link.transition().attr("d", function(d) {
             var path = "";
             if (d.bendpoints || d.sections.length > 1) {
                 throw new Error("NotImplemented");
             }
-            
+            if(d.junctionPoints)
+            	d.junctionPoints.forEach(function (jp) {
+            		junctionPoints.push(jp);
+            	});
             return elk.section2svgPath(d.sections[0]);
           });
-        
+          var junctionPoints = root.selectAll(".junction-point")
+              .data(junctionPoints)
+              .enter()
+              .append("circle")
+              .attr("r", "3")
+              .attr("cx", function(d) {
+            	  return d.x;
+              })
+              .attr("cy", function(d) {
+            	  return d.y;
+              })
+              .attr("class", "junction-point");
+          
           // apply node positions
           node.transition()
             .duration(0)
@@ -212,8 +233,10 @@ function ComponentGraph() {
         // spot port name
         port.append("text")
           .attr("y", self.PORT_HEIGHT / 4)
-          .text(function(d) { 
-              if (d.level) {
+          .text(function(d) {
+        	  if (d.ignoreLabel)
+        		  return "";
+        	  else if (d.level) {
                   var indent = '-'.repeat(d.level);
                   var side = d.properties.portSide;
                   if (side == "WEST") {
@@ -224,9 +247,8 @@ function ComponentGraph() {
                       throw new Error(side);
                   }
               
-              } else {
+              } else
                   return d.name; 
-              }
           })
           .attr("x", function(d) {
               var side = d.properties.portSide;

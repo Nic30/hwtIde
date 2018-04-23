@@ -265,29 +265,34 @@ var elk;
         
         var offset = {x: 0, y: 0};
         if (relative) {
-          offset.x = relative.x;
-          offset.y = relative.y;
+          offset.x = relative.x || 0;
+          offset.y = relative.y || 0;
         }
         if (relative.padding) {
           offset.x += relative.padding.left || 0;
           offset.y += relative.padding.top || 0;
         }
-        (e.sections || []).forEach(function (s) {
-	        // ... and apply it to the edge
-	        if (s.startPoint) {
-	          s.startPoint.x += offset.x || 0;
-	          s.startPoint.y += offset.y || 0;
-	        }
-	        if (s.endPoint) {
-	          s.endPoint.x += offset.x || 0;
-	          s.endPoint.y += offset.y || 0;
-	        }
-	        (s.bendPoints || []).forEach(function (bp) {
-	          bp.x += offset.x;
-	          bp.y += offset.y;
-	        });
-        });
-
+        if (e.sections)
+        	e.sections.forEach(function (s) {
+	            // ... and apply it to the edge
+	            if (s.startPoint) {
+	              s.startPoint.x += offset.x;
+	              s.startPoint.y += offset.y;
+	            }
+	            if (s.endPoint) {
+	              s.endPoint.x += offset.x;
+	              s.endPoint.y += offset.y;
+	            }
+	            (s.bendPoints || []).forEach(function (bp) {
+	              bp.x += offset.x;
+	              bp.y += offset.y;
+	            });
+            });
+        if (e.junctionPoints)
+        	e.junctionPoints.forEach(function (jp) {
+        		  jp.x += offset.x;
+	              jp.y += offset.y;
+        	});
       });
       // children
       (n.children || []).forEach(function(c) {
