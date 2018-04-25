@@ -5,7 +5,7 @@ from elkContainer.lEdge import LEdge
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 from fromHwtToElk.utils import removeEdge
-from hwt.pyUtils.arrayQuery import single, DuplicitValueExc
+from hwt.pyUtils.arrayQuery import single, DuplicitValueExc, NoValueExc
 
 
 def getRootIntfPort(port: LPort):
@@ -152,7 +152,7 @@ def mergeSplitsOnInterfaces(root: LNode):
                 p = single(ch.west, lambda x: True)
                 e = single(p.incomingEdges, lambda x: True)
                 srcPort = e.src
-        except DuplicitValueExc:
+        except (DuplicitValueExc, NoValueExc):
             continue
 
         if srcPort is not None and isinstance(srcPort.parent, LPort):

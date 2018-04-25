@@ -63,6 +63,8 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
 
                         if items * sliceW == w:
                             sliceI = i.stop // sliceW
+                            if ep not in toL:
+                                continue
                             sliceParts.append((sliceI, ep))
                             continue
 

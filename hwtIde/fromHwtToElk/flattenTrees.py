@@ -7,7 +7,11 @@ from fromHwtToElk.utils import removeEdge
 
 def searchRootOfTree(reducibleChildren, nodeFromTree):
     while True:
-        nextNode = nodeFromTree.east[0].outgoingEdges[0].dstNode
+        out_e = nodeFromTree.east[0].outgoingEdges
+        if not out_e:
+            return nodeFromTree
+
+        nextNode = out_e[0].dstNode
         if nextNode in reducibleChildren:
             nodeFromTree = nextNode
         else:

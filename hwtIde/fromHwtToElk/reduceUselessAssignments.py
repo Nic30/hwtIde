@@ -11,7 +11,7 @@ def reduceUselessAssignments(root: LNode):
     for n in root.children:
         if isinstance(n.originObj, Assignment)\
                 and not n.originObj.indexes\
-                and len(n.originObj._inputs) >= 1:
+                and len(n.west) == 1:
 
             if not do_update:
                 nodes = set(root.children)

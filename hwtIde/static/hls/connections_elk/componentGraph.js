@@ -7,6 +7,7 @@ function ComponentGraph() {
     self.CHAR_WIDTH = 7.55;
     self.CHAR_HEIGHT = 13;
     self.NODE_MIDDLE_PORT_SPACING = 20;
+    self.MAX_NODE_BODY_TEXT_SIZE = [400, 400];
     // top, right, bottom, left
     self.BODY_TEXT_PADDING = [15, 10, 10, 10];
 
@@ -60,6 +61,9 @@ function ComponentGraph() {
         var portW = 0;
         var max = Math.max
         var bodyTextSize = initBodyTextLines(d);
+        var MBT = self.MAX_NODE_BODY_TEXT_SIZE;
+        bodyTextSize[0] = Math.min(bodyTextSize[0], MBT[0]);
+        bodyTextSize[1] = Math.min(bodyTextSize[1], MBT[1]);
 
         if (d.ports != null)
           d.ports.forEach(function(p) {
@@ -97,8 +101,15 @@ function ComponentGraph() {
             var bodyText = d3.select(this)
             var d = bodyText.data()[0];
             var bodyTextLines = d.bodyText;
-            if (bodyTextLines) {
+            var MBT = self.MAX_NODE_BODY_TEXT_SIZE;
+            MBT = [MBT[0] /self.CHAR_WIDTH, MBT[1] / self.CHAR_HEIGHT];
+            
+            if (bodyTextLines && (d.children == null || d.children.length == 0)) {
                 bodyTextLines.forEach(function (line, dy) {
+                    if (line.length > MBT[0])
+                        line = line.slice(0, MBT[0] - 3) + "...";
+                    if (dy > MBT[1])
+                        return;
                     bodyText
                        .append("tspan")
                        .attr("x", d.portLabelWidth + padLeft)
@@ -255,7 +266,7 @@ function ComponentGraph() {
               if (side == "WEST") {
                  return 7;
               } else if (side == "EAST") {
-                 return -this.getBBox().width;
+                 return -this.getBBox().width - self.CHAR_WIDTH/2;
               } else {
                   throw new Error(side);
               }
