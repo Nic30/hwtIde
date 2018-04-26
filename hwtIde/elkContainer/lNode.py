@@ -46,7 +46,8 @@ class LNode():
         self._node2lnode = node2lnode
 
     def iterPorts(self) -> Generator[LPort, None, None]:
-        return chain(self.north, self.east, reversed(self.south), reversed(self.west))
+        return chain(self.north, self.east,
+                     reversed(self.south), reversed(self.west))
 
     def getPortSideView(self, side) -> List["LPort"]:
         """
@@ -122,21 +123,25 @@ class LNode():
             ch.toElkJson_registerPorts(idStore)
 
     def toElkJson(self, idStore, isTop=True):
+        props = {
+            "org.eclipse.elk.portConstraints": self.portConstraints.name,
+            'org.eclipse.elk.randomSeed': 0,
+            'org.eclipse.elk.layered.mergeEdges': 1,
+        }
+
         d = {
             "name": self.name,
             "ports": [p.toElkJson(idStore)
                       for p in self.iterPorts()],
-            "properties": {
-                "org.eclipse.elk.portConstraints": self.portConstraints.name,
-                'org.eclipse.elk.randomSeed': 0,
-                'org.eclipse.elk.layered.mergeEdges': 1,
-            }
+            "properties": props
         }
         if self.bodyText is not None:
             d["bodyText"] = self.bodyText
 
         if not isTop:
             d["id"] = str(idStore[self])
+            if self.parent.parent is not None:
+                props["org.eclipse.elk.noLayout"] = True
         else:
             self.toElkJson_registerNodes(idStore, isTop=isTop)
             self.toElkJson_registerPorts(idStore)
@@ -156,9 +161,7 @@ class LNode():
 
             for e in edges:
                 idStore.registerEdge(e)
-            d["edges"] = [e.toElkJson(idStore) for e in edges
-                          #if e.srcNode is not self and e.dstNode is not self
-                          ]
+            d["edges"] = [e.toElkJson(idStore) for e in edges]
 
         return d
 

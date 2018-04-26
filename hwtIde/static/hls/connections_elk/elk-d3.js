@@ -158,10 +158,12 @@ var elk;
           parent;
       // note that svg z-index is document order, literally
       while ((parent = queue.pop()) != null) {
-        nodes.push(parent);
-        (parent.children || []).forEach(function(c) {
-          queue.push(c);
-        });
+        if (!parent.properties["org.eclipse.elk.noLayout"]) {
+            nodes.push(parent);
+            (parent.children || []).forEach(function(c) {
+              queue.push(c);
+            });
+        }
       }
       d3elk.__nodeCache = nodes;
       return nodes;

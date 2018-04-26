@@ -129,10 +129,10 @@ def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
     bodyText = toStr(stm)
     u = root.addNode(
         originObj=stm, bodyText=bodyText)
-    for _ in stm._inputs:
-        u.addPort(None,  PortType.INPUT,  PortSide.WEST)
-    for _ in stm._outputs:
-        u.addPort(None, PortType.OUTPUT, PortSide.EAST)
+    #for _ in stm._inputs:
+    #    u.addPort(None,  PortType.INPUT,  PortSide.WEST)
+    #for _ in stm._outputs:
+    #    u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u
 
 
