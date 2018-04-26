@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable, Union, Dict, Set
 
 from elkContainer.lNode import LNode
 from fromHwtToElk.extractSplits import extractSplits
@@ -15,6 +15,11 @@ from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
 from elkContainer.constants import PortType, PortSide
 from hwt.hdl.assignment import Assignment
+from hwt.hdl.ifContainter import IfContainer
+from hwt.hdl.switchContainer import SwitchContainer
+from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
+from hwt.hdl.statements import HdlStatement
+from itertools import chain
 
 
 def lazyLoadNode(root, stm, toL):
@@ -66,6 +71,29 @@ def sortStatementPorts(root):
     pass
 
 
+def findAllHiddenOperators(signals: RtlSignalBase,
+                           seen: Set[Union[RtlSignalBase, Operator]]):
+    signals = set(signals)
+    while signals:
+        s = signals.pop()
+        seen.add(s)
+        for d in s.drivers:
+            if isinstance(d, Operator) and d not in seen:
+                seen.add(d)
+                yield d
+                for op in d.operands:
+                    if isinstance(op, RtlSignalBase) and op.hidden and op not in seen:
+                        signals.add(op)
+
+        for e in s.endpoints:
+            if isinstance(e, Operator) and e not in seen:
+                seen.add(e)
+                yield e
+                res = e.result
+                if isinstance(res, RtlSignalBase) and res.hidden and res not in seen:
+                    signals.add(res)
+
+
 def renderContentOfStatemtn(root, toL):
     stm = root.originObj
     FF = "FF"
@@ -73,7 +101,13 @@ def renderContentOfStatemtn(root, toL):
     MUX = "MUX"
     RAM = "RAM"
     CONNECTION = "CONNECTION"
-    signalsToRedner = set()
+
+    # for each inputs and outputs render expression trees
+    signalsAndOps = set()
+    ops = findAllHiddenOperators(
+        [sig for sig in chain(stm._inputs, stm._outputs) if sig.hidden],
+        signalsAndOps)
+    ops = list(ops)
 
     # walk statements and render muxs and memories
     if isinstance(stm, Assignment):
@@ -83,8 +117,86 @@ def renderContentOfStatemtn(root, toL):
         if stm.indexes:
             n.addPort("", PortType.INPUT, PortSide.WEST)
         n.addPort("", PortType.OUTPUT, PortSide.EAST)
+    elif isinstance(stm, IfContainer):
+        pass
+        #raise NotImplementedError()
+    elif isinstance(stm, SwitchContainer):
+        raise NotImplementedError()
     else:
         raise NotImplementedError()
+
+    for op in ops:
+        addOperatorAsLNode(root, op)
+
+    for s in signalsAndOps:
+        if isinstance(s, RtlSignalBase):
+            pass
+
+
+def connectSignalInStatement(s: RtlSignalBase,
+                             toL: Dict[Union[HdlStatement, Operator], LNode],
+                             root: LNode):
+    """
+    :ivar s: signal to make connections from
+    :ivar toL: dictionary for resolving layout node for hdl node
+    :ivar root: node of parent statement
+    """
+    driverPorts = set()
+    endpointPorts = set()
+
+    # connect all drivers of this signal with all endpoints
+    for stm in s.drivers:
+        if isinstance(stm, Operator):
+            node = toL[stm]
+            driverPorts.add(node.east[0])
+
+    for stm in s.endpoints:
+        if isinstance(stm, Operator):
+            node = toL[stm]
+            for op, port in zip(stm.operands, node.west):
+                if op is s:
+                    endpointPorts.add(port)
+
+    for src in driverPorts:
+        for dst in endpointPorts:
+            root.addEdge(src, dst, name=s.name, originObj=s)
+
+
+def connectSignalToStatements(s, toL, stmPorts, root):
+    driverPorts = set()
+    endpointPorts = set()
+
+    def addEndpoint(ep):
+        if isinstance(ep, PortItem):
+            dst = toL[ep]
+            endpointPorts.add(dst)
+        else:
+            laStm = toL[ep]
+            dst = stmPorts[laStm].register(s, PortType.INPUT)
+            endpointPorts.add(dst)
+
+    # connect all drivers of this signal with all endpoints
+    for stm in s.drivers:
+        node = toL[stm]
+        if isinstance(stm, PortItem):
+            src = node
+        elif isinstance(stm, Operator):
+            continue
+        else:
+            src = stmPorts[node].register(s, PortType.OUTPUT)
+
+        driverPorts.add(src)
+
+    for stm in s.endpoints:
+        if isinstance(stm, Operator):
+            for ep in walkSignalEndpointsToStatements(stm.result):
+                addEndpoint(ep)
+        else:
+            addEndpoint(stm)
+
+    for src in driverPorts:
+        for dst in endpointPorts:
+            root.addEdge(src, dst, name=s.name, originObj=s)
 
 
 def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -> LNode:
@@ -119,55 +231,11 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
     for intf in u._interfaces:
         addPort(root, intf)
 
-    # pending and seen set because we do not want to draw
-    # hidden signals in statements
-    # we need to create connections for signals only outside of statements
-    def connect_signal(s):
-        driverPorts = set()
-        endpointPorts = set()
-
-        def addEndpoint(ep):
-            if isinstance(ep, PortItem):
-                dst = toL[ep]
-                endpointPorts.add(dst)
-            else:
-                laStm = toL[ep]
-                dst = stmPorts[laStm].register(s, PortType.INPUT)
-                endpointPorts.add(dst)
-
-        # connect all drivers of this signal with all endpoints
-        for stm in s.drivers:
-            node = lazyLoadNode(root, stm, toL)
-
-            if isinstance(stm, PortItem):
-                src = node
-            elif isinstance(stm, Operator):
-                continue
-                src = node.east[0]
-                for op, opPort in zip(stm.operands, node.west):
-                    if isConst(op):
-                        n = ValueAsLNode(root, op)
-                        root.addEdge(n.east[0], opPort, originObj=op)
-            else:
-                src = stmPorts[node].register(s, PortType.OUTPUT)
-
-            driverPorts.add(src)
-
-        for stm in s.endpoints:
-            if isinstance(stm, Operator):
-                for ep in walkSignalEndpointsToStatements(stm.result):
-                    addEndpoint(ep)
-            else:
-                addEndpoint(stm)
-
-        for src in driverPorts:
-            for dst in endpointPorts:
-                root.addEdge(src, dst, name=s.name, originObj=s)
-
     # connect nets
     for s in u._ctx.signals:
         if not s.hidden:
-            connect_signal(s)
+            print(s)
+            connectSignalToStatements(s, toL, stmPorts, root)
 
     # optimizations
     reduceUselessAssignments(root)
