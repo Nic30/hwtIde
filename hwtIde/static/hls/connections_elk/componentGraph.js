@@ -166,10 +166,19 @@ function ComponentGraph() {
          * Select net on click
          * */
         link.on("click", function(d) {
-                d.selected = !d.selected;
-                d3.select(this).classed("link-selected", d.selected);
-                console.log("rect");
-                //d3.event.stopPropagation();
+        	    var doSelect = !d.selected;
+                var l = d3.select(this);
+                var data = l.data()[0];
+                // propagate click on all nets with same source
+                var src = data.source;
+                var srcP = data.sourcePort;
+                link.classed("link-selected", function (d) {
+                    if (d.source == src && d.sourcePort == srcP) {
+                    	d.selected = doSelect;
+                    }
+                    return d.selected;
+                });
+                d3.event.stopPropagation();
         });
         
 
