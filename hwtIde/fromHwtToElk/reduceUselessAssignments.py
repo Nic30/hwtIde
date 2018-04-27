@@ -1,6 +1,7 @@
 from elkContainer.lNode import LNode
 from fromHwtToElk.utils import getSinglePort, removeEdge
 from hwt.hdl.assignment import Assignment
+from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 
 
 def reduceUselessAssignments(root: LNode):
@@ -12,6 +13,9 @@ def reduceUselessAssignments(root: LNode):
         if isinstance(n.originObj, Assignment)\
                 and not n.originObj.indexes\
                 and len(n.west) == 1:
+            src = n.originObj.src
+            if isinstance(src, RtlSignalBase) and src.hidden:
+                continue
 
             if not do_update:
                 nodes = set(root.children)

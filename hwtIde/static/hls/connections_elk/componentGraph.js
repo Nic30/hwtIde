@@ -90,7 +90,7 @@ function ComponentGraph() {
         if (portColums == 2) middleSpacing = self.NODE_MIDDLE_PORT_SPACING
         
         d.portLabelWidth = portW;
-        d.width = max(portW * portColums + middleSpacing, labelW) + bodyTextSize[0];
+        d.width = max(portW * portColums + middleSpacing, labelW) + bodyTextSize[0] + self.CHAR_WIDTH;
         d.height = max(max(westCnt, eastCnt) * self.PORT_HEIGHT, bodyTextSize[1]);
     }
     

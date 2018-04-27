@@ -171,8 +171,11 @@ def addOperatorAsLNode(root: LNode, op: Operator):
     else:
         u = root.addNode(originObj=op, name=op.operator.id)
         u.addPort(None, PortType.OUTPUT, PortSide.EAST)
-        for _ in range(len(op.operands)):
-            u.addPort(None,  PortType.INPUT,  PortSide.WEST)
+        for op in op.operands:
+            p = u.addPort(None,  PortType.INPUT,  PortSide.WEST)
+            if isinstance(op, Value):
+                v = ValueAsLNode(root, op).east[0]
+                root.addEdge(v, p)
         return u
 
 

@@ -140,8 +140,8 @@ class LNode():
 
         if not isTop:
             d["id"] = str(idStore[self])
-            if self.parent.parent is not None:
-                props["org.eclipse.elk.noLayout"] = True
+            #if self.parent.parent is not None:
+            #    props["org.eclipse.elk.noLayout"] = True
         else:
             self.toElkJson_registerNodes(idStore, isTop=isTop)
             self.toElkJson_registerPorts(idStore)
