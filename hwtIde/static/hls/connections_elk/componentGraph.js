@@ -1,7 +1,7 @@
 
 
 function ComponentGraph() {
-    var self = {};
+    var self = this;
     self.PORT_HEIGHT = 20;
     self.PORT_PIN_SIZE = [7, 20];
     self.CHAR_WIDTH = 7.55;
@@ -23,7 +23,7 @@ function ComponentGraph() {
      * */
     function initBodyTextLines(d) {
         var max = Math.max
-        if (d.bodyText != null) {
+        if (d.bodyText && typeof d.bodyText == "string") {
             d.bodyText = d.bodyText.split("\n");
             var bodyTextW = 0;
             d.bodyText.forEach(function (line) {
@@ -47,12 +47,13 @@ function ComponentGraph() {
      * Init bodyText and resolve size of node from body text and ports 
      * */
     function initNodeSizes(d) {
-    	if (d.children && !d.properties["org.eclipse.elk.noLayout"]) {
+    	if (d.properties["org.eclipse.elk.noLayout"])
+    		return;
+    	if (d.children && !d.hideChildren) {
             if (d.ports != null)
                 d.ports.forEach(function(p) {
                 	p.ignoreLabel = true;
                 });
-    		return;
     	}
 
         var labelW = widthOfText(d.name)
@@ -119,7 +120,7 @@ function ComponentGraph() {
             var MBT = self.MAX_NODE_BODY_TEXT_SIZE;
             MBT = [MBT[0] /self.CHAR_WIDTH, MBT[1] / self.CHAR_HEIGHT];
             
-            if (bodyTextLines && (d.children == null || d.children.length == 0)) {
+            if (bodyTextLines && (d.children == null || d.children.length == 0 || d.hideChildren)) {
                 bodyTextLines.forEach(function (line, dy) {
                     if (line.length > MBT[0])
                         line = line.slice(0, MBT[0] - 3) + "...";
@@ -139,11 +140,32 @@ function ComponentGraph() {
     
     self.root = svg.append("g");
     self.layouter = elk.d3kgraph();
-    
+    function toggleHideChildren(node) {
+    	var h = node.hideChildren = !node.hideChildren;
+    }
     /*
      * Set bind graph data to graph rendering engine
      * */
     self.bindData = function (graph) {
+        function applyHideChildren(n) {
+        	if (n.hideChildren) {
+        		if (n.children !== undefined) {
+        			n.__children = n.children;
+        			n.__edges = n.edges;
+        			delete n.children;
+        			delete n.edges;
+        		}
+        	} else {
+        		if (n.__children !== undefined) {
+        			n.children = n.__children;
+        			n.edges = n.__edges;
+        			delete n.__children;
+        			delete n.__edges;
+            	}
+        	}
+        	(n.children || []).forEach(applyHideChildren)
+        }
+        applyHideChildren(graph);
         var root = self.root;
         var layouter = self.layouter;
         // config of layouter
@@ -157,12 +179,14 @@ function ComponentGraph() {
         var nodes = layouter.getNodes().slice(1); // skip root node
         var edges = layouter.getEdges();
         nodes.forEach(initNodeSizes);
+
             
         // by "g" we group nodes along with their ports
         var node = root.selectAll(".node")
             .data(nodes)
             .enter()
             .append("g");
+
         
         var nodeBody = node.append("rect");
         
@@ -177,21 +201,31 @@ function ComponentGraph() {
             .append("path")
             .attr("class", "link")
 
+        node.on("click", function (d) {
+        	console.log(d);
+        	if (!d.hideChildren && (!d.children || d.children.length == 0))
+        		return;
+        	var graph = self.layouter.kgraph()
+        	self.layouter.cleanLayout();
+        	root.selectAll("*").remove();
+        	toggleHideChildren(d);	
+        	self.bindData(graph)
+        });
         // Select net on click
         link.on("click", function(d) {
-        	    var doSelect = !d.selected;
-                var l = d3.select(this);
-                var data = l.data()[0];
-                // propagate click on all nets with same source
-                var src = data.source;
-                var srcP = data.sourcePort;
-                link.classed("link-selected", function (d) {
-                    if (d.source == src && d.sourcePort == srcP) {
-                    	d.selected = doSelect;
-                    }
-                    return d.selected;
-                });
-                d3.event.stopPropagation();
+          var doSelect = !d.selected;
+          var l = d3.select(this);
+          var data = l.data()[0];
+          // propagate click on all nets with same source
+          var src = data.source;
+          var srcP = data.sourcePort;
+          link.classed("link-selected", function (d) {
+              if (d.source == src && d.sourcePort == srcP) {
+              	d.selected = doSelect;
+              }
+              return d.selected;
+          });
+          d3.event.stopPropagation();
         });
 
         // apply layout
@@ -204,6 +238,8 @@ function ComponentGraph() {
           // apply edge routes
           link.transition().attr("d", function(d) {
             var path = "";
+            if (!d.sections)
+                return "";
             if (d.bendpoints || d.sections.length > 1) {
                 throw new Error("NotImplemented");
             }

@@ -27,6 +27,17 @@ class LEdge():
         self.setSource(src)
         self.setTarget(dst)
 
+    def consystencyCheck(self):
+        assert (self.srcNode.parent is self.dstNode.parent
+                or self.srcNode is self.dstNode.parent
+                or self.srcNode.parent is self.dstNode)
+        #p = self.src
+        #n = self.srcNode
+        #assert p in n.west or p in n.east or p in n.south or p in n.north, self
+        #p = self.dst
+        #n = self.dstNode
+        #assert p in n.west or p in n.east or p in n.south or p in n.north, self
+
     def setTarget(self, dst: "LPort"):
         if self.dst is not None:
             self.dst.incomingEdges.remove(self)
@@ -40,6 +51,9 @@ class LEdge():
             dst.incomingEdges.append(self)
             self.isSelfLoop = self.srcNode is self.dstNode
 
+            if self.src is not None:
+                self.consystencyCheck()
+
     def setSource(self, src: "LPort"):
         if self.src is not None:
             self.src.outgoingEdges.remove(self)
@@ -52,6 +66,9 @@ class LEdge():
             self.srcNode = src.getNode()
             src.outgoingEdges.append(self)
             self.isSelfLoop = self.srcNode is self.dstNode
+
+            if self.dst is not None:
+                self.consystencyCheck()
 
     def toElkJson(self, idStore):
         return {

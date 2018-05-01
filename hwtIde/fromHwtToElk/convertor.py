@@ -63,7 +63,10 @@ def connectSignalToStatements(s, toL, stmPorts, root):
             continue
         else:
             src = stmPorts[node].register(s, PortType.OUTPUT)
-
+        try:
+            assert src.getNode().parent == root, (s, node)
+        except AssertionError as e:
+            raise
         driverPorts.add(src)
 
     for stm in s.endpoints:
@@ -73,13 +76,27 @@ def connectSignalToStatements(s, toL, stmPorts, root):
         else:
             addEndpoint(stm)
 
+    if not (driverPorts and endpointPorts):
+        print("Warning signal endpoints/drivers not discovered", s)
     for src in driverPorts:
         for dst in endpointPorts:
-            root.addEdge(src, dst, name=s.name, originObj=s)
+            e = root.addEdge(src, dst, name=s.name, originObj=s)
+            print(e)
 
 
 def sortStatementPorts(root):
     pass
+
+
+def checkConsystency(node):
+    children = set(node.children)
+    for ch in node.children:
+        for e in node.iterEdges():
+            try:
+                e.consystencyCheck()
+            except AssertionError as ex:
+                raise
+        checkConsystency(ch)
 
 
 def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -> LNode:
@@ -99,8 +116,7 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
 
     # create subunits
     for su in u._units:
-        n = root.addNode(name=su._name, originObj=su,
-                         portConstraint=PortConstraints.FIXED_SIDE)
+        n = root.addNode(name=su._name, originObj=su)
         #UnitToLNode(su, n, toL)
         for intf in su._interfaces:
             addPortToLNode(n, intf)
@@ -125,14 +141,16 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
         r.renderContent()
 
     # optimizations
-    reduceUselessAssignments(root)
-    extractSplits(root, u._ctx.signals, toL)
-    flattenTrees(root, lambda node: node.name == "CONCAT")
-    mergeSplitsOnInterfaces(root)
-    resolveSharedConnections(root)
-
-    sortStatementPorts(root)
+    # reduceUselessAssignments(root)
+    #extractSplits(root, u._ctx.signals, toL)
+    #flattenTrees(root, lambda node: node.name == "CONCAT")
+    # mergeSplitsOnInterfaces(root)
+    # resolveSharedConnections(root)
+    #
+    # sortStatementPorts(root)
     # required for to json conversion
     flattenPorts(root)
+
+    checkConsystency(root)
 
     return root

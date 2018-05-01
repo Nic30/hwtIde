@@ -14,6 +14,8 @@ class ElkIdStore(dict):
         self.reverseDict = {v: k for k, v in self.items()}
 
     def register(self, obj):
+        if obj in self:
+            return
         k = len(self)
         self[obj] = k
         self.reverseDict[k] = obj

@@ -94,6 +94,7 @@ var elk;
           throw "elkjs.js library wasn't loaded!"
       }
     }
+    var NO_LAYOUT = "org.eclipse.elk.noLayout";
     /**
      * Setting the available area, the
      * positions of the layouted graph
@@ -109,6 +110,7 @@ var elk;
       }
       return d3elk;
     };
+
     /**
      * Sets the group used to perform 'zoomToFit'.
      */
@@ -117,11 +119,13 @@ var elk;
       transformGroup = g;
       return d3elk;
     };
+
     d3elk.options = function(opts) {
       if (!arguments.length) return options;
       options = opts;
       return d3elk;
     };
+
     /**
      * Start the layout process.
      */
@@ -137,6 +141,7 @@ var elk;
       layouter.layout(graph).then(onSuccess, d3elk.onError);
       return d3elk;
     };
+
     d3elk.getNodes = function() {
       if (d3elk.__nodeCache != null)
         return d3elk.__nodeCache;
@@ -146,7 +151,7 @@ var elk;
           parent;
       // note that svg z-index is document order, literally
       while ((parent = queue.pop()) != null) {
-        if (!parent.properties["org.eclipse.elk.noLayout"]) {
+        if (!parent.properties[NO_LAYOUT]) {
             nodes.push(parent);
             (parent.children || []).forEach(function(c) {
               queue.push(c);
@@ -156,32 +161,45 @@ var elk;
       d3elk.__nodeCache = nodes;
       return nodes;
     };
+
+    d3elk.getPorts = function() {
+    	if (d3elk.__portsCache != null)
+    		return d3elk.__portsCache;
+    	
+    	var ports = d3.merge(d3elk.getNodes().map(function(n) {
+    		return n.ports || [];
+    	}));
+    	d3elk.__portsCache = ports; 
+    };
+
     d3elk.getEdges = function() {
       if (d3elk.__edgesCache != null)
         return d3elk.__edgesCache;
+
       d3elk.__edgesCache = graph.edges || [];
-      var edgesOfChildren = d3.merge(d3elk.getNodes().map(function(n) {
+
+      var edgesOfChildren = d3.merge(
+    		  d3elk.getNodes()
+    		  .filter(function (n) {
+    			  return !n.hideChildren;
+    		  })
+    		  .map(function(n) {
         return n.edges || [];
       }));
+
       d3elk.__edgesCache = d3elk.__edgesCache.concat(edgesOfChildren);
       return d3elk.__edgesCache;
     };
-    d3elk.getPorts = function() {
-        if (d3elk.__portsCache != null)
-            return d3elk.__portsCache;
 
-        var ports = d3.merge(d3elk.getNodes().map(function(n) {
-          return n.ports || [];
-        }));
-        d3elk.__portsCache = ports; 
-    };
     d3elk.invalidateCaches = function() {
         d3elk.__nodeCache = null;
-        d3elk.__edgesCache = null;
         d3elk.__portsCache = null;
+        d3elk.__edgesCache = null;
     };
       
     d3elk.kgraph = function(root) {
+      if (!arguments.length) return graph;
+    	
       graph = root;
       d3elk.invalidateCaches();
       // alias applyLayout method
@@ -202,9 +220,31 @@ var elk;
       
       return d3elk;
     };
+    
     d3elk.onError = function (e) {
     	throw e;
     }
+    
+    /**
+     * Clean all layout possitions from nodes, nets and ports
+     */
+    d3elk.cleanLayout = function (n) {
+    	if (!arguments.length) n = graph;
+    	delete n.x;
+    	delete n.y;
+    	(n.ports || []).forEach(function (p) {
+    		delete p.x;
+    		delete p.y;
+        });
+    	(n.edges || []).forEach(function (e) { 
+    		delete e.sections;
+    		delete e.junctionPoints;
+    	});
+    	(n.children || []).forEach(function(c) {
+    		d3elk.cleanLayout(c)
+        });
+    }
+    
     /**
      * Apply layout for the kgraph style.
      * Converts relative positions to absolute positions.

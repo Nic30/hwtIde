@@ -100,8 +100,7 @@ class LNode():
         return e
 
     def toElkJson_registerNodes(self, idStore, isTop=False):
-        if not isTop:
-            idStore.registerNode(self)
+        idStore.registerNode(self)
         for ch in self.children:
             ch.toElkJson_registerNodes(idStore)
 
@@ -149,12 +148,20 @@ class LNode():
         if self.children:
             nodes = []
             edges = UniqList()
-            for p in self.iterPorts():
-                edges.extend(p.iterEdges())
+            for ch in self.children:
+                for e in ch.iterEdges():
+                    p1 = e.srcNode.parent
+                    p2 = e.dstNode.parent
+                    if ((p1 is self and p2 is self) or 
+                        (e.srcNode is self and p2 is self) or
+                        (p1 is self and e.dstNode is self)
+                        ):
+                        edges.append(e)
+
             for ch in self.children:
                 nodes.append(ch.toElkJson(idStore, isTop=False))
-                for p in ch.iterPorts():
-                    edges.extend(p.iterEdges())
+            #    for p in ch.iterPorts():
+            #        edges.extend(p.iterEdges())
 
             nodes.sort(key=lambda n: n["id"])
             d["children"] = nodes

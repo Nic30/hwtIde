@@ -76,7 +76,7 @@ class StatementRenderer():
     def addInputPort(self, node, name,
                      inpValue: Union[Value, RtlSignalBase],
                      side=PortSide.WEST):
-        root = node.parent
+        root = self.node
         port = node.addPort(name, PortType.INPUT, side)
         if isinstance(inpValue, Value):
             v = ValueAsLNode(root, inpValue).east[0]
@@ -96,12 +96,12 @@ class StatementRenderer():
         oPort = node.addPort(name, PortType.OUTPUT, side)
         if out is not None:
             if isinstance(out, LPort):
-                node.parent.addEdge(oPort, out)
+                self.node.addEdge(oPort, out)
             elif out.hidden:
                 self.extraConn[out][0].append(oPort)
             else:
                 out = self.portCtx[out]
-                node.parent.addEdge(oPort, out)
+                self.node.addEdge(oPort, out)
 
         return oPort
 
@@ -237,8 +237,6 @@ class StatementRenderer():
         Walk statement and render nodes which are representing
         hardware components (MUX, LATCH, FF, ...) for specified signal
         """
-        node = self.node
-
         # filter statements for this signal only if required
         if not isinstance(stm, HdlStatement):
             stm = list(walkStatementsForSig(stm, s))
@@ -308,10 +306,13 @@ class StatementRenderer():
         # render SwitchContainer instances
         elif isinstance(stm, SwitchContainer):
             if s in encl:
-                inputStms = chain(*map(lambda c: c[1], stm.cases))
+                inputs = []
+                for _, stms in stm.cases:
+                    inputs.append(self.renderForSignal(stms, s, False)[1])
+
                 if stm.default:
-                    inputStms = chain(inputStms, stm.default)
-                inputs = list(map(lambda p: p[1], inputStms))
+                    inputs.append(self.renderForSignal(stm.default, s, False)[1])
+
                 return self.createMux(s, inputs, stm.switchOn, connectOut)
             else:
                 raise NotImplementedError(LATCH, MUX)

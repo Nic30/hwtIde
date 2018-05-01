@@ -1,5 +1,6 @@
 from itertools import chain
 from typing import List
+from elkContainer.constants import PortSide, PortConstraints
 
 
 class LPort():
@@ -80,15 +81,20 @@ class LPort():
         return list(reversed(names))
 
     def toElkJson(self, idStore):
+        props = {
+            "portSide": self.side.name,
+        }
+
+        if self.getNode().portConstraints.isOrderFixed():
+            assert isinstance(self.index, int)
+            props["portIndex"] = self.index
+
         return {
             "id": str(idStore[self]),
             "name": self.name,
             "direction": self.direction.name,
             "level": self.getLevel(),
-            "properties": {
-                "portSide": self.side.name,
-                "portIndex": self.index
-            }
+            "properties": props,
         }
 
     def __repr__(self):
