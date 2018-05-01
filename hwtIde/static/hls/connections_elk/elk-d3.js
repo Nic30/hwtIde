@@ -39,8 +39,6 @@ var elk;
     // dimensions
     width = 0,
     height = 0,
-    defaultNodeSize = [10, 10],
-    defaultPortSize = [4, 4],
     transformGroup,
     // kgraph properties that shall be copied
     kgraphKeys = [
@@ -124,16 +122,6 @@ var elk;
       options = opts;
       return d3elk;
     };
-    d3elk.defaultNodeSize = function(dns) {
-      if (!arguments.length) return defaultNodeSize;
-      defaultNodeSize = dns;
-      return d3elk;
-    };
-    d3elk.defaultPortSize = function(dps) {
-      if (!arguments.length) return defaultPortSize;
-      defaultPortSize = dps;
-      return d3elk;
-    };
     /**
      * Start the layout process.
      */
@@ -214,6 +202,9 @@ var elk;
       
       return d3elk;
     };
+    d3elk.onError = function (e) {
+    	throw e;
+    }
     /**
      * Apply layout for the kgraph style.
      * Converts relative positions to absolute positions.
@@ -228,6 +219,11 @@ var elk;
       dispatch.call('finish', {graph: kgraph});
     };
     var toAbsolutePositions = function(n, offset, nodeMap) {
+      // [TODO] find out why this offset is required
+      if (n.children && n.children.length > 0)
+    	(n.ports || []).forEach(function (p) {
+       	   p.y -= 10;
+        });
       n.x = (n.x || 0) + offset.x;
       n.y = (n.y || 0) + offset.y;
       nodeMap[n.id] = n;

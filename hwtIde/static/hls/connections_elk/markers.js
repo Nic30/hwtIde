@@ -1,39 +1,59 @@
 
 function addMarkers(svg) {
-	var defs = svg.append("defs")
-        function addMarker(id, arrowPath, arrowTranslate) {
-          var cont = defs.append("g")
-	    .attr("id", id)
-            .attr("class", "port")
-	    .append("path")
-	    .attr("d", arrowPath)
-            .attr("transform", "translate(" + arrowTranslate[0] + ", " + arrowTranslate[1] + ")");
-        
-        }
-        var right = "M 0 4  2 4  2 0  7 5  2 10  2 6  0 6 Z";
-        var left = "M 7 4  5 4  5 0  0 5  5 10  5 6  7 6 Z";
-        addMarker("westInPortMarker", right, [0, -4])
-	addMarker("westOutPortMarker", left, [0, -4])
-        addMarker("eastInPortMarker", left, [0, -4])
-        addMarker("eastOutPortMarker", right, [0, -4])
+    var defs = svg.append("defs");
+    var w = 7;
+    var h = 10;
+    var PORT_PIN_SIZE = [7, 20];
+    function addMarker(id, arrowTranslate, arrowRotate=0) {
+    	var rightArrow = "M 0 4  2 4  2 0  7 5  2 10  2 6  0 6 Z";
+        var trans = "";
+        if (arrowRotate != 0)
+        	trans += "rotate(" + arrowRotate + ")";
+        if (arrowTranslate[0] != 0 || arrowTranslate[1] != 0)
+        	trans += "translate(" + arrowTranslate[0] + ", " + arrowTranslate[1] + ")";
+        var cont = defs.append("g")
+        .attr("id", id)
+        .attr("class", "port")
+        .append("path")
+        .attr("d", rightArrow)
+        if (trans)
+        	cont
+            .attr("transform", trans);
+    }
+    addMarker("westInPortMarker", [0, h/2]);
+    addMarker("westOutPortMarker",[0, -h*1.5], 180);
+
+    addMarker("eastInPortMarker", [-w, -h*1.5], 180);
+    addMarker("eastOutPortMarker",[0, h/2]);
+
+    addMarker("northInPortMarker", [w/2, -h], 90);
+    addMarker("northOutPortMarker",[w/2, 0], 270);
+
+    addMarker("southInPortMarker", [w/2, h], 270);
+    addMarker("southOutPortMarker",[w/2, 0], 90);
 }
 
-function getIOMarker(d) {
-	var side = d.properties.portSide;
-	var portType = d.direction;
+var PORT_MARKERS = {
+		"WEST": {
+			"INPUT": "#westInPortMarker",
+			"OUTPUT": "#westOutPortMarker"},
+		"EAST": {
+			"INPUT": "#eastInPortMarker",
+			"OUTPUT": "#eastOutPortMarker"},
+		"NORTH": {
+			"INPUT": "#northInPortMarker",
+			"OUTPUT": "#northOutPortMarker"},
+	    "SOUTH": {
+	    	"INPUT": "#southInPortMarker" ,
+	    	"OUTPUT": "#southOutPortMarker"},
+};
 
-	if (side == "WEST") {
-		if (portType == "INPUT") {
-			return "#westInPortMarker";
-		} else if (portType == "OUTPUT") {
-			return "#westOutPortMarker";
-		}
-	} else if (side == "EAST") {
-		if (portType == "INPUT") {
-			return "#eastInPortMarker";
-		} else if (portType == "OUTPUT") {
-			return "#eastOutPortMarker";
-		}
-	}
-	throw new Error("Wrong side, portType", side, portType)
+function getIOMarker(d) {
+    var side = d.properties.portSide;
+    var portType = d.direction;
+    var marker = PORT_MARKERS[side][portType];
+    if (marker === undefined) {
+    	throw new Error("Wrong side, portType", side, portType)
+    }
+    return marker;
 }

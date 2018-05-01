@@ -8,6 +8,10 @@ def reduceUselessAssignments(root: LNode):
     """
     Remove assignments if it is only a direct connection and can be replaced with direct link
     """
+    for n in root.children:
+        if n.children:
+            reduceUselessAssignments(n)
+
     do_update = False
     for n in root.children:
         if isinstance(n.originObj, Assignment)\
@@ -47,12 +51,5 @@ def reduceUselessAssignments(root: LNode):
                     root.addEdge(srcPort, dstPort, originObj=originObj)
 
     if do_update:
-        for n in nodes:
-            for p in n.iterPorts():
-                for e in p.iterEdges():
-                    try:
-                        assert e.dstNode in nodes, (e, n, e.dstNode)
-                        assert e.srcNode in nodes, (e, n, e.srcNode)
-                    except AssertionError:
-                        raise
         root.children = list(nodes)
+

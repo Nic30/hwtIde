@@ -86,8 +86,11 @@ def resolveSharedConnections(root: LNode):
     Walk all ports on all nodes and group subinterface connections
     to only parent interface connection if it is possible
     """
-    for u in root.children:
-        for p in u.iterPorts():
+    for ch in root.children:
+        resolveSharedConnections(ch)
+
+    for ch in root.children:
+        for p in ch.iterPorts():
             portTryReduce(root, p)
 
 

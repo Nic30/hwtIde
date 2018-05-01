@@ -73,7 +73,11 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
             if compatible:
                 # reduce to slice
                 sliceParts.sort(reverse=True)
-                srcPort = toL[sliceParts[0][1]].west[0].incomingEdges[0].src
+                n = toL[sliceParts[0][1]]
+                p = n.west[0]
+                if not p.incomingEdges:
+                    return
+                srcPort = p.incomingEdges[0].src
                 sliceNode = root.addNode(
                     "SLICE", originObj=InterfaceSplitInfo(sliceParts))
                 inputPort = sliceNode.addPort(

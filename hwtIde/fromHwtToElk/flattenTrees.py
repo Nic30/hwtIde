@@ -25,6 +25,10 @@ def flattenTrees(root, nodeSelector: Callable[[LNode], bool]):
 
     :attention: node has to have single output
     """
+    for ch in root.children:
+        if ch.children:
+            flattenTrees(ch, nodeSelector)
+
     reducibleChildren = set()
     for ch in root.children:
         if nodeSelector(ch):

@@ -129,9 +129,9 @@ def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
     bodyText = toStr(stm)
     u = root.addNode(
         originObj=stm, bodyText=bodyText)
-    #for _ in stm._inputs:
+    # for _ in stm._inputs:
     #    u.addPort(None,  PortType.INPUT,  PortSide.WEST)
-    #for _ in stm._outputs:
+    # for _ in stm._outputs:
     #    u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u
 
@@ -165,7 +165,7 @@ def ternaryAsSimpleAssignment(root, op):
     return u
 
 
-def addOperatorAsLNode(root: LNode, op: Operator):
+def addOperatorAsLNode(root: LNode, op: Operator, operandSigCheck=None):
     if op.operator == AllOps.INDEX:
         return addIndexAsLNode(root, op)
     else:
@@ -173,9 +173,13 @@ def addOperatorAsLNode(root: LNode, op: Operator):
         u.addPort(None, PortType.OUTPUT, PortSide.EAST)
         for op in op.operands:
             p = u.addPort(None,  PortType.INPUT,  PortSide.WEST)
+
             if isinstance(op, Value):
                 v = ValueAsLNode(root, op).east[0]
                 root.addEdge(v, p)
+            elif operandSigCheck is not None:
+                operandSigCheck(op, p)
+
         return u
 
 

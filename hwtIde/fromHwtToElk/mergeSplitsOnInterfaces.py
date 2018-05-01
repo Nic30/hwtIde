@@ -140,6 +140,10 @@ def mergeSplitsOnInterfaces(root: LNode):
     """
     collect all split/concatenation nodes and group them by target interface
     """
+    for ch in root.children:
+        if ch.children:
+            mergeSplitsOnInterfaces(ch)
+
     srcPort2splits = {}
     for ch in root.children:
         srcPort = None

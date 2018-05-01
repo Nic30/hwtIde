@@ -3,7 +3,7 @@
 function ComponentGraph() {
     var self = {};
     self.PORT_HEIGHT = 20;
-    self.PORT_PIN_SIZE = [7, 10];
+    self.PORT_PIN_SIZE = [7, 20];
     self.CHAR_WIDTH = 7.55;
     self.CHAR_HEIGHT = 13;
     self.NODE_MIDDLE_PORT_SPACING = 20;
@@ -47,7 +47,7 @@ function ComponentGraph() {
      * Init bodyText and resolve size of node from body text and ports 
      * */
     function initNodeSizes(d) {
-    	if (d.children) {
+    	if (d.children && !d.properties["org.eclipse.elk.noLayout"]) {
             if (d.ports != null)
                 d.ports.forEach(function(p) {
                 	p.ignoreLabel = true;
@@ -56,42 +56,57 @@ function ComponentGraph() {
     	}
 
         var labelW = widthOfText(d.name)
-        var westCnt = 0;
-        var eastCnt = 0;
-        var portW = 0;
         var max = Math.max
         var bodyTextSize = initBodyTextLines(d);
         var MBT = self.MAX_NODE_BODY_TEXT_SIZE;
         bodyTextSize[0] = Math.min(bodyTextSize[0], MBT[0]);
         bodyTextSize[1] = Math.min(bodyTextSize[1], MBT[1]);
 
+        // {PortSide: (portCnt, portWidth)}
+        var portDim = {
+        		"WEST": [0, 0],
+        		"EAST": [0, 0],
+        		"SOUTH": [0, 0],
+        		"NORTH": [0, 0]
+        };
+
         if (d.ports != null)
           d.ports.forEach(function(p) {
               var t = p.properties.portSide;
-              if (t == "WEST"){
-                  westCnt++;    
-              } else if (t == "EAST") {
-                  eastCnt++;
-              } else {
-                  throw new Error(t);
-              }
               var indent = 0;
               if (p.level > 0)
             	  indent = (p.level + 1) * self.CHAR_WIDTH;
-              portW = max(portW, widthOfText(p.name) + indent)
+              var portW = widthOfText(p.name) + indent;
+              var pDim = portDim[t];
+              if (pDim === undefined)
+                  throw new Error(t);
+              pDim[0]++;
+              pDim[1] = max(pDim[1], portW);
+              
               // dimension of connection pin
               p.width = self.PORT_PIN_SIZE[0];
               p.height = self.PORT_PIN_SIZE[1];
           })
+         
+        var west = portDim["WEST"],
+            east = portDim["EAST"],
+            south = portDim["SOUTH"],
+            north = portDim["NORTH"];
+
         var portColums = 0;
-        if (westCnt) portColums += 1;
-        if (eastCnt) portColums += 1;
+        if (west[0]) portColums += 1;
+        if (east[0]) portColums += 1;
         var middleSpacing = 0;
         if (portColums == 2) middleSpacing = self.NODE_MIDDLE_PORT_SPACING
+        var portW = max(west[1], east[1]);
         
         d.portLabelWidth = portW;
-        d.width = max(portW * portColums + middleSpacing, labelW) + bodyTextSize[0] + self.CHAR_WIDTH;
-        d.height = max(max(westCnt, eastCnt) * self.PORT_HEIGHT, bodyTextSize[1]);
+        d.width = max(portW * portColums + middleSpacing, labelW,
+        		      max(south[0], north[0]) * self.PORT_HEIGHT)
+        			+ bodyTextSize[0] + self.CHAR_WIDTH;
+        d.height = max(max(west[0], east[0]) * self.PORT_HEIGHT,
+        			   bodyTextSize[1],
+        			   max(south[1], north[1]) * self.CHAR_WIDTH);
     }
     
     function renderTextLines(bodyTexts) {
@@ -139,7 +154,6 @@ function ComponentGraph() {
             .options({
               edgeRouting: "ORTHOGONAL",
             })
-            .defaultPortSize(self.PORT_PIN_SIZE) // size of port icon
         var nodes = layouter.getNodes().slice(1); // skip root node
         var edges = layouter.getEdges();
         nodes.forEach(initNodeSizes);
@@ -162,9 +176,8 @@ function ComponentGraph() {
             .enter()
             .append("path")
             .attr("class", "link")
-        /*
-         * Select net on click
-         * */
+
+        // Select net on click
         link.on("click", function(d) {
         	    var doSelect = !d.selected;
                 var l = d3.select(this);
@@ -180,7 +193,6 @@ function ComponentGraph() {
                 });
                 d3.event.stopPropagation();
         });
-        
 
         // apply layout
         layouter.on("finish", function(graph) {
@@ -201,6 +213,7 @@ function ComponentGraph() {
             	});
             return elk.section2svgPath(d.sections[0]);
           });
+
           var junctionPoints = root.selectAll(".junction-point")
               .data(junctionPoints)
               .enter()
@@ -219,11 +232,10 @@ function ComponentGraph() {
             .duration(0)
             .attr("transform", function(d) { return "translate(" + d.x + " " + d.y + ")"});
           
-          var PORT_Y_OFFSET = (self.PORT_PIN_SIZE[1] - 2) / 2;
           // apply port positions  
           port.transition()
             .duration(0)
-            .attr("transform", function(d) { return "translate(" + d.x + "," + (d.y + PORT_Y_OFFSET) + ")"});
+            .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"});
         
         });
         
@@ -252,7 +264,7 @@ function ComponentGraph() {
 
         // spot port name
         port.append("text")
-          .attr("y", self.PORT_HEIGHT / 4)
+          .attr("y", self.PORT_HEIGHT * 0.75)
           .text(function(d) {
         	  if (d.ignoreLabel)
         		  return "";
@@ -266,7 +278,6 @@ function ComponentGraph() {
                   } else {
                       throw new Error(side);
                   }
-              
               } else
                   return d.name; 
           })
@@ -275,7 +286,11 @@ function ComponentGraph() {
               if (side == "WEST") {
                  return 7;
               } else if (side == "EAST") {
-                 return -this.getBBox().width - self.CHAR_WIDTH/2;
+                 return -this.getBBox().width - self.CHAR_WIDTH / 2;
+              } else if (side == "NORTH") {
+            	 return 0;
+              } else if (side == "SOUTH") {
+             	 return 0;
               } else {
                   throw new Error(side);
               }
