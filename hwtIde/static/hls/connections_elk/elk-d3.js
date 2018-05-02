@@ -259,11 +259,6 @@ var elk;
       dispatch.call('finish', {graph: kgraph});
     };
     var toAbsolutePositions = function(n, offset, nodeMap) {
-      // [TODO] find out why this offset is required
-      if (n.children && n.children.length > 0)
-    	(n.ports || []).forEach(function (p) {
-       	   p.y -= 10;
-        });
       n.x = (n.x || 0) + offset.x;
       n.y = (n.y || 0) + offset.y;
       nodeMap[n.id] = n;

@@ -89,7 +89,6 @@ def sortStatementPorts(root):
 
 
 def checkConsystency(node):
-    children = set(node.children)
     for ch in node.children:
         for e in node.iterEdges():
             try:
@@ -117,7 +116,7 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
     # create subunits
     for su in u._units:
         n = root.addNode(name=su._name, originObj=su)
-        #UnitToLNode(su, n, toL)
+        UnitToLNode(su, n, toL)
         for intf in su._interfaces:
             addPortToLNode(n, intf)
 
@@ -142,12 +141,12 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
 
     # optimizations
     # reduceUselessAssignments(root)
-    #extractSplits(root, u._ctx.signals, toL)
-    #flattenTrees(root, lambda node: node.name == "CONCAT")
-    # mergeSplitsOnInterfaces(root)
-    # resolveSharedConnections(root)
-    #
-    # sortStatementPorts(root)
+    extractSplits(root, u._ctx.signals, toL)
+    flattenTrees(root, lambda node: node.name == "CONCAT")
+    mergeSplitsOnInterfaces(root)
+    resolveSharedConnections(root)
+
+    sortStatementPorts(root)
     # required for to json conversion
     flattenPorts(root)
 

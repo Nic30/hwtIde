@@ -23,8 +23,10 @@ function ComponentGraph() {
      * */
     function initBodyTextLines(d) {
         var max = Math.max
-        if (d.bodyText && typeof d.bodyText == "string") {
-            d.bodyText = d.bodyText.split("\n");
+        if (d.bodyText) {
+        	if (typeof d.bodyText === "string") {
+        	    d.bodyText = d.bodyText.split("\n");
+        	}
             var bodyTextW = 0;
             d.bodyText.forEach(function (line) {
                 bodyTextW = max(bodyTextW, line.length);
@@ -49,12 +51,12 @@ function ComponentGraph() {
     function initNodeSizes(d) {
     	if (d.properties["org.eclipse.elk.noLayout"])
     		return;
-    	if (d.children && !d.hideChildren) {
-            if (d.ports != null)
-                d.ports.forEach(function(p) {
-                	p.ignoreLabel = true;
-                });
-    	}
+    	var ignorePortLabel = d.children && !d.hideChildren;
+        if (d.ports != null)
+            d.ports.forEach(function(p) {
+            	p.ignoreLabel = ignorePortLabel;
+            });
+    	
 
         var labelW = widthOfText(d.name)
         var max = Math.max
