@@ -6,6 +6,7 @@ from fromHwtToElk.extractSplits import extractSplits
 from fromHwtToElk.flattenPorts import flattenPorts
 from fromHwtToElk.flattenTrees import flattenTrees
 from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
+from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
 from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
 from fromHwtToElk.statementRenderer import StatementRenderer, Signal2stmPortCtx
 from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
@@ -14,7 +15,7 @@ from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
 from hwt.hdl.operator import Operator
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
-from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
+from fromHwtToElk.connectSignalToStatements import connectSignalToStatements
 
 
 def lazyLoadNode(root, stm, toL):
@@ -30,60 +31,6 @@ def lazyLoadNode(root, stm, toL):
             return node
         else:
             raise
-
-
-def walkSignalEndpointsToStatements(sig):
-    assert sig.hidden, sig
-    for ep in sig.endpoints:
-        if isinstance(ep, Operator):
-            yield from walkSignalEndpointsToStatements(ep.result)
-        else:
-            yield ep
-
-
-def connectSignalToStatements(s, toL, stmPorts, root, reducedStatements):
-    driverPorts = set()
-    endpointPorts = set()
-
-    def addEndpoint(ep):
-        if isinstance(ep, PortItem):
-            dst = toL[ep]
-            endpointPorts.add(dst)
-        elif ep in reducedStatements:
-            raise NotImplementedError()
-        else:
-            laStm = toL[ep]
-            dst = stmPorts[laStm].register(s, PortType.INPUT)
-            endpointPorts.add(dst)
-
-    # connect all drivers of this signal with all endpoints
-    for stm in s.drivers:
-        node = toL[stm]
-        if isinstance(stm, PortItem):
-            src = node
-        elif isinstance(stm, Operator):
-            continue
-        elif stm in reducedStatements:
-            src = node.east[0]
-        else:
-            src = stmPorts[node].register(s, PortType.OUTPUT)
-
-        assert src.getNode().parent == root, (s, node)
-        driverPorts.add(src)
-
-    for stm in s.endpoints:
-        if isinstance(stm, Operator):
-            for ep in walkSignalEndpointsToStatements(stm.result):
-                addEndpoint(ep)
-        else:
-            addEndpoint(stm)
-
-    if not (driverPorts and endpointPorts):
-        print("Warning signal endpoints/drivers not discovered", s)
-
-    for src in driverPorts:
-        for dst in endpointPorts:
-            root.addEdge(src, dst, name=s.name, originObj=s)
 
 
 def sortStatementPorts(root):
