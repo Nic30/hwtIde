@@ -151,12 +151,12 @@ class StatementRenderer():
             control = [control, ]
 
         for c in control:
-            addInputPort(n, "c", c, PortSide.SOUTH)
+            addInputPort(n, "", c, PortSide.SOUTH)
 
         for i in inputs:
-            addInputPort(n, "i", i)
+            addInputPort(n, "", i)
 
-        oPort = n.addPort("o", PortType.OUTPUT, PortSide.EAST)
+        oPort = n.addPort("", PortType.OUTPUT, PortSide.EAST)
         if connectOut:
             if output.hidden:
                 con[output][0].append(oPort)
