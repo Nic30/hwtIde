@@ -9,7 +9,7 @@ function ComponentGraph(svg) {
     self.NODE_MIDDLE_PORT_SPACING = 20;
     self.MAX_NODE_BODY_TEXT_SIZE = [400, 400];
     // top, right, bottom, left
-    self.BODY_TEXT_PADDING = [15, 10, 10, 10];
+    self.BODY_TEXT_PADDING = [15, 10, 0, 10];
 
     addMarkers(svg, self.PORT_PIN_SIZE);
     
