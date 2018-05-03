@@ -1,6 +1,6 @@
-from hwt.hdl.portItem import PortItem
 from elkContainer.constants import PortType
 from hwt.hdl.operator import Operator
+from hwt.hdl.portItem import PortItem
 
 
 def walkSignalEndpointsToStatements(sig):

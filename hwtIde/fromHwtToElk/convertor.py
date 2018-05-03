@@ -1,7 +1,7 @@
 from typing import Optional
 
-from elkContainer.constants import PortType, PortSide, PortConstraints
 from elkContainer.lNode import LNode
+from fromHwtToElk.connectSignalToStatements import connectSignalToStatements
 from fromHwtToElk.extractSplits import extractSplits
 from fromHwtToElk.flattenPorts import flattenPorts
 from fromHwtToElk.flattenTrees import flattenTrees
@@ -13,9 +13,7 @@ from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
     addStmAsLNode, addPort, ternaryAsSimpleAssignment,\
     isUselessTernary, ValueAsLNode
 from hwt.hdl.operator import Operator
-from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
-from fromHwtToElk.connectSignalToStatements import connectSignalToStatements
 
 
 def lazyLoadNode(root, stm, toL):
