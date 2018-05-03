@@ -10,7 +10,7 @@ from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
 from fromHwtToElk.statementRenderer import StatementRenderer, Signal2stmPortCtx
 from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
     addStmAsLNode, addPort, ternaryAsSimpleAssignment,\
-    isUselessTernary
+    isUselessTernary, ValueAsLNode
 from hwt.hdl.operator import Operator
 from hwt.hdl.portItem import PortItem
 from hwt.synthesizer.unit import Unit
@@ -41,7 +41,7 @@ def walkSignalEndpointsToStatements(sig):
             yield ep
 
 
-def connectSignalToStatements(s, toL, stmPorts, root):
+def connectSignalToStatements(s, toL, stmPorts, root, reducedStatements):
     driverPorts = set()
     endpointPorts = set()
 
@@ -49,6 +49,8 @@ def connectSignalToStatements(s, toL, stmPorts, root):
         if isinstance(ep, PortItem):
             dst = toL[ep]
             endpointPorts.add(dst)
+        elif ep in reducedStatements:
+            raise NotImplementedError()
         else:
             laStm = toL[ep]
             dst = stmPorts[laStm].register(s, PortType.INPUT)
@@ -61,12 +63,12 @@ def connectSignalToStatements(s, toL, stmPorts, root):
             src = node
         elif isinstance(stm, Operator):
             continue
+        elif stm in reducedStatements:
+            src = node.east[0]
         else:
             src = stmPorts[node].register(s, PortType.OUTPUT)
-        try:
-            assert src.getNode().parent == root, (s, node)
-        except AssertionError as e:
-            raise
+
+        assert src.getNode().parent == root, (s, node)
         driverPorts.add(src)
 
     for stm in s.endpoints:
@@ -78,13 +80,14 @@ def connectSignalToStatements(s, toL, stmPorts, root):
 
     if not (driverPorts and endpointPorts):
         print("Warning signal endpoints/drivers not discovered", s)
+
     for src in driverPorts:
         for dst in endpointPorts:
-            e = root.addEdge(src, dst, name=s.name, originObj=s)
-            print(e)
+            root.addEdge(src, dst, name=s.name, originObj=s)
 
 
 def sortStatementPorts(root):
+    # [TODO]
     pass
 
 
@@ -120,10 +123,17 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
         for intf in su._interfaces:
             addPortToLNode(n, intf)
 
+    reducedStatements = set()
     # create subunits from statements
     for stm in u._ctx.statements:
-        n = addStmAsLNode(root, stm)
-        stmPorts[n] = Signal2stmPortCtx(n)
+        if StatementRenderer.isJustConstAssign(stm):
+            # reduce assignment to just value node
+            reducedStatements.add(stm)
+            n = ValueAsLNode(root, stm.src)
+            toL[stm] = n
+        else:
+            n = addStmAsLNode(root, stm)
+            stmPorts[n] = Signal2stmPortCtx(n)
 
     # create ports
     for intf in u._interfaces:
@@ -132,12 +142,15 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
     # connect nets
     for s in u._ctx.signals:
         if not s.hidden:
-            connectSignalToStatements(s, toL, stmPorts, root)
+            connectSignalToStatements(
+                s, toL, stmPorts, root, reducedStatements)
 
+    # render content of statements
     for stm in u._ctx.statements:
-        n = toL[stm]
-        r = StatementRenderer(n, toL, stmPorts[n])
-        r.renderContent()
+        if stm not in reducedStatements:
+            n = toL[stm]
+            r = StatementRenderer(n, toL, stmPorts[n])
+            r.renderContent()
 
     # optimizations
     reduceUselessAssignments(root)

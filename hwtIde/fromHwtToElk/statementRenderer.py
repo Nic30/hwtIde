@@ -19,7 +19,7 @@ from elkContainer.lPort import LPort
 from fromHwtToElk.utils import addOperatorAsLNode, ValueAsLNode
 from hwt.hdl.assignment import Assignment
 from hwt.hdl.ifContainter import IfContainer
-from hwt.hdl.operator import Operator
+from hwt.hdl.operator import Operator, isConst
 from hwt.hdl.statements import HdlStatement
 from hwt.hdl.switchContainer import SwitchContainer
 from hwt.hdl.types.array import HArray
@@ -230,6 +230,10 @@ class StatementRenderer():
             for dst in endpointPorts:
                 root.addEdge(src, dst, name=s.name, originObj=s)
 
+    @staticmethod
+    def isJustConstAssign(stm):
+        return isinstance(stm, Assignment) and not stm.indexes and isConst(stm.src)
+        
     def renderForSignal(self, stm: Union[HdlStatement, List[HdlStatement]],
                         s: RtlSignalBase,
                         connectOut=True) -> Union[RtlSignalBase, LPort]:

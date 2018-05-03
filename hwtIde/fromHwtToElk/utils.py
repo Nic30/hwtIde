@@ -1,19 +1,19 @@
 from typing import Union, List
 
-from elkContainer.constants import PortType, PortSide
+from elkContainer.constants import PortType, PortSide, PortConstraints
 from elkContainer.lEdge import LEdge
 from elkContainer.lNode import LayoutExternalPort, LNode
 from elkContainer.lPort import LPort
+from hwt.hdl.assignment import Assignment
 from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.operator import Operator
 from hwt.hdl.operatorDefs import AllOps
 from hwt.hdl.portItem import PortItem
 from hwt.hdl.statements import HdlStatement
+from hwt.hdl.types.defs import BIT
 from hwt.hdl.value import Value
 from hwt.serializer.hwt.serializer import HwtSerializer
 from hwt.synthesizer.interface import Interface
-from hwt.hdl.types.defs import BIT
-from hwt.hdl.assignment import Assignment
 
 
 def toStr(obj):
@@ -129,10 +129,6 @@ def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
     bodyText = toStr(stm)
     u = root.addNode(
         originObj=stm, bodyText=bodyText)
-    # for _ in stm._inputs:
-    #    u.addPort(None,  PortType.INPUT,  PortSide.WEST)
-    # for _ in stm._outputs:
-    #    u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u
 
 
@@ -201,6 +197,6 @@ def LNodeAddPortFromHdl(node, origin: Union[Interface, PortItem],
 
 
 def ValueAsLNode(root: LNode, val: Value):
-    u = root.addNode(originObj=val, bodyText=toStr(val))
+    u = root.addNode(originObj=val, bodyText=toStr(val), portConstraint=PortConstraints.FREE)
     u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u
