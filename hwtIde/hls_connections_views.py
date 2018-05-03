@@ -13,8 +13,10 @@ from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesi
 from json_resp import jsonResp
 from hwt.synthesizer.dummyPlatform import DummyPlatform
 from hwt.hdl.assignment import Assignment
-from hwt.hdl.operator import isConst
+from hwt.hdl.operator import isConst, Operator
 from hwt.code import Concat
+from hwt.hdl.operatorDefs import AllOps
+from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 
 
 WORKSPACE_DIR = "../../hwtLib/hwtLib/samples"
@@ -24,22 +26,22 @@ connectionsBp = Blueprint('connections', __name__,
                           template_folder='templates/hls/')
 
 
-@connectionsBp.route(r'/hls/connections-save', methods=['POST'])
-def connections_save():
-    data = request.get_json()
-    path = data["path"]
-    path = os.path.join(WORKSPACE_DIR, path)
-    if path.endswith(".json"):
-        nodes = data["nodes"]
-        nets = data["nets"]
-        with open(path, mode='w') as f:
-            json.dump(
-                {"name": data["name"], "nodes": nodes, "nets": nets},
-                f, indent=4)
-        return jsonify(success=True)
-    else:
-        raise Exception("Not implemented")
-
+#@connectionsBp.route(r'/hls/connections-save', methods=['POST'])
+# def connections_save():
+#    data = request.get_json()
+#    path = data["path"]
+#    path = os.path.join(WORKSPACE_DIR, path)
+#    if path.endswith(".json"):
+#        nodes = data["nodes"]
+#        nets = data["nets"]
+#        with open(path, mode='w') as f:
+#            json.dump(
+#                {"name": data["name"], "nodes": nodes, "nets": nets},
+#                f, indent=4)
+#        return jsonify(success=True)
+#    else:
+#        raise Exception("Not implemented")
+#
 
 @connectionsBp.route('/connections/')
 def connections():
@@ -129,6 +131,42 @@ def indexedAssignmentsToConcatenation(netlist):
         s(Concat(*map(lambda x: x[1], inputs)))
 
 
+def unhideResultsOfIndexingAndConcatOnPublicSignals(netlist):
+    openset = set([s for s in netlist.signals if not s.hidden])
+    epsToReplace = []
+    while openset:
+        s = openset.pop()
+        for ep in s.endpoints:
+            # search for index ops
+            if isinstance(ep, Operator) and ep.operator == AllOps.INDEX and ep.operands[0] is s:
+                if ep.result.hidden:
+                    epsToReplace.append(ep)
+
+        for ep in epsToReplace:
+            r = ep.result
+            assert len(r.drivers) == 1, r
+            r.hidden = False
+            i = ep.operands[1]
+            # update operator cache of signal
+            k = (AllOps.INDEX, i)
+            _r = s._usedOps.pop(k)
+            assert r is _r
+            for o in ep.operands:
+                if isinstance(o, RtlSignalBase):
+                    o.endpoints.discard(ep)
+            r.origin = None
+            r.drivers.clear()
+
+            # instantiate new hidden signal for result of index
+            new_r = s[i]
+            assert new_r is not r, r
+            # and instantiate Assignment to this new signal from the
+            # old one
+            r(new_r)
+            openset.add(r)
+        epsToReplace.clear()
+
+
 @connectionsBp.route("/hls/connections-data-elk/<module_name>/<in_module_name>")
 def connectionDataElk(module_name, in_module_name):
     # get and construct target unit specified by arguments
@@ -138,12 +176,15 @@ def connectionDataElk(module_name, in_module_name):
         ucls = getattr(ucls, name)
     u = ucls()
     plat = DummyPlatform()
-    plat.beforeHdlArchGeneration.append(indexedAssignmentsToConcatenation)
+    plat.beforeHdlArchGeneration.extend([
+        indexedAssignmentsToConcatenation,
+        unhideResultsOfIndexingAndConcatOnPublicSignals,
+    ])
     # synthetize unit and convert it to json
     synthesised(u, plat)
     g = UnitToLNode(u)
     idStore = ElkIdStore()
     data = g.toElkJson(idStore)
-    #assert len(g.children) == idStore.nodeCnt, (len(
+    # assert len(g.children) == idStore.nodeCnt, (len(
     #    g.children), idStore.nodeCnt)
     return jsonify(data)

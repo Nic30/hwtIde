@@ -80,11 +80,11 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
             n = addStmAsLNode(root, stm)
             stmPorts[n] = Signal2stmPortCtx(n)
 
-    # create ports
+    # create ports for this unit
     for intf in u._interfaces:
         addPort(root, intf)
 
-    # connect nets
+    # connect nets inside this unit
     for s in u._ctx.signals:
         if not s.hidden:
             connectSignalToStatements(
