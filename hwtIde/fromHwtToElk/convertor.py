@@ -140,7 +140,7 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
         r.renderContent()
 
     # optimizations
-    # reduceUselessAssignments(root)
+    reduceUselessAssignments(root)
     extractSplits(root, u._ctx.signals, toL)
     flattenTrees(root, lambda node: node.name == "CONCAT")
     mergeSplitsOnInterfaces(root)

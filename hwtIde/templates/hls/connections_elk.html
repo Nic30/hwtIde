@@ -43,6 +43,9 @@
       fill: #BDBDBD;
       border: 1px;
     }
+    body {
+      margin: 0;
+    }
     
     
   </style>
@@ -80,9 +83,7 @@ var svg = d3.select("body")
     .on("dblclick.zoom", null) // disable zoom on doubleclick
     .append("g");
 
-addMarkers(svg)
-
-var cGraph = new ComponentGraph();
+var cGraph = new ComponentGraph(svg);
 
 // load the data and render the elements
 d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, function(error, graph) {
@@ -91,6 +92,7 @@ d3.json("/hls/connections-data-elk/" + MODULE_NAME + "/" + IN_MODULE_NAME, funct
   }
   cGraph.bindData(graph);
 });
+
 function applyTransform() {
   svg.attr("transform", d3.event.transform)
 };

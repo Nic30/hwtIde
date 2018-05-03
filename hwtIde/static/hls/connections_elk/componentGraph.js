@@ -1,9 +1,9 @@
 
 
-function ComponentGraph() {
+function ComponentGraph(svg) {
     var self = this;
-    self.PORT_HEIGHT = 20;
-    self.PORT_PIN_SIZE = [7, 20];
+    self.PORT_PIN_SIZE = [7, 13];
+    self.PORT_HEIGHT = self.PORT_PIN_SIZE[1];
     self.CHAR_WIDTH = 7.55;
     self.CHAR_HEIGHT = 13;
     self.NODE_MIDDLE_PORT_SPACING = 20;
@@ -11,6 +11,8 @@ function ComponentGraph() {
     // top, right, bottom, left
     self.BODY_TEXT_PADDING = [15, 10, 10, 10];
 
+    addMarkers(svg, self.PORT_PIN_SIZE);
+    
     function widthOfText(text) {
         if (text)
             return text.length * self.CHAR_WIDTH;
@@ -204,9 +206,14 @@ function ComponentGraph() {
             .attr("class", "link")
 
         node.on("click", function (d) {
-        	console.log(d);
-        	if (!d.hideChildren && (!d.children || d.children.length == 0))
-        		return;
+        	var children;
+        	if (d.hideChildren)
+        		children = d.__children;
+        	else
+        		children = d.children;
+
+        	if (!children || children.length == 0)
+        		return; // does not have anything to expand
         	var graph = self.layouter.kgraph()
         	self.layouter.cleanLayout();
         	root.selectAll("*").remove();
