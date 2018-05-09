@@ -1,4 +1,15 @@
 
+/**
+* Returns whether the sides of ports are fixed.
+* 
+* @see PortSide
+* @return true if the port sides are fixed
+*/
+
+function PortConstraints_isSideFixed(val) {
+   return val == "FREE" || val != "UNDEFINED"
+}
+
 
 function ComponentGraph(svg) {
     var self = this;
@@ -172,14 +183,17 @@ function ComponentGraph(svg) {
         applyHideChildren(graph);
         var root = self.root;
         var layouter = self.layouter;
+
         // config of layouter
         layouter
+	        .options({
+	        	edgeRouting: "ORTHOGONAL",
+	        	//"org.eclipse.elk.layered.crossingMinimization.strategy": "LAYER_EVO"
+	        })
             .kgraph(graph)
             .size([width, height])
             .transformGroup(root)
-            .options({
-              edgeRouting: "ORTHOGONAL",
-            })
+
         var nodes = layouter.getNodes().slice(1); // skip root node
         var edges = layouter.getEdges();
         nodes.forEach(initNodeSizes);
@@ -238,7 +252,7 @@ function ComponentGraph(svg) {
         });
 
         // apply layout
-        layouter.on("finish", function(graph) {
+        layouter.on("finish", function applyLayout() {
           nodeBody
             .attr("width", function(d) { return d.width })
             .attr("height", function(d) { return d.height });
@@ -275,13 +289,73 @@ function ComponentGraph(svg) {
           // apply node positions
           node.transition()
             .duration(0)
-            .attr("transform", function(d) { return "translate(" + d.x + " " + d.y + ")"});
+            .attr("transform", function(d) {
+            	// if side of ports is not fixed resolve it from position
+            	var c = d.properties['"org.eclipse.elk.portConstraints"'];
+            	if (!PortConstraints_isSideFixed(c)) {
+            		var w = d.width;
+	            	var h = d.height;
+            		ports.forEach(function initPortSides(p) {
+	            		if (p.x < 0)
+	            			p.side = "WEST";
+	            		else if (p.y < 0)
+	            			p.side = "NORTH";
+	            		else if (p.x >= w)
+	            			p.side = "EAST";
+	            		else if (p.y >= h)
+	            			d.side = "SOUTH";
+	            		else
+	            			throw new Exception("wrong port position" + [p.x, p.y]);
+	            	});
+            	}
+            	if (typeof d.x === "undefined" || typeof d.x === "undefined") {
+            		throw new Error("Node with undefined position", d);
+            	}
+            	return "translate(" + d.x + " " + d.y + ")"
+            });
           
           // apply port positions  
           port.transition()
             .duration(0)
             .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"});
         
+          // spot port name
+          port.append("text")
+            .attr("y", self.PORT_HEIGHT * 0.75)
+            .text(function(d) {
+          	  if (d.ignoreLabel)
+          		  return "";
+          	  else if (d.level) {
+                    var indent = '-'.repeat(d.level);
+                    var side = d.properties.portSide;
+                    if (side == "WEST") {
+                       return indent + d.name;;
+                    } else if (side == "EAST") {
+                       return d.name + indent;
+                    } else {
+                        throw new Error(side);
+                    }
+                } else
+                    return d.name; 
+            })
+            .attr("x", function(d) {
+                var side = d.properties.portSide;
+                if (side == "WEST") {
+                   return 7;
+                } else if (side == "EAST") {
+                   return -this.getBBox().width - self.CHAR_WIDTH / 2;
+                } else if (side == "NORTH") {
+              	 return 0;
+                } else if (side == "SOUTH") {
+               	 return 0;
+                } else {
+                    throw new Error(side);
+                }
+            });
+          
+          // spot input/output marker
+          port.append("use")
+              .attr("href", getIOMarker)
         });
         
         layouter.start();
@@ -307,43 +381,7 @@ function ComponentGraph(svg) {
             .call(renderTextLines)
         
 
-        // spot port name
-        port.append("text")
-          .attr("y", self.PORT_HEIGHT * 0.75)
-          .text(function(d) {
-        	  if (d.ignoreLabel)
-        		  return "";
-        	  else if (d.level) {
-                  var indent = '-'.repeat(d.level);
-                  var side = d.properties.portSide;
-                  if (side == "WEST") {
-                     return indent + d.name;;
-                  } else if (side == "EAST") {
-                     return d.name + indent;
-                  } else {
-                      throw new Error(side);
-                  }
-              } else
-                  return d.name; 
-          })
-          .attr("x", function(d) {
-              var side = d.properties.portSide;
-              if (side == "WEST") {
-                 return 7;
-              } else if (side == "EAST") {
-                 return -this.getBBox().width - self.CHAR_WIDTH / 2;
-              } else if (side == "NORTH") {
-            	 return 0;
-              } else if (side == "SOUTH") {
-             	 return 0;
-              } else {
-                  throw new Error(side);
-              }
-          });
-        
-        // spot input/output marker
-        port.append("use")
-            .attr("href", getIOMarker)
+
         
     }
     return self;
