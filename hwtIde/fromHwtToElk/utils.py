@@ -9,11 +9,75 @@ from hwt.hdl.constants import INTF_DIRECTION
 from hwt.hdl.operator import Operator
 from hwt.hdl.operatorDefs import AllOps
 from hwt.hdl.portItem import PortItem
-from hwt.hdl.statements import HdlStatement
 from hwt.hdl.types.defs import BIT
 from hwt.hdl.value import Value
 from hwt.serializer.hwt.serializer import HwtSerializer
 from hwt.synthesizer.interface import Interface
+from hwt.hdl.switchContainer import SwitchContainer
+from hwt.pyUtils.uniqList import UniqList
+from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
+
+
+class NetCtxs(dict):
+    def joinNetsByKey(self, k0, k1):
+        v0 = self.getDefault(k0)
+        v1 = self.getDefault(k1)
+        v0.extend(v1)
+        v0.actualKeys.extend(v1.actualKeys)
+
+        self[k1] = v0
+        return v0
+
+    def joinNetsByKeyVal(self, k0, v1):
+        v0 = self.getDefault(k0)
+        v0.extend(v1)
+        v0.actualKeys.extend(v1.actualKeys)
+
+        for k in v1.actualKeys:
+            self[k] = v0
+
+        return v0
+
+    def joinNetsByValKey(self, v0, k1):
+        v1 = self.getDefault(k1)
+        v0.extend(v1)
+        v0.actualKeys.extend(v1.actualKeys)
+
+        for k in v1.actualKeys:
+            self[k] = v0
+
+        return v0
+
+    def getDefault(self, k):
+        try:
+            return self[k]
+        except KeyError:
+            v = self[k] = NetCtx(self, k)
+            return v
+
+
+class NetCtx():
+    def __init__(self, others: NetCtxs, actualKey):
+        self.actualKeys = [actualKey, ]
+        self.others = others
+        self.drivers = UniqList()
+        self.endpoints = UniqList()
+
+    def extend(self, other):
+        self.drivers.extend(other.drivers)
+        self.endpoints.extend(other.endpoints)
+
+    def addDriver(self, d):
+        if isinstance(d, RtlSignalBase):
+            return self.others.joinNetsByKeyVal(d, self)
+        else:
+            return self.drivers.append(d)
+
+    def addEndpoint(self, ep):
+        if isinstance(ep, RtlSignalBase):
+            return self.others.joinNetsByValKey(self, ep)
+        else:
+            return self.endpoints.append(ep)
 
 
 def toStr(obj):
@@ -125,22 +189,6 @@ def removeEdge(edge: LEdge):
     edge.dst = edge.dstNode = edge.src = edge.srcNode = None
 
 
-def addStmAsLNode(root: LNode, stm: HdlStatement) -> LNode:
-    bodyText = toStr(stm)
-    u = root.addNode(
-        originObj=stm, bodyText=bodyText)
-    return u
-
-
-def addIndexAsLNode(root: LNode, op: Operator) -> LNode:
-    bodyText = toStr(op)
-    u = root.addNode(originObj=op, name="Index", bodyText=bodyText)
-    u.addPort("out", PortType.OUTPUT, PortSide.EAST)
-    u.addPort("in",  PortType.INPUT,  PortSide.WEST)
-    u.addPort("index",  PortType.INPUT,  PortSide.WEST)
-    return u
-
-
 def isUselessTernary(op):
     if op.operator == AllOps.TERNARY:
         ifTrue = op.operands[1]
@@ -153,6 +201,16 @@ def isUselessTernary(op):
     return False
 
 
+def isUselessEq(op: Operator):
+    if op.operator == AllOps.EQ:
+        res = op.result
+        if res.hidden and len(res.endpoints) == 1:
+            e = res.endpoints[0]
+            if isinstance(e, SwitchContainer):
+                # this EQ is part of the MUX
+                return e.switchOn in op.operands
+
+
 def ternaryAsSimpleAssignment(root, op):
     originObj = Assignment(op.operands[0], op.result, virtualOnly=True)
     u = root.addNode(originObj=originObj, name="Assignment")
@@ -163,20 +221,23 @@ def ternaryAsSimpleAssignment(root, op):
 
 def addOperatorAsLNode(root: LNode, op: Operator, operandSigCheck=None):
     if op.operator == AllOps.INDEX:
-        return addIndexAsLNode(root, op)
+        inputNames = ["in", "index"]
     else:
-        u = root.addNode(originObj=op, name=op.operator.id)
-        u.addPort(None, PortType.OUTPUT, PortSide.EAST)
-        for op in op.operands:
-            p = u.addPort(None,  PortType.INPUT,  PortSide.WEST)
+        inputNames = [None for _ in op.operands]
 
-            if isinstance(op, Value):
-                v = ValueAsLNode(root, op).east[0]
-                root.addEdge(v, p)
-            elif operandSigCheck is not None:
-                operandSigCheck(op, p)
+    u = root.addNode(originObj=op, name=op.operator.id)
+    u.addPort(None, PortType.OUTPUT, PortSide.EAST)
 
-        return u
+    for inpName, op in zip(inputNames, op.operands):
+        p = u.addPort(inpName,  PortType.INPUT,  PortSide.WEST)
+
+        if isinstance(op, Value):
+            v = ValueAsLNode(root, op).east[0]
+            root.addEdge(v, p)
+        elif operandSigCheck is not None:
+            operandSigCheck(op, p)
+
+    return u
 
 
 def LNodeAddPortFromHdl(node, origin: Union[Interface, PortItem],
@@ -197,6 +258,7 @@ def LNodeAddPortFromHdl(node, origin: Union[Interface, PortItem],
 
 
 def ValueAsLNode(root: LNode, val: Value):
-    u = root.addNode(originObj=val, bodyText=toStr(val), portConstraint=PortConstraints.FREE)
+    u = root.addNode(originObj=val, bodyText=toStr(
+        val), portConstraint=PortConstraints.FREE)
     u.addPort(None, PortType.OUTPUT, PortSide.EAST)
     return u

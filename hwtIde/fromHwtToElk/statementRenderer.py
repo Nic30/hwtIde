@@ -1,3 +1,32 @@
+from collections import defaultdict
+from itertools import chain
+from typing import Union, List, Set, Optional
+
+from elkContainer.constants import PortType, PortSide
+from elkContainer.lNode import LNode
+from elkContainer.lPort import LPort
+from fromHwtToElk.utils import addOperatorAsLNode, ValueAsLNode,\
+    isUselessTernary, isUselessEq
+from hwt.hdl.assignment import Assignment
+from hwt.hdl.ifContainter import IfContainer
+from hwt.hdl.operator import Operator
+from hwt.hdl.statements import HdlStatement
+from hwt.hdl.switchContainer import SwitchContainer
+from hwt.hdl.types.array import HArray
+from hwt.hdl.value import Value
+from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
+from hwt.synthesizer.rtlLevel.netlist import walk_assignments
+from fromHwtToElk.statementRendererUtils import VirtualLNode,\
+    walkStatementsForSig
+
+
+FF = "FF"
+LATCH = "LATCH"
+MUX = "MUX"
+RAM_WRITE = "RAM_WRITE"
+RAM_READ = "RAM_READ"
+CONNECTION = "CONNECTION"
+
 #                     __________
 # if rising(clk): clk-|>       |
 #     a(1)         1--|in   out|---a
@@ -9,66 +38,22 @@
 #     else:           |
 #        a(2)         b
 #
-from collections import defaultdict
-from itertools import chain
-from typing import Dict, Union, Tuple, List, Set, Optional
-
-from elkContainer.constants import PortType, PortSide
-from elkContainer.lNode import LNode
-from elkContainer.lPort import LPort
-from fromHwtToElk.utils import addOperatorAsLNode, ValueAsLNode
-from hwt.hdl.assignment import Assignment
-from hwt.hdl.ifContainter import IfContainer
-from hwt.hdl.operator import Operator, isConst
-from hwt.hdl.statements import HdlStatement
-from hwt.hdl.switchContainer import SwitchContainer
-from hwt.hdl.types.array import HArray
-from hwt.hdl.value import Value
-from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
-from hwt.synthesizer.rtlLevel.netlist import walk_assignments
-
-
-FF = "FF"
-LATCH = "LATCH"
-MUX = "MUX"
-RAM_WRITE = "RAM_WRITE"
-RAM_READ = "RAM_READ"
-CONNECTION = "CONNECTION"
-
-
-def walkStatementsForSig(statments, s):
-    for stm in statments:
-        if s in stm._outputs:
-            yield stm
-
-
-class Signal2stmPortCtx(dict):
-    def __init__(self, stmNode: LNode):
-        self.stmNode = stmNode
-
-    def register(self, sig, portType: PortType):
-        p = self.get(sig, None)
-        if p is not None:
-            return p
-
-        if portType == PortType.INPUT:
-            side = PortSide.WEST
-        elif portType == portType.OUTPUT:
-            side = PortSide.EAST
-        else:
-            raise ValueError(portType)
-
-        p = self.stmNode.addPort(sig.name, portType, side)
-        self[sig] = p
-        return p
 
 
 class StatementRenderer():
-    def __init__(self, node: LNode, toL, portCtx):
-        self.node = node
+    def __init__(self, node: LNode, toL, portCtx, rootNetCtxs):
         self.stm = node.originObj
+        if isinstance(node, VirtualLNode):
+            self.node = node.parent
+        else:
+            self.node = node
+
         self.toL = toL
         self.portCtx = portCtx
+        self.rootNetCtxs = rootNetCtxs
+
+        assert (portCtx is not None and rootNetCtxs is None) or (
+            portCtx is None and rootNetCtxs is not None), "only one is allowed"
 
         # sig: (extra src ports, extra dst ports)
         self.extraConn = defaultdict(lambda: ([], []))
@@ -76,6 +61,9 @@ class StatementRenderer():
     def addInputPort(self, node, name,
                      inpValue: Union[Value, RtlSignalBase],
                      side=PortSide.WEST):
+        """
+        Add and connect input port on subnode
+        """
         root = self.node
         port = node.addPort(name, PortType.INPUT, side)
         if isinstance(inpValue, Value):
@@ -84,15 +72,23 @@ class StatementRenderer():
         else:
             if isinstance(inpValue, LPort):
                 root.addEdge(inpValue, port)
-            elif not inpValue.hidden:
-                inpValue = self.portCtx[inpValue]
-                root.addEdge(inpValue, port)
-            else:
+            elif inpValue.hidden:
                 self.extraConn[inpValue][1].append(port)
+            else:
+                # connect from inside of node to port
+                if self.portCtx is not None:
+                    inpValue = self.portCtx.getInside(inpValue)
+                    root.addEdge(inpValue, port)
+
+                # connect parent signal to port of wrap
+                self.rootNetCtxs.getDefault(inpValue).addEndpoint(port)
 
     def addOutputPort(self, node: LNode, name: str,
-                      out: Optional[Union[Value, RtlSignalBase]],
+                      out: Optional[RtlSignalBase],
                       side=PortSide.EAST):
+        """
+        Add and connect output port on subnode
+        """
         oPort = node.addPort(name, PortType.OUTPUT, side)
         if out is not None:
             if isinstance(out, LPort):
@@ -100,8 +96,10 @@ class StatementRenderer():
             elif out.hidden:
                 self.extraConn[out][0].append(oPort)
             else:
-                out = self.portCtx[out]
-                self.node.addEdge(oPort, out)
+                if self.portCtx is None:
+                    out = self.portCtx.getInside(out)
+                    self.node.addEdge(oPort, out)
+                self.rootNetCtxs.getDefault(out).addDriver(oPort)
 
         return oPort
 
@@ -127,7 +125,6 @@ class StatementRenderer():
                      clk: RtlSignalBase,
                      i: RtlSignalBase,
                      connectOut):
-        c = self.extraConn
         n = self.node.addNode(FF)
         self.addInputPort(n, "clk", clk)
         self.addInputPort(n, "i", i)
@@ -141,9 +138,7 @@ class StatementRenderer():
                   inputs: List[Union[RtlSignalBase, Value]],
                   control: Union[RtlSignalBase, List[RtlSignalBase]],
                   connectOut):
-        con = self.extraConn
         root = self.node
-        portCtx = self.portCtx
         addInputPort = self.addInputPort
 
         n = root.addNode(MUX)
@@ -156,41 +151,64 @@ class StatementRenderer():
         for i in inputs:
             addInputPort(n, "", i)
 
-        oPort = n.addPort("", PortType.OUTPUT, PortSide.EAST)
-        if connectOut:
-            if output.hidden:
-                con[output][0].append(oPort)
-            else:
-                output = portCtx[output]
-                root.addEdge(oPort, output)
+        oPort = self.addOutputPort(n, "",
+                                   output if connectOut else None)
 
         return n, oPort
+
+    def createConnection(self, assig: Assignment, connectOut: bool):
+        if assig.indexes:
+            raise NotImplementedError()
+        else:
+            if connectOut:
+                if self.portCtx is not None:
+                    dst = self.portCtx.getInside(assig.dst)
+                    self.extraConn[assig.src][1].append(dst)
+                else:
+                    dst = assig.dst
+
+                _dst = assig.dst
+                self.rootNetCtxs.getDefault(_dst).addDriver(assig.src)
+                assert self.rootNetCtxs[_dst] is self.rootNetCtxs[assig.src]
+                return None, dst
+            else:
+                return None, assig.src
 
     def renderContent(self):
         stm = self.stm
         node = self.node
         portCtx = self.portCtx
+        rootNetCtxs = self.rootNetCtxs
         # for each inputs and outputs render expression trees
         signalsAndOps = set()
-        ops = findAllHiddenOperators(
-            [sig for sig in chain(stm._inputs, stm._outputs) if sig.hidden],
-            signalsAndOps)
+        ops = findAllHiddenOperators(stm._inputs, signalsAndOps)
         ops = list(ops)
 
         # walk statements and render muxs and memories
         for o in stm._outputs:
+            if portCtx is not None:
+                portCtx.register(o, PortType.OUTPUT)
             self.renderForSignal(stm, o)
 
         def connectExternalInputs(operand, opPort):
             if not operand.hidden:
-                src = portCtx[operand]
-                node.addEdge(src, opPort)
+                if portCtx is not None:
+                    src = portCtx.register(operand, PortType.INPUT)
+                    node.addEdge(src, opPort)
+                rootNetCtxs.getDefault(operand).addEndpoint(opPort)
 
         for op in ops:
-            addOperatorAsLNode(node, op, operandSigCheck=connectExternalInputs)
+            if isUselessTernary(op):
+                print("[TODO] rm useless ternary")
+
+            elif isUselessEq(op):
+                print("[TODO] rm useless EQ which is part of MUX")
+
+            addOperatorAsLNode(node, op,
+                               operandSigCheck=connectExternalInputs)
 
         for s in signalsAndOps:
-            if isinstance(s, RtlSignalBase):
+            if isinstance(s, RtlSignalBase) and s.hidden:
                 self.makeConnections(s)
 
     def makeConnections(self, s: RtlSignalBase):
@@ -220,20 +238,23 @@ class StatementRenderer():
                             endpointPorts.add(port)
 
         _extra = extra.get(s, None)
-        if _extra:
+        if _extra is not None:
             for src in _extra[0]:
                 driverPorts.add(src)
             for dst in _extra[1]:
                 endpointPorts.add(dst)
 
-        for src in driverPorts:
+        net = self.rootNetCtxs.get(s, None)
+        if net is not None:
+            for src in driverPorts:
+                net.addDriver(src)
             for dst in endpointPorts:
-                root.addEdge(src, dst, name=s.name, originObj=s)
+                net.addEndpoint(dst)
+        else:
+            for src in driverPorts:
+                for dst in endpointPorts:
+                    root.addEdge(src, dst, name=s.name, originObj=s)
 
-    @staticmethod
-    def isJustConstAssign(stm):
-        return isinstance(stm, Assignment) and not stm.indexes and isConst(stm.src)
-        
     def renderForSignal(self, stm: Union[HdlStatement, List[HdlStatement]],
                         s: RtlSignalBase,
                         connectOut=True) -> Union[RtlSignalBase, LPort]:
@@ -251,16 +272,7 @@ class StatementRenderer():
 
         # render assignment instances
         if isinstance(stm, Assignment):
-            if stm.indexes:
-                raise NotImplementedError()
-            else:
-                assert stm.dst is s, (stm.dst, s)
-                if connectOut:
-                    dst = self.portCtx[s]
-                    self.extraConn[stm.src][1].append(dst)
-                    return None, dst
-                else:
-                    return None, stm.src
+            return self.createConnection(stm, connectOut)
 
         encl = stm._enclosed_for
         full_ev_dep = stm._is_completly_event_dependent
@@ -303,7 +315,9 @@ class StatementRenderer():
                 for c, stms in stm.elIfs:
                     controls.append(c)
                     inputs.append(self.renderForSignal(stms, s, False)[1])
-                inputs.append(self.renderForSignal(stm.ifFalse, s, False)[1])
+                if stm.ifFalse:
+                    inputs.append(self.renderForSignal(
+                        stm.ifFalse, s, False)[1])
 
                 return self.createMux(s, inputs, controls, connectOut)
 
@@ -315,7 +329,8 @@ class StatementRenderer():
                     inputs.append(self.renderForSignal(stms, s, False)[1])
 
                 if stm.default:
-                    inputs.append(self.renderForSignal(stm.default, s, False)[1])
+                    inputs.append(self.renderForSignal(
+                        stm.default, s, False)[1])
 
                 return self.createMux(s, inputs, stm.switchOn, connectOut)
             else:

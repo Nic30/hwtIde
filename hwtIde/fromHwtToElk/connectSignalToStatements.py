@@ -1,4 +1,3 @@
-from elkContainer.constants import PortType
 from hwt.hdl.operator import Operator
 from hwt.hdl.portItem import PortItem
 
@@ -24,7 +23,7 @@ def connectSignalToStatements(s, toL, stmPorts, root, reducedStatements):
             raise NotImplementedError()
         else:
             laStm = toL[ep]
-            dst = stmPorts[laStm].register(s, PortType.INPUT)
+            dst = stmPorts[laStm].getOutside(s)
             endpointPorts.add(dst)
 
     # connect all drivers of this signal with all endpoints
@@ -37,7 +36,7 @@ def connectSignalToStatements(s, toL, stmPorts, root, reducedStatements):
         elif stm in reducedStatements:
             src = node.east[0]
         else:
-            src = stmPorts[node].register(s, PortType.OUTPUT)
+            src = stmPorts[node].getOutside(s)
 
         assert src.getNode().parent == root, (s, node)
         driverPorts.add(src)

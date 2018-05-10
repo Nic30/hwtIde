@@ -8,27 +8,11 @@ from fromHwtToElk.flattenTrees import flattenTrees
 from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
 from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
 from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
-from fromHwtToElk.statementRenderer import StatementRenderer, Signal2stmPortCtx
-from fromHwtToElk.utils import addOperatorAsLNode, addPortToLNode,\
-    addStmAsLNode, addPort, ternaryAsSimpleAssignment,\
-    isUselessTernary, ValueAsLNode
-from hwt.hdl.operator import Operator
+from fromHwtToElk.statementRenderer import StatementRenderer
+from fromHwtToElk.utils import addPortToLNode, addPort, NetCtxs
 from hwt.synthesizer.unit import Unit
-
-
-def lazyLoadNode(root, stm, toL):
-    try:
-        return toL[stm]
-    except KeyError:
-        if isinstance(stm, Operator):
-            if isUselessTernary(stm):
-                node = ternaryAsSimpleAssignment(root, stm)
-            else:
-                node = addOperatorAsLNode(root, stm)
-            toL[stm] = node
-            return node
-        else:
-            raise
+from fromHwtToElk.statementRendererUtils import addStmAsLNode, VirtualLNode
+from hwt.hdl.portItem import PortItem
 
 
 def sortStatementPorts(root):
@@ -61,6 +45,9 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
 
     stmPorts = {}
 
+    # {RtlSignal: NetCtx}
+    netCtx = NetCtxs()
+
     # create subunits
     for su in u._units:
         n = root.addNode(name=su._name, originObj=su)
@@ -68,34 +55,48 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
         for intf in su._interfaces:
             addPortToLNode(n, intf)
 
-    reducedStatements = set()
     # create subunits from statements
     for stm in u._ctx.statements:
-        if StatementRenderer.isJustConstAssign(stm):
-            # reduce assignment to just value node
-            reducedStatements.add(stm)
-            n = ValueAsLNode(root, stm.src)
-            toL[stm] = n
-        else:
-            n = addStmAsLNode(root, stm)
-            stmPorts[n] = Signal2stmPortCtx(n)
+        n = addStmAsLNode(root, stm, stmPorts, netCtx)
 
     # create ports for this unit
     for intf in u._interfaces:
         addPort(root, intf)
 
+    # render content of statements
+    for stm in u._ctx.statements:
+        n = toL.get(stm, None)
+        if n is not None:
+            if isinstance(n, VirtualLNode):
+                # statement is not in wrap and does not need any port context
+                p = None
+            else:
+                # statement is in wrap and needs a port context
+                # to resolve port connections to wrap
+                p = stmPorts[n]
+
+            r = StatementRenderer(n, toL, p, netCtx)
+            r.renderContent()
+
     # connect nets inside this unit
     for s in u._ctx.signals:
         if not s.hidden:
-            connectSignalToStatements(
-                s, toL, stmPorts, root, reducedStatements)
+            net = netCtx.getDefault(s)
+            for e in s.endpoints:
+                if isinstance(e, PortItem):
+                    net.addEndpoint(toL[e])
 
-    # render content of statements
-    for stm in u._ctx.statements:
-        if stm not in reducedStatements:
-            n = toL[stm]
-            r = StatementRenderer(n, toL, stmPorts[n])
-            r.renderContent()
+            for d in s.drivers:
+                if isinstance(d, PortItem):
+                    net.addDriver(toL[d])
+            # connectSignalToStatements(
+            #    s, toL, stmPorts, root, reducedStatements)
+
+    # [TODO] uniq values per key
+    for net in set(netCtx.values()):
+        for src in net.drivers:
+            for dst in net.endpoints:
+                root.addEdge(src, dst)
 
     # optimizations
     reduceUselessAssignments(root)

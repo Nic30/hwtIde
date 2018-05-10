@@ -48,8 +48,8 @@ def reduceUselessAssignments(root: LNode):
 
             for srcPort, originObj in srcPorts:
                 for dstPort in dstPorts:
-                    root.addEdge(srcPort, dstPort, originObj=originObj)
+                    root.addEdge(srcPort, dstPort,
+                                 originObj=originObj)
 
     if do_update:
         root.children = list(nodes)
-
