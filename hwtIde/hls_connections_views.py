@@ -6,17 +6,9 @@ import os
 import sys
 
 from elkContainer.idStore import ElkIdStore
-from fromHwtToElk.convertor import UnitToLNode, sortStatementPorts
-from fromHwtToElk.extractSplits import extractSplits
-from fromHwtToElk.flattenPorts import flattenPorts
-from fromHwtToElk.flattenTrees import flattenTrees
-from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
-from fromHwtToElk.netlistPreprocessors import indexedAssignmentsToConcatenation,\
-    unhideResultsOfIndexingAndConcatOnPublicSignals
-from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
-from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
+from fromHwtToElk.convertor import UnitToLNode
+from fromHwtToElk.defauts import DEFAULT_PLATFORM, DEFAULT_LAYOUT_OPTIMIZATIONS
 from fsEntry import FSEntry
-from hwt.synthesizer.dummyPlatform import DummyPlatform
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 from json_resp import jsonResp
 
@@ -102,24 +94,6 @@ def connectionDataLs(path=""):
 #    #    raise Exception("not implemented")
 #    return jsonResp(data)
 
-plat = DummyPlatform()
-plat.beforeHdlArchGeneration.extend([
-    indexedAssignmentsToConcatenation,
-    unhideResultsOfIndexingAndConcatOnPublicSignals,
-])
-
-layoutOptimizations = [
-    # optimizations
-    lambda root, u: reduceUselessAssignments(root),
-    lambda root, u: extractSplits(root, u._ctx.signals),
-    lambda root, u: flattenTrees(root, lambda node: node.name == "CONCAT"),
-    lambda root, u: mergeSplitsOnInterfaces(root),
-    lambda root, u: resolveSharedConnections(root),
-    lambda root, u: sortStatementPorts(root),
-    # required for to json conversion
-    lambda root, u: flattenPorts(root),
-]
-
 
 @connectionsBp.route("/hls/connections-data-elk/<module_name>/<in_module_name>")
 def connectionDataElk(module_name, in_module_name):
@@ -130,8 +104,8 @@ def connectionDataElk(module_name, in_module_name):
         ucls = getattr(ucls, name)
     u = ucls()
     # synthetize unit and convert it to json
-    synthesised(u, plat)
-    g = UnitToLNode(u, optimizations=layoutOptimizations)
+    synthesised(u, DEFAULT_PLATFORM)
+    g = UnitToLNode(u, optimizations=DEFAULT_LAYOUT_OPTIMIZATIONS)
     idStore = ElkIdStore()
     data = g.toElkJson(idStore)
     return jsonify(data)

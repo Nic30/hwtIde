@@ -323,7 +323,7 @@ class StatementRenderer():
 
             elif par is None and not parent_ev_dep and s not in encl:
                 # LATCH
-                raise NotImplementedError(LATCH)
+                raise NotImplementedError(LATCH, stm)
             else:
                 # MUX
                 controls = [stm.cond]

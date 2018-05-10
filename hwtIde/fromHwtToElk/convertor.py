@@ -83,6 +83,6 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None,
                 root.addEdge(src, dst)
 
     for opt in optimizations:
-        opt(root, u)
+        opt(root)
 
     return root

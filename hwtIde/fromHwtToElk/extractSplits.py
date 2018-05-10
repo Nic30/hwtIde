@@ -1,6 +1,4 @@
 from elkContainer.lNode import LNode
-from hwt.synthesizer.rtlLevel.rtlSignal import RtlSignal
-from typing import Set
 from hwt.hdl.operatorDefs import AllOps
 from hwt.hdl.assignment import Assignment
 from hwt.hdl.operator import Operator, isConst
@@ -14,7 +12,7 @@ class InterfaceSplitInfo(tuple):
     pass
 
 
-def extractSplits(root: LNode, signals: Set[RtlSignal]):
+def extractSplits(root: LNode):
     """
     convert group of indexed assignments witch are splitting signal to Split node
 
@@ -23,9 +21,10 @@ def extractSplits(root: LNode, signals: Set[RtlSignal]):
     to
     a, b = sig
 
-    :param toL: dictionary {hdl object: layout object} 
+    :param toL: dictionary {hdl object: layout object}
     """
     toL = root._node2lnode
+    signals = root.originObj._ctx.signals
 
     # search from "sig" side (look at doc string)
     for s in signals:
@@ -69,7 +68,8 @@ def extractSplits(root: LNode, signals: Set[RtlSignal]):
                             sliceParts.append((sliceI, ep))
                             continue
 
-            compatible = expectedItems is not None and expectedItems == len(sliceParts)
+            compatible = expectedItems is not None and expectedItems == len(
+                sliceParts)
             if compatible:
                 # reduce to slice
                 sliceParts.sort(reverse=True)

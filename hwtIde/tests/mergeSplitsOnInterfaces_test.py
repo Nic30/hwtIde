@@ -10,13 +10,12 @@ from fromHwtToElk.extractSplits import extractSplits
 from hwt.synthesizer.dummyPlatform import DummyPlatform
 from fromHwtToElk.netlistPreprocessors import indexedAssignmentsToConcatenation,\
     unhideResultsOfIndexingAndConcatOnPublicSignals
-from pprint import pprint
 from fromHwtToElk.flattenTrees import flattenTrees
 
 def_optimizations = [
-    lambda root, u: flattenTrees(root, lambda node: node.name == "CONCAT"),
-    lambda root, u: extractSplits(root, u._ctx.signals),
-    lambda root, u: mergeSplitsOnInterfaces(root)
+    lambda root: flattenTrees(root, lambda node: node.name == "CONCAT"),
+    extractSplits,
+    mergeSplitsOnInterfaces
 ]
 
 plat = DummyPlatform()
