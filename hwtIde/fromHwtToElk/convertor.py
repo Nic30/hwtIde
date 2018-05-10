@@ -1,13 +1,6 @@
 from typing import Optional
 
 from elkContainer.lNode import LNode
-from fromHwtToElk.connectSignalToStatements import connectSignalToStatements
-from fromHwtToElk.extractSplits import extractSplits
-from fromHwtToElk.flattenPorts import flattenPorts
-from fromHwtToElk.flattenTrees import flattenTrees
-from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
-from fromHwtToElk.reduceUselessAssignments import reduceUselessAssignments
-from fromHwtToElk.resolveSharedConnections import resolveSharedConnections
 from fromHwtToElk.statementRenderer import StatementRenderer
 from fromHwtToElk.utils import addPortToLNode, addPort, NetCtxs
 from hwt.synthesizer.unit import Unit
@@ -20,17 +13,9 @@ def sortStatementPorts(root):
     pass
 
 
-def checkConsystency(node):
-    for ch in node.children:
-        for e in node.iterEdges():
-            try:
-                e.consystencyCheck()
-            except AssertionError as ex:
-                raise
-        checkConsystency(ch)
-
-
-def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -> LNode:
+def UnitToLNode(u: Unit, node: Optional[LNode]=None,
+                toL: Optional[dict]=None,
+                optimizations=[]) -> LNode:
     """
     Build LNode instance from Unit instance
 
@@ -51,7 +36,7 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
     # create subunits
     for su in u._units:
         n = root.addNode(name=su._name, originObj=su)
-        UnitToLNode(su, n, toL)
+        UnitToLNode(su, n, toL, optimizations)
         for intf in su._interfaces:
             addPortToLNode(n, intf)
 
@@ -92,23 +77,12 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None, toL: Optional[dict]=None) -
             # connectSignalToStatements(
             #    s, toL, stmPorts, root, reducedStatements)
 
-    # [TODO] uniq values per key
     for net in set(netCtx.values()):
         for src in net.drivers:
             for dst in net.endpoints:
                 root.addEdge(src, dst)
 
-    # optimizations
-    reduceUselessAssignments(root)
-    extractSplits(root, u._ctx.signals, toL)
-    flattenTrees(root, lambda node: node.name == "CONCAT")
-    mergeSplitsOnInterfaces(root)
-    resolveSharedConnections(root)
-
-    sortStatementPorts(root)
-    # required for to json conversion
-    flattenPorts(root)
-
-    checkConsystency(root)
+    for opt in optimizations:
+        opt(root, u)
 
     return root

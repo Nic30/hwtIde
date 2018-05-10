@@ -14,17 +14,18 @@ class InterfaceSplitInfo(tuple):
     pass
 
 
-def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
+def extractSplits(root: LNode, signals: Set[RtlSignal]):
     """
     convert group of indexed assignments witch are splitting signal to Split node
 
     a = sig[0]
     b = sig[1]
-    to 
+    to
     a, b = sig
 
     :param toL: dictionary {hdl object: layout object} 
     """
+    toL = root._node2lnode
 
     # search from "sig" side (look at doc string)
     for s in signals:
@@ -69,7 +70,6 @@ def extractSplits(root: LNode, signals: Set[RtlSignal], toL):
                             continue
 
             compatible = expectedItems is not None and expectedItems == len(sliceParts)
-
             if compatible:
                 # reduce to slice
                 sliceParts.sort(reverse=True)

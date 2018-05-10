@@ -4,7 +4,7 @@ from hwt.hdl.statements import HdlStatement
 from hwt.hdl.assignment import Assignment
 from hwt.hdl.operator import isConst
 from fromHwtToElk.utils import ValueAsLNode, toStr, NetCtxs
-from typing import Set, Dict
+from typing import Dict
 
 
 def walkStatementsForSig(statments, s):
@@ -17,10 +17,13 @@ class Signal2stmPortCtx(dict):
     def __init__(self, stmNode: LNode):
         self.stmNode = stmNode
 
-    def getInside(self, k):
-        p = self.get(k)
+    def getInside(self, k, portType):
+        p = self.get(k, None)
         if not isinstance(self.stmNode, VirtualLNode):
-            return p
+            if p is None:
+                return self.register(k, portType)
+            else:
+                return p
 
         n = p.getNode()
         if p.direction == PortType.INPUT:

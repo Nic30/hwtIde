@@ -46,6 +46,8 @@ def portTryReduce(root: LNode, port: LPort):
                 target_ch.parent,
                 new_target)
         except AssertionError:
+            print('Wrong target:\n', edge.src, "\n", edge.dst,
+                  "\n", target_ch.parent, "\n", new_target)
             raise
         # disconnect selected children from this port and target
         children_to_destroy.add(child)

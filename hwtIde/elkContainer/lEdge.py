@@ -1,8 +1,11 @@
+from elkContainer.constants import PortType
+
 
 class LEdge():
     """
     Edge in layout graph
 
+    :ivar parent: parent node instance
     :ivar name: name of this edge (label)
     :ivar originObj: optional object which was this edge generated for
     :ivar src: LPort instance where this edge starts
@@ -11,7 +14,8 @@ class LEdge():
     :ivar dstNode: node of dst (used as cache)
     """
 
-    def __init__(self, name: str=None, originObj=None):
+    def __init__(self, parent: "LNode", name: str=None, originObj=None):
+        self.parent = parent
         if name is not None:
             assert isinstance(name, str)
         self.name = name
@@ -20,23 +24,10 @@ class LEdge():
         self.srcNode = None
         self.dst = None
         self.dstNode = None
-        self.labels = []
-        self.bendPoints = []
 
     def setSrcDst(self, src: "LPort", dst: "LPort"):
         self.setSource(src)
         self.setTarget(dst)
-
-    def consystencyCheck(self):
-        assert (self.srcNode.parent is self.dstNode.parent
-                or self.srcNode is self.dstNode.parent
-                or self.srcNode.parent is self.dstNode)
-        #p = self.src
-        #n = self.srcNode
-        #assert p in n.west or p in n.east or p in n.south or p in n.north, self
-        #p = self.dst
-        #n = self.dstNode
-        #assert p in n.west or p in n.east or p in n.south or p in n.north, self
 
     def setTarget(self, dst: "LPort"):
         if self.dst is not None:
@@ -47,12 +38,15 @@ class LEdge():
             self.dstNode = None
             self.isSelfLoop = False
         else:
-            self.dstNode = dst.getNode()
+            dstNode = dst.getNode()
+            if self.parent is dstNode:
+                assert dst.direction == PortType.OUTPUT, dst
+            else:
+                assert dst.direction == PortType.INPUT, dst
+
+            self.dstNode = dstNode
             dst.incomingEdges.append(self)
             self.isSelfLoop = self.srcNode is self.dstNode
-
-            if self.src is not None:
-                self.consystencyCheck()
 
     def setSource(self, src: "LPort"):
         if self.src is not None:
@@ -63,12 +57,15 @@ class LEdge():
             self.srcNode = None
             self.isSelfLoop = False
         else:
-            self.srcNode = src.getNode()
+            srcNode = src.getNode()
+            if self.parent is srcNode:
+                assert src.direction == PortType.INPUT, src
+            else:
+                assert src.direction == PortType.OUTPUT, src
+
+            self.srcNode = srcNode
             src.outgoingEdges.append(self)
             self.isSelfLoop = self.srcNode is self.dstNode
-
-            if self.dst is not None:
-                self.consystencyCheck()
 
     def toElkJson(self, idStore):
         return {

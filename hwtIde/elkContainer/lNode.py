@@ -95,7 +95,7 @@ class LNode():
             yield from p.iterEdges(filterSelfLoops=filterSelfLoops)
 
     def addEdge(self, src: LPort, dst: LPort, name=None, originObj=None):
-        e = LEdge(name, originObj=originObj)
+        e = LEdge(self, name, originObj=originObj)
         e.setSrcDst(src, dst)
         return e
 
@@ -160,8 +160,6 @@ class LNode():
 
             for ch in self.children:
                 nodes.append(ch.toElkJson(idStore, isTop=False))
-            #    for p in ch.iterPorts():
-            #        edges.extend(p.iterEdges())
 
             nodes.sort(key=lambda n: n["id"])
             d["children"] = nodes
