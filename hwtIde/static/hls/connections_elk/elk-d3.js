@@ -84,7 +84,7 @@ var elk;
     if (!layouter) {
       if (typeof ELK !== "undefined") {
           // elkjs already imported
-        layouter = new ELK();
+        layouter = new ELK({workerUrl:"/static/hls/connections_elk/elk-worker.js"});
       } else if (typeof module === "object" && module.exports) {
           layouter = require("elkjs");
       } else if (typeof $elkjs !== "undefined") {
@@ -138,7 +138,7 @@ var elk;
           graph = kgraph;
           applyLayout(kgraph);
       }
-      layouter.layout(graph).then(onSuccess, d3elk.onError);
+      layouter.layout(graph, {layoutOptions: options}).then(onSuccess, d3elk.onError);
       return d3elk;
     };
 
@@ -210,8 +210,6 @@ var elk;
           graph.properties = { 'algorithm': 'layered' };
       if (!graph.properties.algorithm)
     	  graph.properties.algorithm = 'layered';
-      if (!graph.layoutOptions)
-          graph.layoutOptions = options;
       if (!graph.width)
     	  graph.width = width;
       if (!graph.height)
