@@ -8,6 +8,34 @@ from fromHwtToElk.utils import removeEdge
 from hwt.pyUtils.arrayQuery import single, DuplicitValueExc, NoValueExc
 
 
+class PortConnectionCtx(list):
+    pass
+
+
+class MergeSplitsOnInterfacesCtx():
+    def __init__(self):
+        self.items = {}
+
+    def register(self, rootPort, splitOrConcat: LNode, mainEdge: LEdge):
+        try:
+            c = self.items[rootPort]
+        except KeyError:
+            c = PortConnectionCtx()
+            self.items[rootPort] = c
+        c.append((splitOrConcat, mainEdge))
+
+    def registerInput(self, inp):
+        raise NotImplemented()
+
+    def registerOutput(self, inp):
+        raise NotImplemented()
+
+    def iterPortSplits(self):
+        for srcPort, splitsAndConcats in self.items.items():
+            if len(splitsAndConcats) == portCnt(srcPort):
+                yield srcPort, splitsAndConcats
+
+
 def getRootIntfPort(port: LPort):
     """
     :return: most top port which contains this port
@@ -87,8 +115,9 @@ def reconnectPorts(root: LNode, srcPort: LPort,
     """
     # sort oldSplit nodes because they are not in same order as signals on
     # ports
-    srcPortSignals = list(walkSignalPorts(srcPort))
-    portOrder = {p: i for i, p in enumerate(srcPortSignals)}
+    mainPortSignals = list(walkSignalPorts(srcPort))
+    portOrder = {p: i for i, p in enumerate(mainPortSignals)}
+    isOneToN = len(newSplitNode.west) == 1
 
     def portSortKey(x):
         n, e = x
@@ -100,32 +129,41 @@ def reconnectPorts(root: LNode, srcPort: LPort,
             raise ValueError("Edge not connected to split node", e, n)
 
     oldSplits.sort(key=portSortKey)
-    newSplitPorts = [walkSignalPorts(p) for p in newSplitNode.east]
+    newSplitPorts = [walkSignalPorts(p) for p in
+                     (newSplitNode.east if isOneToN else newSplitNode.west)]
 
-    for preSplitPort, splitInp, (oldSplitNode, e) in zip(
-            srcPortSignals,
-            walkSignalPorts(newSplitNode.west[0]),
+    if isOneToN:
+        newMainPort = newSplitNode.west[0]
+    else:
+        newMainPort = newSplitNode.east[0]
+
+    for mainPort, splitInp, (oldSplitNode, e) in zip(
+            mainPortSignals,
+            walkSignalPorts(newMainPort),
             oldSplits):
+        assert mainPort.direction != splitInp.direction, (
+            mainPort, splitInp)
 
         # reconnect edge from src port to split node
-        assert (e.src is preSplitPort and e.dstNode is oldSplitNode)\
-            or (e.dst is preSplitPort and e.srcNode is oldSplitNode), e
-        ouputPort = e.src is preSplitPort
+        assert (e.src is mainPort and e.dstNode is oldSplitNode)\
+            or (e.dst is mainPort and e.srcNode is oldSplitNode), e
         removeEdge(e)
-        if ouputPort:
-            root.addEdge(preSplitPort, splitInp, originObj=e.originObj)
-        else:
-            root.addEdge(splitInp, preSplitPort, originObj=e.originObj)
 
         _newSplitPorts = [next(p) for p in newSplitPorts]
         # reconnect part from split node to other target nodes
         if oldSplitNode.name == "CONCAT":
+            root.addEdge(splitInp, mainPort,
+                         originObj=e.originObj)
+
             for oldP, newP in zip(oldSplitNode.west, _newSplitPorts):
                 for e in list(oldP.incomingEdges):
                     root.addEdge(e.src, newP, originObj=e.originObj)
                     removeEdge(e)
 
         elif oldSplitNode.name == "SLICE":
+            root.addEdge(mainPort, splitInp,
+                         originObj=e.originObj)
+
             for oldP, newP in zip(oldSplitNode.east, reversed(_newSplitPorts)):
                 for e in list(oldP.outgoingEdges):
                     root.addEdge(newP, e.dst, originObj=e.originObj)
@@ -144,7 +182,7 @@ def mergeSplitsOnInterfaces(root: LNode):
         if ch.children:
             mergeSplitsOnInterfaces(ch)
 
-    srcPort2splits = {}
+    ctx = MergeSplitsOnInterfacesCtx()
     for ch in root.children:
         srcPort = None
         try:
@@ -162,18 +200,19 @@ def mergeSplitsOnInterfaces(root: LNode):
         if srcPort is not None and isinstance(srcPort.parent, LPort):
             # only for non primitive ports
             rootPort = getRootIntfPort(srcPort)
-            records = srcPort2splits.get(rootPort, [])
-            records.append((ch, e))
-            srcPort2splits[rootPort] = records
+            ctx.register(rootPort, ch, e)
 
     # join them if it is possible
-    for srcPort, splits in srcPort2splits.items():
-        if len(splits) == portCnt(srcPort):
-            newSplitNode = root.addNode("SPLIT")
-            copyPort(srcPort, newSplitNode, True, "")
-            n = splits[0][0]
-            for i in range(max(len(n.west),
-                               len(n.east))):
-                copyPort(
-                    srcPort, newSplitNode, False, "[%d]" % i)
-            reconnectPorts(root, srcPort, splits, newSplitNode)
+    for srcPort, splitsAndConcats in ctx.iterPortSplits():
+        name = "SPLIT" if srcPort.direction == PortType.OUTPUT else "CONCAT"
+        newSplitNode = root.addNode(name)
+        copyPort(srcPort, newSplitNode, True, "")
+        n = splitsAndConcats[0][0]
+        for i in range(max(len(n.west),
+                           len(n.east))):
+            copyPort(
+                srcPort, newSplitNode,
+                False, "[%d]" % i)
+
+        reconnectPorts(root, srcPort, splitsAndConcats,
+                       newSplitNode)

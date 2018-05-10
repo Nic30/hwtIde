@@ -52,9 +52,6 @@ class StatementRenderer():
         self.portCtx = portCtx
         self.rootNetCtxs = rootNetCtxs
 
-        assert (portCtx is not None and rootNetCtxs is None) or (
-            portCtx is None and rootNetCtxs is not None), "only one is allowed"
-
         # sig: (extra src ports, extra dst ports)
         self.extraConn = defaultdict(lambda: ([], []))
 
@@ -75,13 +72,19 @@ class StatementRenderer():
             elif inpValue.hidden:
                 self.extraConn[inpValue][1].append(port)
             else:
-                # connect from inside of node to port
-                if self.portCtx is not None:
-                    inpValue = self.portCtx.getInside(inpValue)
-                    root.addEdge(inpValue, port)
+                if self.portCtx is None:
+                    # connect from original signal
+                    self.rootNetCtxs.getDefault(inpValue).addEndpoint(port)
+                else:
+                    # connect this input from port of wrap
+                    _inpValue = self.portCtx.getInside(
+                        inpValue, PortType.INPUT)
+                    root.addEdge(_inpValue, port)
 
-                # connect parent signal to port of wrap
-                self.rootNetCtxs.getDefault(inpValue).addEndpoint(port)
+                    # connect parent signal to port of wrap
+                    oinpValue = self.portCtx.getOutside(inpValue)
+                    self.rootNetCtxs.getDefault(
+                        inpValue).addEndpoint(oinpValue)
 
     def addOutputPort(self, node: LNode, name: str,
                       out: Optional[RtlSignalBase],
@@ -97,9 +100,12 @@ class StatementRenderer():
                 self.extraConn[out][0].append(oPort)
             else:
                 if self.portCtx is None:
-                    out = self.portCtx.getInside(out)
-                    self.node.addEdge(oPort, out)
-                self.rootNetCtxs.getDefault(out).addDriver(oPort)
+                    self.rootNetCtxs.getDefault(out).addDriver(oPort)
+                else:
+                    _out = self.portCtx.getInside(out, PortType.OUTPUT)
+                    self.node.addEdge(oPort, _out)
+                    ooPort = self.portCtx.getOutside(out)
+                    self.rootNetCtxs.getDefault(out).addDriver(ooPort)
 
         return oPort
 
@@ -157,22 +163,28 @@ class StatementRenderer():
         return n, oPort
 
     def createConnection(self, assig: Assignment, connectOut: bool):
+        pctx = self.portCtx
         if assig.indexes:
             raise NotImplementedError()
-        else:
-            if connectOut:
-                if self.portCtx is not None:
-                    dst = self.portCtx.getInside(assig.dst)
-                    self.extraConn[assig.src][1].append(dst)
-                else:
-                    dst = assig.dst
-
-                _dst = assig.dst
-                self.rootNetCtxs.getDefault(_dst).addDriver(assig.src)
-                assert self.rootNetCtxs[_dst] is self.rootNetCtxs[assig.src]
+        elif connectOut:
+            dst = assig.dst
+            if pctx is None:
+                # connect to original dst signal directly
+                self.rootNetCtxs.getDefault(dst).addDriver(assig.src)
+                assert self.rootNetCtxs[dst] is self.rootNetCtxs[assig.src]
                 return None, dst
             else:
-                return None, assig.src
+                # connect src to dst port on this wrap
+                dstPort = pctx.getInside(dst,
+                                         PortType.OUTPUT)
+                self.extraConn[assig.src][1].append(dstPort)
+                # connect original signal from port on this wrap
+
+                odstPort = pctx.getOutside(dst)
+                self.rootNetCtxs.getDefault(dst).addDriver(odstPort)
+                return None, dstPort
+        else:
+            return None, assig.src
 
     def renderContent(self):
         stm = self.stm
@@ -192,10 +204,14 @@ class StatementRenderer():
 
         def connectExternalInputs(operand, opPort):
             if not operand.hidden:
-                if portCtx is not None:
+                if portCtx is None:
+                    rootNetCtxs.getDefault(operand).addEndpoint(opPort)
+                else:
                     src = portCtx.register(operand, PortType.INPUT)
                     node.addEdge(src, opPort)
-                rootNetCtxs.getDefault(operand).addEndpoint(opPort)
+
+                    oopPort = portCtx.getOutside(operand)
+                    rootNetCtxs.getDefault(operand).addEndpoint(oopPort)
 
         for op in ops:
             if isUselessTernary(op):
@@ -314,7 +330,8 @@ class StatementRenderer():
                 inputs = [self.renderForSignal(stm.ifTrue, s, False)[1]]
                 for c, stms in stm.elIfs:
                     controls.append(c)
-                    inputs.append(self.renderForSignal(stms, s, False)[1])
+                    inputs.append(
+                        self.renderForSignal(stms, s, False)[1])
                 if stm.ifFalse:
                     inputs.append(self.renderForSignal(
                         stm.ifFalse, s, False)[1])

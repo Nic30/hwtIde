@@ -42,6 +42,7 @@ def flattenTrees(root, nodeSelector: Callable[[LNode], bool]):
 
         inputEdges = []
         reducedNodes = []
+        reducedNodesSet = set()
         # An iterative process to print preorder traveral of tree
         nodeStack = []
         nodeStack.append((treeRoot, None))
@@ -49,8 +50,9 @@ def flattenTrees(root, nodeSelector: Callable[[LNode], bool]):
         while nodeStack:
             # Pop the top item from stack and print it
             node, e = nodeStack.pop()
-            if node in reducibleChildren:
+            if node in reducibleChildren and node not in reducedNodesSet:
                 reducedNodes.append(node)
+                reducedNodesSet.add(node)
                 # walk inputs and add child nodes to stack
                 for p in node.west:
                     for e in p.iterEdges():
