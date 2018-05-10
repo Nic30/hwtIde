@@ -140,7 +140,7 @@ class LNode():
         if not isTop:
             d["id"] = str(idStore[self])
             d["hideChildren"] = True
-            #if self.parent.parent is not None:
+            # if self.parent.parent is not None:
             #    props["org.eclipse.elk.noLayout"] = True
         else:
             self.toElkJson_registerNodes(idStore, isTop=isTop)
@@ -153,10 +153,9 @@ class LNode():
                 for e in ch.iterEdges():
                     p1 = e.srcNode.parent
                     p2 = e.dstNode.parent
-                    if ((p1 is self and p2 is self) or 
-                        (e.srcNode is self and p2 is self) or
-                        (p1 is self and e.dstNode is self)
-                        ):
+                    if ((p1 is self and p2 is self) or
+                            (e.srcNode is self and p2 is self) or
+                            (p1 is self and e.dstNode is self)):
                         edges.append(e)
 
             for ch in self.children:
