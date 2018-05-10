@@ -126,7 +126,8 @@ def countDirectlyConnected(port: LPort, result: dict) -> int:
         return ch_cnt
 
     elif not inEdges and not outEdges:
-        print("Warning", port, "not connected")
+        if port.direction == PortType.INPUT:
+            print("Warning", port, "not connected")
         return 0
     else:
         if len(inEdges) + len(outEdges) != 1:
