@@ -77,10 +77,7 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None,
             # connectSignalToStatements(
             #    s, toL, stmPorts, root, reducedStatements)
 
-    for net in set(netCtx.values()):
-        for src in net.drivers:
-            for dst in net.endpoints:
-                root.addEdge(src, dst)
+    netCtx.applyConnections(root)
 
     for opt in optimizations:
         opt(root)

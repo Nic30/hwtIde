@@ -19,6 +19,15 @@ from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 
 
 class NetCtxs(dict):
+    def applyConnections(self, root):
+        for net in set(self.values()):
+            if not(net.drivers and net.endpoints):
+                continue
+                #raise AssertionError(net)
+            for src in net.drivers:
+                for dst in net.endpoints:
+                    root.addEdge(src, dst)
+
     def joinNetsByKey(self, k0, k1):
         v0 = self.getDefault(k0)
         v1 = self.getDefault(k1)
@@ -216,27 +225,6 @@ def ternaryAsSimpleAssignment(root, op):
     u = root.addNode(originObj=originObj, name="Assignment")
     u.addPort("", PortType.OUTPUT, PortSide.EAST)
     u.addPort("",  PortType.INPUT,  PortSide.WEST)
-    return u
-
-
-def addOperatorAsLNode(root: LNode, op: Operator, operandSigCheck=None):
-    if op.operator == AllOps.INDEX:
-        inputNames = ["in", "index"]
-    else:
-        inputNames = [None for _ in op.operands]
-
-    u = root.addNode(originObj=op, name=op.operator.id)
-    u.addPort(None, PortType.OUTPUT, PortSide.EAST)
-
-    for inpName, op in zip(inputNames, op.operands):
-        p = u.addPort(inpName,  PortType.INPUT,  PortSide.WEST)
-
-        if isinstance(op, Value):
-            v = ValueAsLNode(root, op).east[0]
-            root.addEdge(v, p)
-        elif operandSigCheck is not None:
-            operandSigCheck(op, p)
-
     return u
 
 
