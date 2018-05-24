@@ -13,7 +13,6 @@ from hwt.hdl.types.defs import BIT
 from hwt.hdl.value import Value
 from hwt.serializer.hwt.serializer import HwtSerializer
 from hwt.synthesizer.interface import Interface
-from hwt.hdl.switchContainer import SwitchContainer
 from hwt.pyUtils.uniqList import UniqList
 from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 
@@ -21,9 +20,6 @@ from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 class NetCtxs(dict):
     def applyConnections(self, root):
         for net in set(self.values()):
-            if not(net.drivers and net.endpoints):
-                continue
-                #raise AssertionError(net)
             for src in net.drivers:
                 for dst in net.endpoints:
                     root.addEdge(src, dst)
