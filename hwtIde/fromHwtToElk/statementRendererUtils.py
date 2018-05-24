@@ -72,10 +72,13 @@ def addStmAsLNode(root: LNode, stm: HdlStatement,
     if isOnlyAssig and not stm.indexes and isConst(stm.src):
         # is only constant
         n = ValueAsLNode(root, stm.src)
-        netCtx.getDefault(stm.dst).addDriver(n.east[0])
+        ctx, _ = netCtx.getDefault(stm.dst)
+        ctx.addDriver(n.east[0])
+
     elif isOnlyAssig:
         # inline operatos in assingment to parent node
         n = toL[stm] = VirtualLNode(root, stm)
+
     else:
         # render content of statement into container node
         bodyText = toStr(stm)

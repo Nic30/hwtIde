@@ -66,7 +66,7 @@ def UnitToLNode(u: Unit, node: Optional[LNode]=None,
     # connect nets inside this unit
     for s in u._ctx.signals:
         if not s.hidden:
-            net = netCtx.getDefault(s)
+            net, _ = netCtx.getDefault(s)
             for e in s.endpoints:
                 if isinstance(e, PortItem):
                     net.addEndpoint(toL[e])
