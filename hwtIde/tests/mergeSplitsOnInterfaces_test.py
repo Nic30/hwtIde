@@ -1,16 +1,18 @@
 import unittest
-from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
-from hwtLib.samples.simple import SimpleUnit
+
 from fromHwtToElk.convertor import UnitToLNode
-from hwtLib.samples.intfArray.interfaceArray1 import InterfaceArraySample1
-from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
-from hwtLib.samples.intfArray.interfaceArray0 import InterfaceArraySample0SliceOnly,\
-    InterfaceArraySample0ConcatOnly
 from fromHwtToElk.extractSplits import extractSplits
-from hwt.synthesizer.dummyPlatform import DummyPlatform
+from fromHwtToElk.flattenTrees import flattenTrees
+from fromHwtToElk.mergeSplitsOnInterfaces import mergeSplitsOnInterfaces
 from fromHwtToElk.netlistPreprocessors import indexedAssignmentsToConcatenation,\
     unhideResultsOfIndexingAndConcatOnPublicSignals
-from fromHwtToElk.flattenTrees import flattenTrees
+from hwt.synthesizer.dummyPlatform import DummyPlatform
+from hwtLib.samples.intfArray.interfaceArray0 import InterfaceArraySample0SliceOnly,\
+    InterfaceArraySample0ConcatOnly
+from hwtLib.samples.intfArray.interfaceArray1 import InterfaceArraySample1
+from hwtLib.samples.simple import SimpleUnit
+from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
+
 
 def_optimizations = [
     lambda root: flattenTrees(root, lambda node: node.name == "CONCAT"),
