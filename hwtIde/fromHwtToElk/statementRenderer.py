@@ -6,7 +6,7 @@ from elkContainer.constants import PortType, PortSide
 from elkContainer.lNode import LNode
 from elkContainer.lPort import LPort
 from fromHwtToElk.utils import ValueAsLNode,\
-    isUselessTernary, isUselessEq, NetCtxs
+    isUselessTernary, isUselessEq, NetCtxs, NetCtx
 from hwt.hdl.assignment import Assignment
 from hwt.hdl.ifContainter import IfContainer
 from hwt.hdl.operator import Operator, isConst
@@ -70,22 +70,8 @@ class StatementRenderer():
         else:
             if isinstance(inpValue, LPort):
                 root.addEdge(inpValue, port)
-            elif inpValue.hidden:
-                self.renderOperatorTree(inpValue)
             else:
-                if self.portCtx is None:
-                    # connect from original signal
-                    self.rootNetCtxs.getDefault(inpValue).addEndpoint(port)
-                else:
-                    # connect this input from port of wrap
-                    _inpValue = self.portCtx.getInside(
-                        inpValue, PortType.INPUT)
-                    root.addEdge(_inpValue, port)
-
-                    # connect parent signal to port of wrap
-                    oinpValue = self.portCtx.getOutside(inpValue)
-                    self.rootNetCtxs.getDefault(
-                        inpValue).addEndpoint(oinpValue)
+                self.connectInput(inpValue, port)
 
     def addOutputPort(self, node: LNode, name: str,
                       out: Optional[RtlSignalBase],
@@ -101,12 +87,14 @@ class StatementRenderer():
                 raise NotImplementedError()
             else:
                 if self.portCtx is None:
-                    self.rootNetCtxs.getDefault(out).addDriver(oPort)
+                    ctx, _ = self.rootNetCtxs.getDefault(out)
+                    ctx.addDriver(oPort)
                 else:
                     _out = self.portCtx.getInside(out, PortType.OUTPUT)
                     self.node.addEdge(oPort, _out)
                     ooPort = self.portCtx.getOutside(out)
-                    self.rootNetCtxs.getDefault(out).addDriver(ooPort)
+                    ctx, _ = self.rootNetCtxs.getDefault(out)
+                    ctx.addDriver(ooPort)
 
         return oPort
 
@@ -165,6 +153,12 @@ class StatementRenderer():
 
     def createAssignment(self, assig: Assignment, connectOut: bool):
         pctx = self.portCtx
+        src = assig.src
+        if (isinstance(src, RtlSignalBase)
+                and src.hidden
+                and src not in self.netCtxs):
+            self.lazyLoadNet(src)
+
         if assig.indexes:
             raise NotImplementedError()
         elif connectOut:
@@ -172,11 +166,9 @@ class StatementRenderer():
             rootNetCtxs = self.rootNetCtxs
             if pctx is None:
                 # connect to original dst signal directly
-                src = assig.src
-                rootNetCtxs.getDefault(dst).addDriver(src)
+                ctx, _ = rootNetCtxs.getDefault(dst)
+                ctx.addDriver(src)
                 assert rootNetCtxs[dst] is rootNetCtxs[src]
-                if isinstance(src, RtlSignalBase) and src.hidden:
-                    self.renderOperatorTree(src)
                 return None, dst
             else:
                 # connect src to dst port on this wrap
@@ -186,7 +178,8 @@ class StatementRenderer():
                 # connect original signal from port on this wrap
 
                 odstPort = pctx.getOutside(dst)
-                rootNetCtxs.getDefault(dst).addDriver(odstPort)
+                ctx, _ = rootNetCtxs.getDefault(dst)
+                ctx.addDriver(odstPort)
                 return None, dstPort
         else:
             return None, assig.src
@@ -196,31 +189,91 @@ class StatementRenderer():
         :param signal: signal to connect to specified port
         :param port: input port which should be connected with specified signal
         """
-
+        netCtxs = self.netCtxs
         if signal.hidden:
             # later connect driver of this signal to output port
-            self.netCtxs.getDefault(signal).addEndpoint(port)
+            ctx, wasThereBefore = netCtxs.getDefault(signal)
+            if not wasThereBefore:
+                self.lazyLoadNet(signal)
+            ctx.addEndpoint(port)
         else:
-            node = self.node
             portCtx = self.portCtx
-            rootNetCtxs = self.rootNetCtxs
+            rootCtx, _ = self.rootNetCtxs.getDefault(signal)
 
             if portCtx is None:
-                _port = port
+                # later connect signal in root to input port or input port of
+                # wrap node
+                rootCtx.addEndpoint(port)
             else:
                 # spot input port on this wrap node if required
+                isNewlySpotted = signal not in portCtx
                 src = portCtx.register(signal, PortType.INPUT)
                 # connect input port on wrap node with specified output port
-                node.addEdge(src, port)
+                ctx, _ = netCtxs.getDefault(signal)
+                ctx.addDriver(src)
+                ctx.addEndpoint(port)
 
-                # get input port from parent view
-                _port = portCtx.getOutside(signal)
+                if isNewlySpotted:
+                    # get input port from parent view
+                    _port = portCtx.getOutside(signal)
+                    rootCtx.addEndpoint(_port)
 
-            # later connect signal in root to input port or 
-            rootNetCtxs.getDefault(signal).addEndpoint(_port)
+    def getInputNetCtx(self, signal: RtlSignalBase):
+        netCtxs = self.netCtxs
+        if signal.hidden:
+            # later connect driver of this signal to output port
+            ctx, wasThereBefore = netCtxs.getDefault(signal)
+            if not wasThereBefore:
+                self.lazyLoadNet(signal)
 
-    def addOperatorAsLNode(self, op: Operator):
+        else:
+            portCtx = self.portCtx
+            ctx, _ = netCtxs.getDefault(signal)
+            rootCtx, _ = self.rootNetCtxs.getDefault(signal)
+
+            if portCtx is not None:
+                # spot input port on this wrap node if required
+                isNewlySpotted = signal not in portCtx
+                src = portCtx.register(signal, PortType.INPUT)
+                # connect input port on wrap node with specified output port
+                ctx.addDriver(src)
+
+                if isNewlySpotted:
+                    # get input port from parent view
+                    _port = portCtx.getOutside(signal)
+                    # later connect signal in root to input port or input port
+                    # of wrap node
+                    rootCtx.addEndpoint(_port)
+
+        return ctx
+
+    def lazyLoadNet(self, signal: RtlSignalBase):
+        """
+        :param signal: top signal of hidden operator tree
+        :note: operator tree is constrained by signals with hidden==False
+        :note: statement nodes are not connected automatically
+        """
+        assert len(signal.drivers) == 1, signal
+        driver = signal.drivers[0]
+        if isinstance(driver, Operator):
+            d = self.addOperatorAsLNode(driver)
+            if isinstance(d, LNode):
+                c, _ = self.netCtxs.getDefault(signal)
+                c.addDriver(d.east[0])
+            else:
+                self.netCtxs.joinNetsByKeyVal(signal, d)
+
+    def addOperatorAsLNode(self, op: Operator) -> Union[LNode, NetCtx]:
         root = self.node
+        if isUselessTernary(op):
+            # is in format 1 if cond else 0
+            # retunr NetCtx of cond directly
+            cond = op.operands[0]
+            return self.getInputNetCtx(cond)
+        elif isUselessEq(op):
+            s = op.operands[0]
+            return self.getInputNetCtx(s)
+
         if op.operator == AllOps.INDEX:
             inputNames = ["in", "index"]
         else:
@@ -238,23 +291,8 @@ class StatementRenderer():
                 root.addEdge(v, p)
             else:
                 self.connectInput(op, p)
-                if op.hidden:
-                    self.renderOperatorTree(op)
 
         return u
-
-    def renderOperatorTree(self, signal):
-        """
-        :param signal: top signal of hidden operator tree
-        :note: operator tree is constrained by signals with hidden==False
-        :note: statement nodes are not connected automatically
-        """
-        #print("renderOperatorTree", signal)
-        assert len(signal.drivers) == 1, signal
-        driver = signal.drivers[0]
-        if isinstance(driver, Operator):
-            d = self.addOperatorAsLNode(driver)
-            self.netCtxs.getDefault(signal).addDriver(d.east[0])
 
     def renderContent(self):
         """
@@ -275,50 +313,6 @@ class StatementRenderer():
         if not self.isVirtual:
             self.netCtxs.applyConnections(self.node)
 
-    # def makeConnections(self, s: RtlSignalBase):
-    #    """
-    #    :ivar s: signal to make connections from
-    #    :ivar toL: dictionary for resolving layout node for hdl node
-    #    :ivar root: node of parent statement
-    #    """
-    #    toL = self.toL
-    #    root = self.node
-    #    driverPorts = set()
-    #    endpointPorts = set()
-    #    extra = self.extraConn
-    #
-    #    # connect all drivers of this signal with all endpoints
-    #    for stm in s.drivers:
-    #        if isinstance(stm, Operator):
-    #            node = toL[stm]
-    #            driverPorts.add(node.east[0])
-    #
-    #    for stm in s.endpoints:
-    #        if isinstance(stm, Operator):
-    #            node = toL.get(stm, None)
-    #            if node is not None and node.parent is root:
-    #                for op, port in zip(stm.operands, node.west):
-    #                    if op is s:
-    #                        endpointPorts.add(port)
-    #
-    #    _extra = extra.get(s, None)
-    #    if _extra is not None:
-    #        for src in _extra[0]:
-    #            driverPorts.add(src)
-    #        for dst in _extra[1]:
-    #            endpointPorts.add(dst)
-    #
-    #    net = self.rootNetCtxs.get(s, None)
-    #    if net is not None:
-    #        for src in driverPorts:
-    #            net.addDriver(src)
-    #        for dst in endpointPorts:
-    #            net.addEndpoint(dst)
-    #    else:
-    #        for src in driverPorts:
-    #            for dst in endpointPorts:
-    #                root.addEdge(src, dst, name=s.name, originObj=s)
-    #
     def renderForSignal(self, stm: Union[HdlStatement, List[HdlStatement]],
                         s: RtlSignalBase,
                         connectOut) -> Tuple[LNode, Union[RtlSignalBase, LPort]]:

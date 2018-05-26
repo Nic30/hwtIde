@@ -11,26 +11,25 @@ from hwt.hdl.operatorDefs import AllOps
 from hwt.hdl.portItem import PortItem
 from hwt.hdl.types.defs import BIT
 from hwt.hdl.value import Value
+from hwt.pyUtils.uniqList import UniqList
 from hwt.serializer.hwt.serializer import HwtSerializer
 from hwt.synthesizer.interface import Interface
-from hwt.hdl.switchContainer import SwitchContainer
-from hwt.pyUtils.uniqList import UniqList
 from hwt.synthesizer.rtlLevel.mainBases import RtlSignalBase
 
 
 class NetCtxs(dict):
     def applyConnections(self, root):
         for net in set(self.values()):
-            if not(net.drivers and net.endpoints):
-                continue
-                #raise AssertionError(net)
             for src in net.drivers:
                 for dst in net.endpoints:
                     root.addEdge(src, dst)
 
     def joinNetsByKey(self, k0, k1):
-        v0 = self.getDefault(k0)
-        v1 = self.getDefault(k1)
+        v0, _ = self.getDefault(k0)
+        v1, _ = self.getDefault(k1)
+        if v0 is v1:
+            return v0
+
         v0.extend(v1)
         v0.actualKeys.extend(v1.actualKeys)
 
@@ -38,7 +37,10 @@ class NetCtxs(dict):
         return v0
 
     def joinNetsByKeyVal(self, k0, v1):
-        v0 = self.getDefault(k0)
+        v0, _ = self.getDefault(k0)
+        if v0 is v1:
+            return v0
+
         v0.extend(v1)
         v0.actualKeys.extend(v1.actualKeys)
 
@@ -48,7 +50,10 @@ class NetCtxs(dict):
         return v0
 
     def joinNetsByValKey(self, v0, k1):
-        v1 = self.getDefault(k1)
+        v1, _ = self.getDefault(k1)
+        if v0 is v1:
+            return v0
+
         v0.extend(v1)
         v0.actualKeys.extend(v1.actualKeys)
 
@@ -59,10 +64,10 @@ class NetCtxs(dict):
 
     def getDefault(self, k):
         try:
-            return self[k]
+            return self[k], True
         except KeyError:
             v = self[k] = NetCtx(self, k)
-            return v
+            return v, False
 
 
 class NetCtx():
@@ -212,12 +217,14 @@ def isUselessTernary(op):
 
 def isUselessEq(op: Operator):
     if op.operator == AllOps.EQ:
-        res = op.result
-        if res.hidden and len(res.endpoints) == 1:
-            e = res.endpoints[0]
-            if isinstance(e, SwitchContainer):
-                # this EQ is part of the MUX
-                return e.switchOn in op.operands
+        o0, o1 = op.operands
+        if o0._dtype.bit_length() == 1:
+            try:
+                if bool(o1):
+                    return True
+            except Exception:
+                pass
+    return False
 
 
 def ternaryAsSimpleAssignment(root, op):
