@@ -5,10 +5,10 @@ from importlib import import_module
 import os
 import sys
 
-from elkContainer.idStore import ElkIdStore
-from fromHwtToElk.convertor import UnitToLNode
-from fromHwtToElk.defauts import DEFAULT_PLATFORM, DEFAULT_LAYOUT_OPTIMIZATIONS
 from fsEntry import FSEntry
+from hwtGraph.elk.containers.idStore import ElkIdStore
+from hwtGraph.elk.fromHwt.convertor import UnitToLNode
+from hwtGraph.elk.fromHwt.defauts import DEFAULT_PLATFORM, DEFAULT_LAYOUT_OPTIMIZATIONS
 from hwtLib.tests.synthesizer.interfaceLevel.subunitsSynthesisTC import synthesised
 from json_resp import jsonResp
 
