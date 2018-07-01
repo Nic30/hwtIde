@@ -2,7 +2,7 @@
   "name": "static",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "",
   "dependencies": {
     "ag-grid": "latest",
     "angular": "latest",
@@ -11,7 +11,6 @@
     "angular-hotkeys": "latest",
     "angular-toastr": "latest",
     "bootstrap": "latest",
-    "bootstrap-social": "latest",
     "chai": "latest",
     "d3": "latest",
     "d3-hwschematic": "latest",
@@ -22,8 +21,9 @@
     "jquery": "latest",
     "metismenu": "latest",
     "mocha": "latest",
+    "popper.js": "^1.12.9",
     "raphael": "latest",
-    "seedrandom": "^2.4.3",
+    "seedrandom": "latest",
     "startbootstrap-sb-admin-2": "latest"
   },
   "devDependencies": {},
