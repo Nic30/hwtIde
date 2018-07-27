@@ -9,8 +9,6 @@ It contains various tools for hardware development.
 Prototype of wave viewer, input is vcd/outputs from HWT simulator in memory.
 Using [d3-wave](https://github.com/Nic30/d3-wave) library.
 
-![Wave viewer](/doc/wave.png)
-
 ## Connection editor
 Simple component connection editor used for visualization of of hierarchical components and simple editing.
 
@@ -18,8 +16,6 @@ Simple component connection editor used for visualization of of hierarchical com
 
 ## Connection visualizer
 Simple component connection visualizer for visualization of of hierarchical components. Using ELK (Eclipse Layout Kernel) and [d3-hwschematic](https://github.com/Nic30/d3-hwschematic) library. 
-
-![Connections viewer](/doc/connections_elk.png)
 
 
 ## HLS visualizations
