@@ -1,1 +1,2 @@
 recursive-include hwtIde *.js *.html *.css *.ico *.png *.oft *.eot *.svg *.ttf *.woff
+include README.md
