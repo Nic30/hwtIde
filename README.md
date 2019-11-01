@@ -1,5 +1,6 @@
 # hwtIde
 
+## Note that this is only proof concept and this project will probably be never finished or fully working
 
 HwtIde is web based prototype of IDE for https://github.com/Nic30/hwt .
 It contains various tools for hardware development.
