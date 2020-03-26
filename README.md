@@ -1,6 +1,6 @@
 # hwtIde
 
-## Note that this is only proof of concept and this project will probably be never finished or fully working
+## Note that this is only proof of concept and this project will probably be never finished or fully working it exits in order to test the ideas before the become an independent software. The thing which will remain there is an prototype of original application and the final application is stored elsewhere.
 
 HwtIde is web based prototype of IDE for https://github.com/Nic30/hwt .
 It contains various tools for hardware development.
@@ -28,7 +28,7 @@ Simple component connection visualizer for visualization of of hierarchical comp
 
 
 # Installation
-* NOT RECOMENDED, it is only prototype
+* NOT RECOMENDED, think of this as an example which we tried before a developing of real app.
 * "pip3 install flask hwtLib hwtHls"
 * download repo and run "npm install" in  hwtIde/static to download node packages for frontend
 
