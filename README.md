@@ -39,5 +39,6 @@ run by executing app.py
 * https://github.com/1138-4EB/hwd-ide
 
 # Similar projects
+* https://github.com/GIBIS-UNIFESP/wiRedPanda
 * https://github.com/TerosTechnology/terosHDL
 * https://github.com/YosysHQ/yosys
