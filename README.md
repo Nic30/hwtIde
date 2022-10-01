@@ -1,6 +1,6 @@
 # hwtIde
 
-## Note that this is only proof of concept and this project will probably be never finished or fully working it exits in order to test the ideas before the become an independent software. The thing which will remain there is an prototype of original application and the final application is stored elsewhere.
+## Note that the only purpose of this project is to test new ideas before they became independent software or are deprecated. That said, this repo is composed of raw prototypes and failures.
 
 HwtIde is web based prototype of IDE for https://github.com/Nic30/hwt .
 It contains various tools for hardware development.
